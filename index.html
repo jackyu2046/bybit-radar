@@ -291,9 +291,10 @@
         <section class="bg-crypto-card border border-crypto-border rounded-xl p-2.5 sm:p-3 flex flex-wrap gap-2.5 items-center justify-between">
             <div class="flex items-center flex-wrap gap-1.5">
                 <button onclick="setFilter('all')" id="filterBtn-all" class="px-2.5 py-1 rounded-lg text-xs font-medium bg-amber-500 text-black">全部合約</button>
+                <button onclick="setFilter('oiSurge')" id="filterBtn-oiSurge" class="px-2.5 py-1 rounded-lg text-xs font-medium bg-slate-900 hover:bg-slate-800 text-slate-300 border border-crypto-border">💎 OI 暴增真突破 (Coinglass)</button>
+                <button onclick="setFilter('momentum1h')" id="filterBtn-momentum1h" class="px-2.5 py-1 rounded-lg text-xs font-medium bg-slate-900 hover:bg-slate-800 text-slate-300 border border-crypto-border">🚀 1h 初動爆發 (GMGN)</button>
                 <button onclick="setFilter('surge')" id="filterBtn-surge" class="px-2.5 py-1 rounded-lg text-xs font-medium bg-slate-900 hover:bg-slate-800 text-slate-300 border border-crypto-border">🔥 爆量狂飆</button>
-                <button onclick="setFilter('squeeze')" id="filterBtn-squeeze" class="px-2.5 py-1 rounded-lg text-xs font-medium bg-slate-900 hover:bg-slate-800 text-slate-300 border border-crypto-border">🧲 極端費率 (逼空)</button>
-                <button onclick="setFilter('breakout')" id="filterBtn-breakout" class="px-2.5 py-1 rounded-lg text-xs font-medium bg-slate-900 hover:bg-slate-800 text-slate-300 border border-crypto-border">⚡ 突破追多信號</button>
+                <button onclick="setFilter('squeeze')" id="filterBtn-squeeze" class="px-2.5 py-1 rounded-lg text-xs font-medium bg-slate-900 hover:bg-slate-800 text-slate-300 border border-crypto-border">🧲 逼空短打</button>
                 <button onclick="setFilter('pullback')" id="filterBtn-pullback" class="px-2.5 py-1 rounded-lg text-xs font-medium bg-slate-900 hover:bg-slate-800 text-slate-300 border border-crypto-border">🎯 回踩低吸</button>
             </div>
 
@@ -335,10 +336,10 @@
                             <tr>
                                 <th class="py-2 px-2.5">幣種</th>
                                 <th class="py-2 px-2.5 text-right">現價 (USDT)</th>
-                                <th class="py-2 px-2.5 text-right">24h 漲跌</th>
+                                <th class="py-2 px-2.5 text-right">1h 爆發 / 24h 漲跌</th>
+                                <th class="py-2 px-2.5 text-right">全網持倉量 (OI)</th>
                                 <th class="py-2 px-2.5 text-right">24h 成交額</th>
                                 <th class="py-2 px-2.5 text-right">資金費率</th>
-                                <th class="py-2 px-2.5 text-center">24h 振幅區間</th>
                                 <th class="py-2 px-2.5 text-center">異常評分</th>
                                 <th class="py-2 px-2.5 text-center">策略信號</th>
                                 <th class="py-2 px-2.5 text-right">跟單操作</th>
@@ -970,76 +971,7 @@
             syncToCloud();
         }
 
-        function loadFromStorage() {
-            try {
-                // 自動向下相容：優先讀取 v3，若無則自動繼承 v2 或 v1 的戰績數據
-                let simSaved = localStorage.getItem(STORAGE_KEY_SIM);
-                if (!simSaved) {
-                    simSaved = localStorage.getItem('bybit_radar_sim_state_v2') || localStorage.getItem('bybit_radar_sim_state_v1');
-                }
-
-                if (simSaved) {
-                    const parsed = JSON.parse(simSaved);
-                    simState = { ...simState, ...parsed };
-                }
-
-                let adaptiveSaved = localStorage.getItem(STORAGE_KEY_ADAPTIVE);
-                if (!adaptiveSaved) {
-                    adaptiveSaved = localStorage.getItem('bybit_radar_adaptive_v2') || localStorage.getItem('bybit_radar_adaptive_v1');
-                }
-
-                if (adaptiveSaved) {
-                    const parsed = JSON.parse(adaptiveSaved);
-                    adaptiveParams = {
-                        ...adaptiveParams,
-                        ...parsed,
-                        blacklist: new Set(parsed.blacklist || [])
-                    };
-                }
-            } catch (e) {
-                console.warn("LocalStorage load error:", e);
-            }
-        }
-
-        let rawTickers = [];
-        let filteredTickers = [];
-        let currentFilter = 'all';
-        let currentPosFilter = 'all';
-        let currentHistoryFilter = 'all';
-        let simPositionViewMode = 'table';
-        let countdown = 10;
-        let timerInterval = null;
-        let alertCount = 0;
-        let triggeredSymbolsHistory = new Set();
-
-        // 嚴格排除非小幣：主流幣、美股、半導體 ETF 等
-        const EXCLUDED_SYMBOLS = [
-            "BTCUSDT", "ETHUSDT", "SOLUSDT", "USDCUSDT",
-            "AAPLUSDT", "SOXLUSDT", "SKHYNIXUSDT", "NVDAUSDT", "TSLAUSDT", 
-            "MSFTUSDT", "GOOGUSDT", "AMZNUSDT", "METAUSDT", "COINUSDT"
-        ];
-
-        let simState = {
-            balance: 100000.0,
-            initialBalance: 100000.0,
-            autoTrade: true,
-            maxPositions: 100,
-            tradeSize: 10.0,
-            positions: [],
-            history: [],
-            fomoTrackers: []
-        };
-
-        let adaptiveParams = {
-            minScore: 65,
-            stopLossPct: 3.5,
-            tp1Pct: 4.0,
-            tp2Pct: 9.5,
-            trailingPct: 7.0,
-            minTurnover: 2500000,
-            blacklist: new Set(),
-            logs: []
-        };
+        let previousTickersMap = new Map();
 
         async function fetchMarketData() {
             const netDot = document.getElementById('netDot');
@@ -1078,22 +1010,41 @@
                 const high24h = parseFloat(item.highPrice24h) || lastPrice;
                 const low24h = parseFloat(item.lowPrice24h) || lastPrice;
                 const fundingRate = (parseFloat(item.fundingRate) || 0) * 100;
+                
+                // 1. 接入 Coinglass 級指標：Open Interest (OI) 持倉總額
+                const oiValue = parseFloat(item.openInterestValue) || (parseFloat(item.openInterest) * lastPrice) || 0;
+                
+                // 2. 接入 DexScreener / GMGN 級指標：1小時初動爆發率 (1h Momentum)
+                const prevPrice1h = parseFloat(item.prevPrice1h) || lastPrice;
+                let price1hPcnt = 0;
+                if (prevPrice1h > 0) {
+                    price1hPcnt = ((lastPrice - prevPrice1h) / prevPrice1h) * 100;
+                }
+
+                // 3. 計算 10秒短線 OI Delta 變化與趨勢狀態
+                let oiDelta10s = 0;
+                const prev = previousTickersMap.get(symbol);
+                if (prev && prev.oiValue > 0) {
+                    oiDelta10s = ((oiValue - prev.oiValue) / prev.oiValue) * 100;
+                }
 
                 let rangePercent = 50;
                 if (high24h > low24h) {
                     rangePercent = Math.min(100, Math.max(0, ((lastPrice - low24h) / (high24h - low24h)) * 100));
                 }
 
-                const { score, reasons } = calculateAnomalyScore(price24hPcnt, turnover24h, fundingRate, rangePercent);
-                const { signalType, signalText, signalColor } = determineSignal(score, price24hPcnt, fundingRate, rangePercent);
+                // 4. 調用四維融合量化評分與信號矩陣
+                const { score, reasons, isOiSurge, isTrap } = calculateAnomalyScore(price24hPcnt, price1hPcnt, turnover24h, fundingRate, rangePercent, oiValue, oiDelta10s);
+                const { signalType, signalText, signalColor } = determineSignal(score, price24hPcnt, price1hPcnt, fundingRate, rangePercent, isOiSurge, isTrap);
 
                 const record = {
-                    symbol, lastPrice, price24hPcnt, turnover24h, volume24h,
-                    high24h, low24h, fundingRate, rangePercent,
+                    symbol, lastPrice, price24hPcnt, price1hPcnt, turnover24h, volume24h,
+                    high24h, low24h, fundingRate, rangePercent, oiValue, oiDelta10s, isOiSurge, isTrap,
                     anomalyScore: score, reasons, signalType, signalText, signalColor
                 };
 
                 newTickers.push(record);
+                previousTickersMap.set(symbol, record);
                 checkAnomalyAlerts(record);
             });
 
@@ -1109,63 +1060,105 @@
             }
         }
 
-        function calculateAnomalyScore(priceChange, turnover, fundingRate, rangePercent) {
+        // ==========================================
+        // 核心量化演算法：融合 Coinglass OI + GMGN 1h 動量 + 解鎖防誘多
+        // ==========================================
+        function calculateAnomalyScore(price24h, price1h, turnover, fundingRate, rangePercent, oiValue, oiDelta) {
             let score = 30;
             const reasons = [];
+            let isOiSurge = false;
+            let isTrap = false;
 
-            if (turnover > 20000000) { score += 25; reasons.push("超巨額成交量"); }
-            else if (turnover > 8000000) { score += 18; reasons.push("熱門主力成交"); }
-            else if (turnover > 2500000) { score += 10; reasons.push("活躍小幣流動性"); }
+            // A. Coinglass 模型：持倉量規模與主升浪檢測
+            if (oiValue > 10000000) { score += 15; reasons.push("OI巨鯨聚集(>$10M)"); }
+            else if (oiValue > 3000000) { score += 10; reasons.push("OI流動性優良(>$3M)"); }
 
-            const absChange = Math.abs(priceChange);
-            if (absChange >= 20) { score += 22; reasons.push("大波動率 (≥20%)"); }
-            else if (absChange >= 10) { score += 16; reasons.push("波幅突圍 (≥10%)"); }
-            else if (absChange >= 4) { score += 10; reasons.push("短線初動 (≥4%)"); }
-
-            if (fundingRate <= -0.15) { score += 25; reasons.push("極限軋空負費率"); }
-            else if (fundingRate <= -0.06) { score += 15; reasons.push("負費率空頭擁擠"); }
-
-            if (rangePercent >= 90 && priceChange > 3) {
+            // 價漲 + OI 持續放大 = 主力真實做多真突破
+            if (price1h >= 2.0 && oiValue >= 2000000) {
                 score += 15;
-                reasons.push("緊貼 24h 最高點 (真突破)");
+                isOiSurge = true;
+                reasons.push("💎 OI+價量齊升 (真突破)");
+            }
+
+            // B. TokenUnlocks / 出貨陷阱過濾：價漲但 OI 暴跌 (空頭踩踏或現貨拉高出貨)
+            if (price24h > 15 && oiDelta < -1.5) {
+                score -= 25;
+                isTrap = true;
+                reasons.push("⚠️ 誘多陷阱 (價漲OI暴減)");
+            }
+
+            // C. DexScreener / GMGN 級指標：1小時初動爆發（避開 24h 魚尾）
+            if (price1h >= 3.0 && price1h <= 10.0 && price24h <= 20.0) {
+                score += 22;
+                reasons.push("🚀 1h 初動啟航 (魚頭啟動)");
+            } else if (price1h > 12.0) {
+                score += 8; // 短期衝太猛，適度降權防回踩
+            }
+
+            // D. 流動性加速度
+            if (turnover > 15000000) { score += 15; reasons.push("主力超大成交量"); }
+            else if (turnover > 3000000) { score += 8; reasons.push("健康成交流動性"); }
+
+            // E. 軋空潛力 (負費率 + 底部支撐)
+            if (fundingRate <= -0.10 && rangePercent >= 50) {
+                score += 18;
+                reasons.push("🧲 極限負費率逼空");
+            } else if (fundingRate <= -0.05) {
+                score += 10;
+                reasons.push("負費率空頭積累");
+            }
+
+            // F. 突破形態：緊貼 24h 高位
+            if (rangePercent >= 88 && price24h > 2.0) {
+                score += 10;
+                reasons.push("高位蓄勢待發");
             }
 
             return {
                 score: Math.min(99, Math.max(10, Math.round(score))),
-                reasons
+                reasons,
+                isOiSurge,
+                isTrap
             };
         }
 
-        function determineSignal(score, priceChange, fundingRate, rangePercent) {
-            // 防追高：漲幅超過 +22% 嚴禁追多
-            if (priceChange > 22) {
+        function determineSignal(score, price24h, price1h, fundingRate, rangePercent, isOiSurge, isTrap) {
+            // 1. 嚴格排雷：誘多出貨陷阱或 24h 漲幅過熱（>22%）
+            if (isTrap || price24h > 22.0) {
                 return {
                     signalType: "STAGNANT_WARN",
-                    signalText: "⚠️ 漲幅過大(防接盤)",
+                    signalText: isTrap ? "⚠️ 誘多出貨陷阱" : "⚠️ 漲幅過大(防接盤)",
                     signalColor: "bg-rose-500/20 text-rose-300 border-rose-500/40"
                 };
             }
-            if (fundingRate <= -0.06 && priceChange >= -1.0 && priceChange <= 15.0) {
+
+            // 2. Coinglass + GMGN 黃金信號：OI 暴增 + 1h 剛啟動的真突破
+            if (isOiSurge && price1h >= 2.5 && price24h <= 18.0 && rangePercent >= 82) {
+                return {
+                    signalType: "OI_BREAKOUT",
+                    signalText: "⚡ OI 真突破 (重倉)",
+                    signalColor: "bg-emerald-500/25 text-emerald-300 border-emerald-500/50"
+                };
+            }
+
+            // 3. 逼空短打：負費率且 1h 未崩塌
+            if (fundingRate <= -0.06 && price24h >= -1.0 && price24h <= 15.0 && price1h >= 0) {
                 return {
                     signalType: "SQUEEZE_BUY",
                     signalText: "🧲 逼空短打",
                     signalColor: "bg-cyan-500/20 text-cyan-300 border-cyan-500/40"
                 };
             }
-            if (score >= 65 && priceChange >= 3.5 && priceChange <= 18.0 && rangePercent >= 84) {
-                return {
-                    signalType: "BREAKOUT_BUY",
-                    signalText: "⚡ 突破追多",
-                    signalColor: "bg-emerald-500/20 text-emerald-300 border-emerald-500/40"
-                };
-            }
-            if (priceChange >= 5.0 && rangePercent >= 60 && rangePercent <= 80) {
+
+            // 4. DexScreener 初動低吸：1小時初動但 24h 未暴拉
+            if (price1h >= 2.8 && price1h <= 8.5 && rangePercent >= 65 && rangePercent <= 85) {
                 return {
                     signalType: "PULLBACK_BUY",
-                    signalText: "🎯 回踩低吸",
+                    signalText: "🎯 1h 初動低吸",
                     signalColor: "bg-amber-500/20 text-amber-300 border-amber-500/40"
                 };
             }
+
             return {
                 signalType: "CONSOLIDATION",
                 signalText: "💤 橫盤整理",
@@ -1179,20 +1172,28 @@
             const candidates = rawTickers.filter(coin => {
                 if (adaptiveParams.blacklist.has(coin.symbol)) return false;
                 if (coin.turnover24h < adaptiveParams.minTurnover) return false;
+                if (coin.isTrap) return false; // 嚴格拒絕誘多出貨單
                 if (simState.positions.some(p => p.symbol === coin.symbol)) return false;
 
-                const isValidSignal = coin.signalType === "BREAKOUT_BUY" || coin.signalType === "SQUEEZE_BUY" || coin.signalType === "PULLBACK_BUY";
+                // 核心有效信號：真突破、逼空短打、初動低吸
+                const isValidSignal = coin.signalType === "OI_BREAKOUT" || coin.signalType === "SQUEEZE_BUY" || coin.signalType === "PULLBACK_BUY";
                 return coin.anomalyScore >= adaptiveParams.minScore && isValidSignal;
             });
 
             if (candidates.length > 0) {
-                candidates.sort((a, b) => b.anomalyScore - a.anomalyScore);
+                // 優先選擇帶有 Coinglass OI 真突破的標的
+                candidates.sort((a, b) => {
+                    if (a.signalType === "OI_BREAKOUT" && b.signalType !== "OI_BREAKOUT") return -1;
+                    if (b.signalType === "OI_BREAKOUT" && a.signalType !== "OI_BREAKOUT") return 1;
+                    return b.anomalyScore - a.anomalyScore;
+                });
+
                 const availableSlots = simState.maxPositions - simState.positions.length;
-                const batchCount = Math.min(availableSlots, Math.min(candidates.length, 4));
+                const batchCount = Math.min(availableSlots, Math.min(candidates.length, 3));
 
                 for (let i = 0; i < batchCount; i++) {
                     const target = candidates[i];
-                    executeOpenPosition(target, `AI自動追隨: ${target.signalText}`);
+                    executeOpenPosition(target, `AI追隨: ${target.signalText}`);
                 }
             }
         }
@@ -2037,9 +2038,10 @@
                 list = list.filter(t => t.turnover24h >= minTurnover);
             }
 
-            if (currentFilter === 'surge') list = list.filter(t => t.anomalyScore >= 65);
+            if (currentFilter === 'oiSurge') list = list.filter(t => t.isOiSurge || t.signalType === 'OI_BREAKOUT');
+            else if (currentFilter === 'momentum1h') list = list.filter(t => t.price1hPcnt >= 2.5 && t.price24hPcnt <= 20.0);
+            else if (currentFilter === 'surge') list = list.filter(t => t.anomalyScore >= 65);
             else if (currentFilter === 'squeeze') list = list.filter(t => t.fundingRate <= -0.05);
-            else if (currentFilter === 'breakout') list = list.filter(t => t.signalType === 'BREAKOUT_BUY');
             else if (currentFilter === 'pullback') list = list.filter(t => t.signalType === 'PULLBACK_BUY');
 
             list.sort((a, b) => {
@@ -2063,8 +2065,12 @@
             }
 
             tbody.innerHTML = list.map((coin, idx) => {
-                const isGain = coin.price24hPcnt >= 0;
-                const changeColor = isGain ? 'text-emerald-400' : 'text-rose-400';
+                const isGain24 = coin.price24hPcnt >= 0;
+                const changeColor24 = isGain24 ? 'text-emerald-400' : 'text-rose-400';
+
+                const isGain1h = coin.price1hPcnt >= 0;
+                const changeColor1h = isGain1h ? 'text-amber-300' : 'text-slate-400';
+
                 const fundingColor = coin.fundingRate < 0 ? 'text-cyan-400 font-bold' : 'text-slate-400';
 
                 let scoreColor = 'bg-slate-700 text-slate-300';
@@ -2077,22 +2083,25 @@
                             <div class="flex items-center gap-1.5">
                                 <span class="text-slate-500 text-[10px] w-4 text-right">${idx + 1}</span>
                                 <div>
-                                    <span class="font-bold text-white font-mono hover:text-amber-400">${coin.symbol}</span>
+                                    <div class="flex items-center gap-1">
+                                        <span class="font-bold text-white font-mono hover:text-amber-400">${coin.symbol}</span>
+                                        ${coin.isOiSurge ? '<span class="text-[9px] px-1 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30">OI激增</span>' : ''}
+                                    </div>
                                     <span class="text-[9px] text-slate-400 block font-sans">${coin.reasons[0] || '監控中'}</span>
                                 </div>
                             </div>
                         </td>
                         <td class="py-2 px-2.5 text-right font-bold text-slate-100">$${formatPrice(coin.lastPrice)}</td>
-                        <td class="py-2 px-2.5 text-right font-bold ${changeColor}">${isGain ? '+' : ''}${coin.price24hPcnt.toFixed(2)}%</td>
+                        <td class="py-2 px-2.5 text-right font-mono">
+                            <div class="font-bold ${changeColor1h}">1h: ${isGain1h ? '+' : ''}${coin.price1hPcnt.toFixed(2)}%</div>
+                            <div class="text-[10px] ${changeColor24}">24h: ${isGain24 ? '+' : ''}${coin.price24hPcnt.toFixed(2)}%</div>
+                        </td>
+                        <td class="py-2 px-2.5 text-right font-mono">
+                            <div class="font-semibold text-purple-300">$${formatNumber(coin.oiValue)}</div>
+                            <div class="text-[10px] text-slate-400">合約持倉總值</div>
+                        </td>
                         <td class="py-2 px-2.5 text-right text-slate-300">$${formatNumber(coin.turnover24h)}</td>
                         <td class="py-2 px-2.5 text-right ${fundingColor}">${coin.fundingRate > 0 ? '+' : ''}${coin.fundingRate.toFixed(4)}%</td>
-                        <td class="py-2 px-2.5 text-center">
-                            <div class="w-20 mx-auto">
-                                <div class="w-full bg-slate-800 h-1 rounded-full overflow-hidden">
-                                    <div class="bg-gradient-to-r from-emerald-500 to-amber-500 h-full" style="width: ${coin.rangePercent}%"></div>
-                                </div>
-                            </div>
-                        </td>
                         <td class="py-2 px-2.5 text-center">
                             <span class="px-1.5 py-0.2 rounded text-[10px] font-mono ${scoreColor}">${coin.anomalyScore}</span>
                         </td>
