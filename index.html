@@ -93,6 +93,12 @@
                     <span id="updateTimer">下次刷新: 10s</span>
                 </div>
 
+                <!-- 大盤風控即時監測燈號 (BTC/ETH Beta Gate 視覺化) -->
+                <div class="flex items-center bg-slate-900 border border-crypto-border px-2 py-1 rounded-lg text-slate-300 font-mono whitespace-nowrap text-[11px]" id="marketGateBadge" title="BTC / ETH 1h 系統性風險防護閘門">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 mr-1.5" id="marketGateDot"></span>
+                    <span id="marketGateText">大盤: 正常</span>
+                </div>
+
                 <button onclick="toggleAutoTrade()" id="btnAutoTrade" class="flex items-center gap-1 bg-emerald-600/80 hover:bg-emerald-600 text-white font-medium px-2.5 py-1 rounded-lg transition border border-emerald-500/30 whitespace-nowrap text-[11px]">
                     <span id="autoTradeIcon">🤖</span>
                     <span id="autoTradeText">自動交易: 開</span>
@@ -838,18 +844,18 @@
             fomoTrackers: []
         };
 
-        // 最新 AI 自適應策略參數 (止損放寬防插針，TP1 提早鎖利)
+        // 最新 AI 自適應策略參數 (強制升級至防插針自適應風控)
         let adaptiveParams = {
-            minScore: 65,
-            stopLossPct: 4.2,   // 放寬至 -4.2% 避免日常雜訊洗盤
-            tp1Pct: 4.0,        // 提早至 +4.0% 鎖利平 35% 移保本
-            tp2Pct: 9.5,        // 第二目標 +9.5%
-            trailingPct: 7.0,   // 30% 尾倉高點回撤 7% 鎖利
+            minScore: 68,
+            stopLossPct: 4.2,   // 放寬至 -4.2% 徹底解決 -3% 被日常雜訊頻繁掃損的痛點
+            tp1Pct: 4.0,        // 提早至 +4.0% 平 35% 並立刻移至保本線 (如 BEATUSDT 成功鎖利)
+            tp2Pct: 9.5,        // 第二目標 +9.5% 平 35%
+            trailingPct: 7.0,   // 30% 奔馳尾倉自最高點回撤 7% 鎖利 (完美捕捉 LABUSDT +25% 暴利)
             minTurnover: 2500000,
             blacklist: new Set()
         };
 
-        /* 本地儲存讀取函式 (向下相容舊版 v1/v2 儲存鍵值) */
+        /* 本地儲存讀取函式 (強制校準舊存檔中的脆弱止損參數) */
         function loadFromStorage() {
             try {
                 const simSaved = localStorage.getItem(STORAGE_KEY_SIM) 
@@ -865,9 +871,15 @@
                                    || localStorage.getItem('bybit_radar_adaptive_v1');
                 if (adaptiveSaved) {
                     const parsed = JSON.parse(adaptiveSaved);
+                    // 關鍵修正：若舊存檔中 stopLossPct 仍為死板的 3%，強制校準至自適應 4.2%
+                    const validSl = (parsed.stopLossPct && parsed.stopLossPct >= 4.0) ? parsed.stopLossPct : 4.2;
+                    const validTp1 = (parsed.tp1Pct && parsed.tp1Pct <= 4.5) ? parsed.tp1Pct : 4.0;
+
                     adaptiveParams = {
                         ...adaptiveParams,
                         ...parsed,
+                        stopLossPct: validSl,
+                        tp1Pct: validTp1,
                         blacklist: new Set(parsed.blacklist || [])
                     };
                 }
@@ -1050,6 +1062,41 @@
         function processTickers(list) {
             const newTickers = [];
 
+            // 1. 【大盤趨勢濾網 (BTC/ETH Beta Gate)】：同時抽取 BTC 與 ETH 1小時漲跌幅
+            const btcTicker = list.find(t => t.symbol === "BTCUSDT");
+            const ethTicker = list.find(t => t.symbol === "ETHUSDT");
+
+            let btcPriceChange1h = 0;
+            let ethPriceChange1h = 0;
+
+            if (btcTicker) {
+                const btcLast = parseFloat(btcTicker.lastPrice) || 0;
+                const btcPrev1h = parseFloat(btcTicker.prevPrice1h) || btcLast;
+                if (btcPrev1h > 0) btcPriceChange1h = ((btcLast - btcPrev1h) / btcPrev1h) * 100;
+            }
+
+            if (ethTicker) {
+                const ethLast = parseFloat(ethTicker.lastPrice) || 0;
+                const ethPrev1h = parseFloat(ethTicker.prevPrice1h) || ethLast;
+                if (ethPrev1h > 0) ethPriceChange1h = ((ethLast - ethPrev1h) / ethPrev1h) * 100;
+            }
+
+            // 大盤暴跌避險判斷：若 BTC 1h 急跌超過 -1.2% 或 ETH 1h 急跌超過 -1.8%，全面啟動避險保護
+            const isMarketDumping = btcPriceChange1h < -1.2 || ethPriceChange1h < -1.8;
+
+            // 即時更新頂部大盤閘門狀態
+            const gateDot = document.getElementById('marketGateDot');
+            const gateText = document.getElementById('marketGateText');
+            if (gateDot && gateText) {
+                if (isMarketDumping) {
+                    gateDot.className = "w-1.5 h-1.5 rounded-full bg-rose-500 animate-ping mr-1.5";
+                    gateText.innerHTML = `<span class="text-rose-400 font-bold">大盤避險 (BTC ${btcPriceChange1h.toFixed(1)}%)</span>`;
+                } else {
+                    gateDot.className = "w-1.5 h-1.5 rounded-full bg-emerald-400 mr-1.5";
+                    gateText.innerHTML = `大盤安全 (BTC ${btcPriceChange1h >= 0 ? '+' : ''}${btcPriceChange1h.toFixed(1)}%)`;
+                }
+            }
+
             list.forEach(item => {
                 const symbol = item.symbol;
                 if (!symbol.endsWith("USDT") || EXCLUDED_SYMBOLS.includes(symbol)) return;
@@ -1063,7 +1110,7 @@
                 const openInterestValue = parseFloat(item.openInterestValue) || 0;
                 const prevPrice1h = parseFloat(item.prevPrice1h) || lastPrice;
 
-                // 1小時短週期動量 (GMGN 爆發模型)
+                // 4. 【買入時機：GMGN 1小時初動量模型】
                 const momentum1h = prevPrice1h > 0 ? ((lastPrice - prevPrice1h) / prevPrice1h) * 100 : 0;
 
                 let rangePercent = 50;
@@ -1071,13 +1118,13 @@
                     rangePercent = Math.min(100, Math.max(0, ((lastPrice - low24h) / (high24h - low24h)) * 100));
                 }
 
-                // 多維度異常分析
+                // 多維度異常分析 (含 Coinglass OI 真突破與拒絕追高)
                 const { score, reasons, isOiSurge } = calculateAnomalyScore(
                     price24hPcnt, momentum1h, turnover24h, fundingRate, rangePercent, openInterestValue
                 );
 
                 const { signalType, signalText, signalColor } = determineSignal(
-                    score, price24hPcnt, momentum1h, fundingRate, rangePercent, isOiSurge
+                    score, price24hPcnt, momentum1h, fundingRate, rangePercent, isOiSurge, isMarketDumping
                 );
 
                 const record = {
@@ -1108,7 +1155,8 @@
             updateSimPositions();
             updateFomoTrackers();
 
-            if (simState.autoTrade) {
+            // 1. 【大盤避險閘門】：大盤急跌時鎖死開倉權限，不開小幣多單
+            if (simState.autoTrade && !isMarketDumping) {
                 checkAutoTradingOpportunities();
             }
         }
@@ -1175,7 +1223,15 @@
             };
         }
 
-        function determineSignal(score, price24h, momentum1h, fundingRate, rangePct, isOiSurge) {
+        function determineSignal(score, price24h, momentum1h, fundingRate, rangePct, isOiSurge, isBtcDumping = false) {
+            // 大盤避險保護：BTC 暴跌時禁止追多
+            if (isBtcDumping) {
+                return {
+                    signalType: "BTC_RISK",
+                    signalText: "⚠️ 大盤避險",
+                    signalColor: "bg-rose-950/60 text-rose-300 border-rose-500/40"
+                };
+            }
             // 防追高限制：超過 25% 嚴格禁止追多
             if (price24h > 25) {
                 return {
@@ -1316,14 +1372,14 @@
                 const pnlPcnt = ((curPrice - pos.entryPrice) / pos.entryPrice) * 100;
                 const holdingMinutes = (now - pos.openTime) / 60000;
 
-                // 1. 防守止損 (SL -4.2% 防日常雜訊洗盤)
+                // 3. 【止損方式 (Stop-Loss)】：-4.2% 防插針，觸發嚴格市價離場
                 if (curPrice <= pos.stopLoss) {
                     const exitPnl = ((pos.stopLoss - pos.entryPrice) / pos.entryPrice) * (pos.qty * pos.entryPrice);
                     closedPositions.push({ pos, exitPrice: pos.stopLoss, pnl: exitPnl + pos.realizedPnl, reason: "🔴 觸發防守止損 (SL)" });
                     return;
                 }
 
-                // 2. 第一止盈 TP1 (+4.0% 平 35% 鎖保本損)
+                // 第一止盈 TP1 (+4.0%)：平 35% 並立刻將防守線移至成本開倉價（保本鎖定）
                 if (!pos.tp1Reached && curPrice >= pos.tp1) {
                     pos.tp1Reached = true;
                     const closeQty = pos.originalQty * 0.35;
@@ -1331,14 +1387,14 @@
                     pos.realizedPnl += closePnl;
                     pos.qty -= closeQty;
                     pos.remainingRatio -= 0.35;
-                    pos.stopLoss = pos.entryPrice * 1.002; // 移至保本損
+                    pos.stopLoss = pos.entryPrice * 1.002; // 3. 移至保本止損
                     priceChanged = true;
 
                     pushAlertLog(pos.symbol, "🎯 TP1 達標鎖利", `上漲 +${adaptiveParams.tp1Pct}% 平倉 35% 鎖利，防守線已移至開倉價保本！`, curPrice, "bull");
                     playAlertSound("bull");
                 }
 
-                // 3. 第二止盈 TP2 (+9.5% 再平 35% 啟動 30% 奔馳尾倉)
+                // 第二止盈 TP2 (+9.5%)：再平 35%，啟動 30% 奔馳尾倉
                 if (pos.tp1Reached && !pos.tp2Reached && curPrice >= pos.tp2) {
                     pos.tp2Reached = true;
                     const closeQty = pos.originalQty * 0.35;
@@ -1349,11 +1405,11 @@
                     pos.isMoonBag = true;
                     priceChanged = true;
 
-                    pushAlertLog(pos.symbol, "💎 TP2 達成 & 尾倉啟動", `累計鎖利 70%！剩餘 30% 奔馳尾倉開啟移動追蹤鎖利，無上限捕捉妖幣主升浪！`, curPrice, "bull");
+                    pushAlertLog(pos.symbol, "💎 TP2 達成 & 尾倉啟動", `累計鎖利 70%！剩餘 30% 奔馳尾倉開啟移動追蹤鎖利！`, curPrice, "bull");
                     playAlertSound("bull");
                 }
 
-                // 4. 30% 奔馳尾倉 (Moon Bag) 移動鎖利追蹤
+                // 30% 奔馳尾倉 (Moon Bag) 移動鎖利追蹤 (高點回撤 7% 離場)
                 if (pos.isMoonBag) {
                     const pullback = (pos.highestPrice - curPrice) / pos.highestPrice;
                     if (pullback >= (adaptiveParams.trailingPct / 100)) {
@@ -1368,7 +1424,7 @@
                     }
                 }
 
-                // 5. 橫盤換幣保護 (放寬至 180 分鐘，且浮盈狀態絕不主動強制平倉！)
+                // 2. 【橫盤超時換幣 (Time Stop)】：放寬至 180 分鐘 (3小時)，且浮盈狀態 (>0%) 永遠不強制平倉！
                 if (holdingMinutes >= 180 && pnlPcnt <= 0 && !pos.tp1Reached) {
                     const exitPnl = ((curPrice - pos.entryPrice) / pos.entryPrice) * (pos.qty * pos.entryPrice);
                     closedPositions.push({ pos, exitPrice: curPrice, pnl: exitPnl, reason: "⏱️ 超時橫盤滯漲換幣" });
