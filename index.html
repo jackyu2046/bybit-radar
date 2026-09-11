@@ -68,62 +68,73 @@
         .pulse-live {
             animation: pulse-fast 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
         }
+        /* 電腦端滾動條正常，僅在手機端隱藏橫向滾動條以提升 App 質感 */
+        @media (max-width: 767px) {
+            .mobile-scroll-x::-webkit-scrollbar {
+                display: none;
+            }
+            .mobile-scroll-x {
+                -ms-overflow-style: none;
+                scrollbar-width: none;
+            }
+        }
     </style>
 </head>
 <body class="font-sans min-h-screen flex flex-col antialiased selection:bg-amber-500 selection:text-black">
 
-    <!-- 頂部導航列 (完美保留截圖原有佈局) -->
-    <header class="border-b border-crypto-border bg-crypto-dark/90 backdrop-blur sticky top-0 z-40 px-4 py-3">
-        <div class="max-w-[1750px] mx-auto flex flex-wrap items-center justify-between gap-3">
-            <div class="flex items-center space-x-3">
-                <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-amber-500 to-yellow-300 flex items-center justify-center text-black font-black text-lg shadow-lg shadow-amber-500/20">
-                    ⚡
-                </div>
-                <div>
-                    <div class="flex items-center gap-2">
-                        <h1 class="text-base font-bold text-white tracking-wide">Bybit 全市場小幣異常監控雷達</h1>
-                        <span class="text-[10px] bg-amber-500/20 text-amber-400 font-mono font-semibold px-2 py-0.5 rounded border border-amber-500/30">V5 LINEAR</span>
-                        <span class="text-[10px] bg-sky-500/20 text-sky-400 font-mono font-semibold px-1.5 py-0.5 rounded border border-sky-500/30 flex items-center gap-1 cursor-pointer" onclick="openCloudModal()" id="cloudNavBadge" title="點擊設定跨端房間">
-                            <span class="w-1.5 h-1.5 rounded-full bg-sky-400 animate-pulse" id="cloudDot"></span>
-                            <span id="cloudNavText">☁️ 雲端同頻中</span>
-                        </span>
-                        <span class="text-[10px] bg-emerald-500/20 text-emerald-400 font-mono font-semibold px-1.5 py-0.5 rounded border border-emerald-500/30 hidden sm:inline" title="已啟用本地儲存">💾 LOCALSTORAGE</span>
+    <!-- 頂部導航列：電腦端保持原版平鋪，手機端單行橫向滑動不折疊堆疊 -->
+    <header class="border-b border-crypto-border bg-crypto-dark/90 backdrop-blur sticky top-0 z-40 px-3 md:px-4 py-2.5 md:py-3">
+        <div class="max-w-[1750px] mx-auto flex flex-col md:flex-row md:items-center justify-between gap-2.5 md:gap-3">
+            <div class="flex items-center justify-between w-full md:w-auto">
+                <div class="flex items-center space-x-2.5 md:space-x-3">
+                    <div class="w-8 h-8 md:w-9 md:h-9 rounded-xl bg-gradient-to-tr from-amber-500 to-yellow-300 flex items-center justify-center text-black font-black text-base md:text-lg shadow-lg shadow-amber-500/20 flex-shrink-0">
+                        ⚡
                     </div>
-                    <p class="text-xs text-slate-400">300+ 永續合約全量即時掃描 · AI 自適應風控決策 · 30% 奔馳尾倉捕捉暴漲小幣</p>
+                    <div>
+                        <div class="flex items-center gap-1.5 md:gap-2">
+                            <h1 class="text-sm md:text-base font-bold text-white tracking-wide">Bybit 全市場小幣異常監控雷達</h1>
+                            <span class="text-[9px] md:text-[10px] bg-amber-500/20 text-amber-400 font-mono font-semibold px-1.5 md:px-2 py-0.5 rounded border border-amber-500/30">V5 LINEAR</span>
+                            <span class="text-[9px] md:text-[10px] bg-sky-500/20 text-sky-400 font-mono font-semibold px-1.5 py-0.5 rounded border border-sky-500/30 flex items-center gap-1 cursor-pointer" onclick="openCloudModal()" id="cloudNavBadge" title="點擊設定跨端房間">
+                                <span class="w-1.5 h-1.5 rounded-full bg-sky-400 animate-pulse" id="cloudDot"></span>
+                                <span id="cloudNavText">☁️ 雲端同頻中</span>
+                            </span>
+                        </div>
+                        <p class="text-[11px] md:text-xs text-slate-400 hidden sm:block">300+ 永續合約全量即時掃描 · AI 自適應風控決策 · 30% 奔馳尾倉捕捉暴漲小幣</p>
+                    </div>
                 </div>
             </div>
 
-            <!-- 控制開關與倒數計時 -->
-            <div class="flex items-center flex-wrap gap-2 text-xs">
-                <div class="flex items-center bg-slate-900 border border-crypto-border px-3 py-1.5 rounded-lg text-slate-300 font-mono">
+            <!-- 控制開關：手機端單行橫向滑動，電腦端 md: 保持原本的平鋪換行排列 -->
+            <div class="flex items-center gap-2 text-xs overflow-x-auto mobile-scroll-x md:overflow-visible flex-nowrap md:flex-wrap pb-1 md:pb-0 w-full md:w-auto">
+                <div class="flex items-center bg-slate-900 border border-crypto-border px-2.5 md:px-3 py-1.5 rounded-lg text-slate-300 font-mono flex-shrink-0">
                     <span class="w-2 h-2 rounded-full bg-emerald-400 mr-2" id="netDot"></span>
                     <span id="updateTimer">下次刷新: 10s</span>
                 </div>
 
                 <!-- 模擬交易開關 -->
-                <button onclick="toggleAutoTrade()" id="btnAutoTrade" class="flex items-center gap-1.5 bg-emerald-600/80 hover:bg-emerald-600 text-white font-medium px-3 py-1.5 rounded-lg transition border border-emerald-500/30">
+                <button onclick="toggleAutoTrade()" id="btnAutoTrade" class="flex items-center gap-1.5 bg-emerald-600/80 hover:bg-emerald-600 text-white font-medium px-2.5 md:px-3 py-1.5 rounded-lg transition border border-emerald-500/30 flex-shrink-0">
                     <span id="autoTradeIcon">🤖</span>
                     <span id="autoTradeText">自動模擬交易: 開</span>
                 </button>
 
                 <!-- 雲端同步管理彈窗按鈕 -->
-                <button onclick="openCloudModal()" class="flex items-center gap-1.5 bg-sky-950/80 hover:bg-sky-900 border border-sky-500/40 text-sky-300 font-medium px-3 py-1.5 rounded-lg transition">
+                <button onclick="openCloudModal()" class="flex items-center gap-1.5 bg-sky-950/80 hover:bg-sky-900 border border-sky-500/40 text-sky-300 font-medium px-2.5 md:px-3 py-1.5 rounded-lg transition flex-shrink-0">
                     <span>☁️</span>
                     <span>雲端同頻</span>
                 </button>
 
-                <button onclick="openAdaptiveModal()" class="flex items-center gap-1.5 bg-purple-600/80 hover:bg-purple-600 text-white font-medium px-3 py-1.5 rounded-lg transition border border-purple-500/30">
+                <button onclick="openAdaptiveModal()" class="flex items-center gap-1.5 bg-purple-600/80 hover:bg-purple-600 text-white font-medium px-2.5 md:px-3 py-1.5 rounded-lg transition border border-purple-500/30 flex-shrink-0">
                     <span>🧠</span>
                     <span>AI 自適應優化儀表板</span>
                 </button>
 
-                <button onclick="openPlaybookModal()" class="flex items-center gap-1.5 bg-indigo-600/80 hover:bg-indigo-600 text-white font-medium px-3 py-1.5 rounded-lg transition border border-indigo-500/30">
+                <button onclick="openPlaybookModal()" class="flex items-center gap-1.5 bg-indigo-600/80 hover:bg-indigo-600 text-white font-medium px-2.5 md:px-3 py-1.5 rounded-lg transition border border-indigo-500/30 flex-shrink-0">
                     <span>📖</span>
                     <span>進出場實戰指南</span>
                 </button>
 
-                <!-- 匯出/匯入備份 (雙層保險) -->
-                <div class="flex items-center bg-slate-900 border border-crypto-border rounded-lg p-0.5">
+                <!-- 匯出/匯入備份 -->
+                <div class="flex items-center bg-slate-900 border border-crypto-border rounded-lg p-0.5 flex-shrink-0">
                     <button onclick="exportBackupData()" title="匯出本機 JSON" class="px-2 py-1 text-slate-300 hover:text-white hover:bg-slate-800 rounded transition">📥 匯出</button>
                     <label title="匯入本機 JSON" class="px-2 py-1 text-slate-300 hover:text-white hover:bg-slate-800 rounded transition cursor-pointer">
                         📤 匯入
@@ -131,12 +142,12 @@
                     </label>
                 </div>
 
-                <button id="soundToggle" onclick="toggleSound()" class="flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 border border-crypto-border px-3 py-1.5 rounded-lg text-slate-300 transition">
+                <button id="soundToggle" onclick="toggleSound()" class="flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 border border-crypto-border px-2.5 md:px-3 py-1.5 rounded-lg text-slate-300 transition flex-shrink-0">
                     <span id="soundIcon">🔔</span>
                     <span id="soundText">聲音警報: 開</span>
                 </button>
 
-                <button onclick="fetchMarketData()" class="flex items-center gap-1.5 bg-amber-500 hover:bg-amber-400 text-black font-semibold px-3 py-1.5 rounded-lg transition shadow-lg shadow-amber-500/10 active:scale-95">
+                <button onclick="fetchMarketData()" class="flex items-center gap-1.5 bg-amber-500 hover:bg-amber-400 text-black font-semibold px-2.5 md:px-3 py-1.5 rounded-lg transition shadow-lg shadow-amber-500/10 active:scale-95 flex-shrink-0">
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
                     <span>立即掃描</span>
                 </button>
@@ -144,11 +155,10 @@
         </div>
     </header>
 
-    <main class="flex-1 p-4 lg:p-6 max-w-[1750px] mx-auto w-full space-y-5">
-
-        <!-- 模擬交易與自修復狀態即時進度條 (與截圖完全一致) -->
+    <main class="flex-1 p-3 md:p-6 max-w-[1750px] mx-auto w-full space-y-4 md:space-y-5">
+        <!-- 模擬交易與自修復狀態即時進度條 -->
         <section class="bg-gradient-to-r from-slate-900 via-crypto-card to-slate-900 border border-crypto-border rounded-xl p-3 flex flex-wrap items-center justify-between gap-3 text-xs">
-            <div class="flex items-center flex-wrap gap-4">
+            <div class="flex items-center flex-wrap gap-3 md:gap-4">
                 <div class="flex items-center gap-2">
                     <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
                     <span class="text-slate-400">模擬錢包權益:</span>
@@ -218,7 +228,7 @@
 
                     <!-- 視圖切換 (精簡表格 / 卡片) -->
                     <div class="flex items-center bg-slate-950 border border-crypto-border rounded-lg p-0.5 text-xs">
-                        <button onclick="togglePositionView('table')" id="btnViewTable" class="px-2.5 py-1 rounded bg-slate-800 text-white font-medium flex items-center gap-1 transition text-[11px]">
+                        <button onclick="togglePositionView('table')" id="btnViewTable" class="px-2.5 py-1 rounded bg-amber-500 text-black font-bold flex items-center gap-1 transition text-[11px]">
                             <span>📋</span> 表格精簡
                         </button>
                         <button onclick="togglePositionView('card')" id="btnViewCard" class="px-2.5 py-1 rounded text-slate-400 hover:text-white font-medium flex items-center gap-1 transition text-[11px]">
@@ -853,6 +863,7 @@
             lastLocalUpdate: Date.now()
         };
 
+        // 固定預設為交易所標準的「表格精簡」視圖，避免被預覽寬度判定強制切為卡片
         let simPositionViewMode = 'table';
         let currentPositionFilter = 'all';
 
@@ -1020,8 +1031,10 @@
         // ==========================================
         function setMaxPositions(num) {
             simState.maxPositions = num;
-            document.getElementById('btnCap50').className = num === 50 ? "px-2 py-0.5 rounded bg-amber-500 text-black font-bold transition" : "px-2 py-0.5 rounded text-slate-400 hover:text-white transition";
-            document.getElementById('btnCap100').className = num === 100 ? "px-2 py-0.5 rounded bg-amber-500 text-black font-bold transition" : "px-2 py-0.5 rounded text-slate-400 hover:text-white transition";
+            const btn50 = document.getElementById('btnCap50');
+            const btn100 = document.getElementById('btnCap100');
+            if (btn50) btn50.className = num === 50 ? "px-2 py-0.5 rounded bg-amber-500 text-black font-bold transition" : "px-2 py-0.5 rounded text-slate-400 hover:text-white transition";
+            if (btn100) btn100.className = num === 100 ? "px-2 py-0.5 rounded bg-amber-500 text-black font-bold transition" : "px-2 py-0.5 rounded text-slate-400 hover:text-white transition";
             saveToStorage();
             updateSimHeaderStats();
             pushAdaptiveLog(`⚙️ 最大持倉上限調整為 ${num} 檔，擴增並行採樣池。`);
@@ -1045,11 +1058,13 @@
             simPositionViewMode = mode;
             const btnTable = document.getElementById('btnViewTable');
             const btnCard = document.getElementById('btnViewCard');
+            if (!btnTable || !btnCard) return;
+
             if (mode === 'table') {
-                btnTable.className = "px-2.5 py-1 rounded bg-slate-800 text-white font-medium flex items-center gap-1 transition text-[11px]";
+                btnTable.className = "px-2.5 py-1 rounded bg-amber-500 text-black font-bold flex items-center gap-1 transition text-[11px] shadow-sm";
                 btnCard.className = "px-2.5 py-1 rounded text-slate-400 hover:text-white font-medium flex items-center gap-1 transition text-[11px]";
             } else {
-                btnCard.className = "px-2.5 py-1 rounded bg-slate-800 text-white font-medium flex items-center gap-1 transition text-[11px]";
+                btnCard.className = "px-2.5 py-1 rounded bg-amber-500 text-black font-bold flex items-center gap-1 transition text-[11px] shadow-sm";
                 btnTable.className = "px-2.5 py-1 rounded text-slate-400 hover:text-white font-medium flex items-center gap-1 transition text-[11px]";
             }
             renderSimPositions(true);
@@ -1546,8 +1561,8 @@
 
             if (simPositionViewMode === 'table') {
                 container.innerHTML = `
-                    <div class="overflow-x-auto max-h-[380px] overflow-y-auto -mx-2 sm:mx-0">
-                        <table class="w-full text-left text-xs border-collapse font-mono min-w-[700px] sm:min-w-full">
+                    <div class="overflow-x-auto max-h-[380px] overflow-y-auto -mx-1 sm:mx-0">
+                        <table class="w-full text-left text-xs border-collapse font-mono min-w-[650px] sm:min-w-full">
                             <thead class="bg-slate-950 text-slate-400 sticky top-0 z-10 text-[10px] sm:text-[11px] border-b border-crypto-border">
                                 <tr>
                                     <th class="py-2 px-2 sm:px-3">#</th>
@@ -1556,8 +1571,8 @@
                                     <th class="py-2 px-2 sm:px-3 text-right">現價</th>
                                     <th class="py-2 px-2 sm:px-3 text-right">浮動盈虧 (%)</th>
                                     <th class="py-2 px-2 sm:px-3 text-right">盈虧 ($)</th>
-                                    <th class="py-2 px-2 sm:px-3 text-center">防守止損 (SL)</th>
-                                    <th class="py-2 px-2 sm:px-3 text-center">目標 (TP1/TP2)</th>
+                                    <th class="py-2 px-2 sm:px-3 text-center">止損 (SL)</th>
+                                    <th class="py-2 px-2 sm:px-3 text-center">目標 (TP1/2)</th>
                                     <th class="py-2 px-2 sm:px-3 text-center">狀態</th>
                                     <th class="py-2 px-2 sm:px-3 text-right">操作</th>
                                 </tr>
@@ -1603,9 +1618,9 @@
                     </div>
                 `;
             } else {
-                // 卡片視圖：手機端預設單欄/雙欄小卡，排版清晰不擁擠
+                // 手機原生交易所 App 級卡片排版：兩欄/單欄精緻卡片，字大清晰，永不截斷
                 container.innerHTML = `
-                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-2.5 max-h-[500px] overflow-y-auto pr-0.5">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-2 max-h-[500px] overflow-y-auto pr-0.5">
                         ${list.map(pos => {
                             const pnlPct = ((pos.currentPrice - pos.entryPrice) / pos.entryPrice) * 100;
                             const pnlUsdt = ((pos.currentPrice - pos.entryPrice) / pos.entryPrice) * (pos.qty * pos.entryPrice);
@@ -1614,46 +1629,45 @@
                             const holdMin = Math.round((Date.now() - pos.openTime) / 60000);
 
                             return `
-                                <div class="bg-slate-900 border ${pos.isMoonBag ? 'border-purple-500/50' : (isWin ? 'border-emerald-500/40' : 'border-rose-500/40')} rounded-xl p-2.5 flex flex-col justify-between space-y-2">
+                                <div class="bg-slate-900/90 border ${pos.isMoonBag ? 'border-purple-500/60 shadow-purple-500/10' : (isWin ? 'border-emerald-500/40 shadow-emerald-500/10' : 'border-rose-500/40 shadow-rose-500/10')} rounded-xl p-2.5 flex flex-col justify-between space-y-2 shadow-md">
                                     <div class="flex items-start justify-between">
                                         <div>
                                             <div class="flex items-center gap-1.5">
-                                                <span class="font-bold text-white font-mono text-xs">${pos.symbol}</span>
-                                                <span class="text-[9px] px-1 py-0.2 rounded bg-amber-500/20 text-amber-300 font-mono">做多</span>
+                                                <span class="font-bold text-white font-mono text-sm tracking-wide">${pos.symbol}</span>
+                                                <span class="text-[9px] px-1 py-0.2 rounded bg-emerald-500/20 text-emerald-300 font-mono">做多</span>
+                                                <span class="text-[9px] px-1 py-0.2 rounded bg-slate-800 text-slate-400 font-mono">${holdMin}m</span>
                                             </div>
-                                            <span class="text-[9px] text-slate-400 block mt-0.5">已持倉: ${holdMin}m</span>
+                                            <span class="text-[10px] text-slate-400 block mt-0.5 font-mono">
+                                                開: $${formatPrice(pos.entryPrice)} → 現: $${formatPrice(pos.currentPrice)}
+                                            </span>
                                         </div>
                                         <div class="text-right">
-                                            <div class="font-bold font-mono text-xs ${pnlColor}">
+                                            <div class="font-extrabold font-mono text-sm ${pnlColor}">
                                                 ${isWin ? '+' : ''}${pnlPct.toFixed(2)}%
                                             </div>
-                                            <div class="text-[10px] font-mono text-slate-300">
+                                            <div class="text-[11px] font-mono font-medium text-slate-300">
                                                 ${isWin ? '+' : ''}$${pnlUsdt.toFixed(2)}
                                             </div>
                                         </div>
                                     </div>
 
-                                    <div class="bg-slate-950/60 p-2 rounded-lg border border-crypto-border/50 text-[10px] font-mono space-y-1">
-                                        <div class="flex justify-between text-slate-400">
-                                            <span>開倉/現價:</span>
-                                            <span class="text-slate-200">$${formatPrice(pos.entryPrice)} / $${formatPrice(pos.currentPrice)}</span>
+                                    <div class="bg-slate-950/70 p-1.5 rounded-lg border border-crypto-border/40 text-[10px] font-mono flex items-center justify-between">
+                                        <div>
+                                            <span class="text-rose-400 font-sans">止損:</span>
+                                            <span class="text-slate-300">$${formatPrice(pos.stopLoss)}</span>
                                         </div>
-                                        <div class="flex justify-between text-rose-400">
-                                            <span>防守止損:</span>
-                                            <span>$${formatPrice(pos.stopLoss)}</span>
-                                        </div>
-                                        <div class="flex justify-between text-emerald-400">
-                                            <span>目標 TP1/2:</span>
-                                            <span>$${formatPrice(pos.tp1)} / $${formatPrice(pos.tp2)}</span>
+                                        <div>
+                                            <span class="text-emerald-400 font-sans">目標:</span>
+                                            <span class="text-slate-300">$${formatPrice(pos.tp1)}</span>
                                         </div>
                                     </div>
 
                                     <div class="flex items-center justify-between pt-0.5">
-                                        <span class="text-[10px] ${pos.isMoonBag ? 'text-purple-300 font-bold' : (pos.tp1Reached ? 'text-cyan-300' : 'text-slate-400')}">
-                                            ${pos.isMoonBag ? '🚀 尾倉狂飆' : (pos.tp1Reached ? '🛡️ 保本鎖定' : '⚡ 推進中')}
+                                        <span class="text-[10px] ${pos.isMoonBag ? 'text-purple-300 font-bold animate-pulse' : (pos.tp1Reached ? 'text-cyan-300' : 'text-slate-400')}">
+                                            ${pos.isMoonBag ? '🚀 尾倉狂飆中' : (pos.tp1Reached ? '🛡️ 保本損鎖定' : '⚡ 推進中')}
                                         </span>
-                                        <button onclick="closePositionManually('${pos.id}')" class="px-2 py-0.5 rounded bg-slate-800 hover:bg-rose-900/60 text-rose-300 text-[10px] font-semibold border border-crypto-border">
-                                            平倉
+                                        <button onclick="closePositionManually('${pos.id}')" class="px-3 py-1 rounded bg-slate-800 hover:bg-rose-900 text-rose-300 text-[10px] font-bold border border-rose-500/30 active:scale-95 transition">
+                                            市價平倉
                                         </button>
                                     </div>
                                 </div>
@@ -1739,27 +1753,37 @@
         }
 
         function updateSimHeaderStats() {
-            document.getElementById('simBalanceDisplay').innerText = `$${simState.balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            const balEl = document.getElementById('simBalanceDisplay');
+            if (balEl) {
+                balEl.innerText = `$${simState.balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            }
             const totalPnlPct = ((simState.balance - simState.initialBalance) / simState.initialBalance) * 100;
             const pnlEl = document.getElementById('simTotalPnlDisplay');
-            pnlEl.innerText = `(${totalPnlPct >= 0 ? '+' : ''}${totalPnlPct.toFixed(2)}%)`;
-            pnlEl.className = `text-xs font-mono font-semibold ${totalPnlPct >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
-            document.getElementById('simOpenPositionsCount').innerText = `${simState.positions.length} / ${simState.maxPositions}`;
+            if (pnlEl) {
+                pnlEl.innerText = `(${totalPnlPct >= 0 ? '+' : ''}${totalPnlPct.toFixed(2)}%)`;
+                pnlEl.className = `text-xs font-mono font-semibold ${totalPnlPct >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
+            }
+            const openPosEl = document.getElementById('simOpenPositionsCount');
+            if (openPosEl) {
+                openPosEl.innerText = `${simState.positions.length} / ${simState.maxPositions}`;
+            }
 
             const moonBags = simState.positions.filter(p => p.isMoonBag).length;
             const mbEl = document.getElementById('moonBagCountDisplay');
             if (mbEl) mbEl.innerText = `${moonBags} 檔`;
 
             const recent = simState.history.slice(0, 50);
+            const winRateEl = document.getElementById('simWinRateDisplay');
+            const ratioEl = document.getElementById('simTradesRatio');
             if (recent.length > 0) {
                 const wins = recent.filter(t => t.pnl > 0).length;
                 const losses = recent.length - wins;
                 const winRate = Math.round((wins / recent.length) * 100);
-                document.getElementById('simWinRateDisplay').innerText = `${winRate}%`;
-                document.getElementById('simTradesRatio').innerText = `(${wins}勝 ${losses}負)`;
+                if (winRateEl) winRateEl.innerText = `${winRate}%`;
+                if (ratioEl) ratioEl.innerText = `(${wins}勝 ${losses}負)`;
             } else {
-                document.getElementById('simWinRateDisplay').innerText = `--%`;
-                document.getElementById('simTradesRatio').innerText = `(0勝 0負)`;
+                if (winRateEl) winRateEl.innerText = `--%`;
+                if (ratioEl) ratioEl.innerText = `(0勝 0負)`;
             }
         }
 
@@ -2255,6 +2279,7 @@
             updateAutoTradeButtonUI();
             setMaxPositions(simState.maxPositions);
             setTradeSize(simState.tradeSize);
+            togglePositionView('table'); // 強制在載入時同步為表格模式與對應高亮按鈕
             updateSimHeaderStats();
             renderSimPositions(true);
             renderFomoTrackers();
