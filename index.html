@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bybit 全市場小幣異常即時監測雷達 & AI 模擬交易系統</title>
-    <!-- Tailwind CSS CDN -->
+    <!-- Tailwind CSS CDN --> 
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -98,6 +98,11 @@
                     <span id="autoTradeText">自動交易: 開</span>
                 </button>
 
+                <button onclick="openHistoryModal()" class="flex items-center gap-1 bg-amber-600/80 hover:bg-amber-600 text-white font-medium px-2.5 py-1 rounded-lg transition border border-amber-500/30 whitespace-nowrap text-[11px]">
+                    <span>📜</span>
+                    <span id="historyBtnText">歷史明細 (0)</span>
+                </button>
+
                 <button onclick="openCloudModal()" class="flex items-center gap-1 bg-sky-600/80 hover:bg-sky-600 text-white font-medium px-2.5 py-1 rounded-lg transition border border-sky-500/30 whitespace-nowrap text-[11px]">
                     <span>☁️</span>
                     <span>雲端同頻</span>
@@ -153,10 +158,11 @@
                     <span class="font-mono font-bold text-amber-400" id="simOpenPositionsCount">0 / 100</span>
                 </div>
                 <div class="h-3 w-[1px] bg-crypto-border hidden sm:block"></div>
-                <div class="flex items-center gap-1.5 text-slate-300">
+                <div class="flex items-center gap-1.5 text-slate-300 cursor-pointer hover:text-amber-400 transition" onclick="openHistoryModal()" title="點擊檢視歷史平倉明細">
                     <span class="text-slate-400">勝率 (近 50 筆):</span>
                     <span class="font-mono font-bold text-emerald-400" id="simWinRateDisplay">--%</span>
                     <span class="text-slate-500 font-mono text-[11px]" id="simTradesRatio">(0勝 0負)</span>
+                    <span class="text-[10px] text-amber-400 underline font-sans">明細 ↗</span>
                 </div>
                 <div class="h-3 w-[1px] bg-crypto-border hidden sm:block"></div>
                 <div class="flex items-center gap-1.5 text-purple-300 font-mono">
@@ -600,6 +606,82 @@
         </div>
     </div>
 
+    <!-- 歷史平倉成交明細與盈虧復盤彈窗 -->
+    <div id="historyModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5 hidden">
+        <div class="bg-crypto-card border border-crypto-border rounded-2xl max-w-4xl w-full p-4 sm:p-5 shadow-2xl space-y-3.5 max-h-[90vh] flex flex-col text-xs">
+            <div class="flex items-center justify-between border-b border-crypto-border pb-2.5">
+                <div class="flex items-center gap-2">
+                    <span class="text-xl">📜</span>
+                    <div>
+                        <h3 class="font-bold text-white text-sm sm:text-base">歷史平倉成交明細與盈虧復盤</h3>
+                        <p class="text-[11px] text-slate-400">檢視每筆訂單的進出場點位、損益金額與離場原因 (止盈/止損/保本/超時)</p>
+                    </div>
+                </div>
+                <button onclick="closeHistoryModal()" class="text-slate-400 hover:text-white text-lg p-1">✕</button>
+            </div>
+
+            <!-- 歷史累計數據統計 4 卡片 -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 font-mono">
+                <div class="p-2 bg-slate-900 border border-crypto-border rounded-xl">
+                    <span class="text-slate-400 block text-[10px] font-sans">累計實現淨盈虧</span>
+                    <span class="text-sm sm:text-base font-bold text-white" id="histTotalRealizedPnl">$0.00</span>
+                </div>
+                <div class="p-2 bg-slate-900 border border-crypto-border rounded-xl">
+                    <span class="text-slate-400 block text-[10px] font-sans">總平倉單數</span>
+                    <span class="text-sm sm:text-base font-bold text-amber-400" id="histTotalTradesCount">0 筆</span>
+                </div>
+                <div class="p-2 bg-slate-900 border border-crypto-border rounded-xl">
+                    <span class="text-slate-400 block text-[10px] font-sans">止盈獲利次數</span>
+                    <span class="text-sm sm:text-base font-bold text-emerald-400" id="histWinCountText">0 筆</span>
+                </div>
+                <div class="p-2 bg-slate-900 border border-crypto-border rounded-xl">
+                    <span class="text-slate-400 block text-[10px] font-sans">止損與微虧次數</span>
+                    <span class="text-sm sm:text-base font-bold text-rose-400" id="histLossCountText">0 筆</span>
+                </div>
+            </div>
+
+            <!-- 分類篩選按鈕列 -->
+            <div class="flex items-center justify-between flex-wrap gap-2 pt-0.5">
+                <div class="flex items-center bg-slate-950 border border-crypto-border rounded-lg p-0.5 text-[11px]">
+                    <button onclick="setHistoryFilter('all')" id="histFilter-all" class="px-2.5 py-1 rounded bg-amber-500 text-black font-bold transition">全部記錄</button>
+                    <button onclick="setHistoryFilter('win')" id="histFilter-win" class="px-2.5 py-1 rounded text-slate-400 hover:text-white transition">🟢 止盈盈利</button>
+                    <button onclick="setHistoryFilter('loss')" id="histFilter-loss" class="px-2.5 py-1 rounded text-slate-400 hover:text-white transition">🔴 止損虧損</button>
+                    <button onclick="setHistoryFilter('timeout')" id="histFilter-timeout" class="px-2.5 py-1 rounded text-slate-400 hover:text-white transition">⏱️ 超時換幣</button>
+                </div>
+                <span class="text-slate-500 text-[10px]">最近保留最多 80 筆平倉詳情</span>
+            </div>
+
+            <!-- 歷史平倉明細表格 -->
+            <div class="flex-1 overflow-y-auto max-h-[420px] rounded-xl border border-crypto-border bg-slate-950/60 pr-0.5">
+                <table class="w-full text-left text-xs border-collapse font-mono">
+                    <thead class="bg-slate-900 text-slate-400 sticky top-0 z-10 text-[11px] border-b border-crypto-border">
+                        <tr>
+                            <th class="py-2 px-2.5">#</th>
+                            <th class="py-2 px-2.5">幣種</th>
+                            <th class="py-2 px-2.5 text-right">開倉價 $\rightarrow$ 平倉價</th>
+                            <th class="py-2 px-2.5 text-right">盈虧 (%)</th>
+                            <th class="py-2 px-2.5 text-right">盈虧 ($)</th>
+                            <th class="py-2 px-2.5 text-center">持倉時長</th>
+                            <th class="py-2 px-2.5">平倉離場原因</th>
+                            <th class="py-2 px-2.5 text-right">時間</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historyTableBody" class="divide-y divide-crypto-border/40 text-[11px]">
+                        <tr>
+                            <td colspan="8" class="py-8 text-center text-slate-500 font-sans">尚無歷史平倉數據。</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="flex justify-end pt-1">
+                <button onclick="closeHistoryModal()" class="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-xs border border-crypto-border">
+                    關閉看板
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- 自訂確認視窗 (代替原生 confirm，符合無障礙與防中斷標準) -->
     <div id="customConfirmModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 hidden">
         <div class="bg-crypto-card border border-rose-500/40 rounded-2xl max-w-sm w-full p-4 shadow-2xl space-y-3 text-xs">
@@ -722,7 +804,7 @@
         const STORAGE_KEY_ADAPTIVE = 'bybit_radar_adaptive_v3';
 
         function getOrCreateDefaultRoom() {
-            let room = localStorage.getItem(STORAGE_KEY_ROOM);
+            let room = localStorage.getItem(STORAGE_KEY_ROOM) || localStorage.getItem('bybit_radar_room_id_v1');
             if (!room) {
                 const rand = Math.random().toString(36).substring(2, 8);
                 room = 'radar-usr-' + rand;
@@ -890,12 +972,22 @@
 
         function loadFromStorage() {
             try {
-                const simSaved = localStorage.getItem(STORAGE_KEY_SIM);
+                // 自動向下相容：優先讀取 v3，若無則自動繼承 v2 或 v1 的戰績數據
+                let simSaved = localStorage.getItem(STORAGE_KEY_SIM);
+                if (!simSaved) {
+                    simSaved = localStorage.getItem('bybit_radar_sim_state_v2') || localStorage.getItem('bybit_radar_sim_state_v1');
+                }
+
                 if (simSaved) {
                     const parsed = JSON.parse(simSaved);
                     simState = { ...simState, ...parsed };
                 }
-                const adaptiveSaved = localStorage.getItem(STORAGE_KEY_ADAPTIVE);
+
+                let adaptiveSaved = localStorage.getItem(STORAGE_KEY_ADAPTIVE);
+                if (!adaptiveSaved) {
+                    adaptiveSaved = localStorage.getItem('bybit_radar_adaptive_v2') || localStorage.getItem('bybit_radar_adaptive_v1');
+                }
+
                 if (adaptiveSaved) {
                     const parsed = JSON.parse(adaptiveSaved);
                     adaptiveParams = {
@@ -913,6 +1005,7 @@
         let filteredTickers = [];
         let currentFilter = 'all';
         let currentPosFilter = 'all';
+        let currentHistoryFilter = 'all';
         let simPositionViewMode = 'table';
         let countdown = 10;
         let timerInterval = null;
@@ -1469,6 +1562,118 @@
             document.getElementById('playbookModal').classList.add('hidden');
         }
 
+        function openHistoryModal() {
+            renderHistoryTable();
+            document.getElementById('historyModal').classList.remove('hidden');
+        }
+
+        function closeHistoryModal() {
+            document.getElementById('historyModal').classList.add('hidden');
+        }
+
+        function setHistoryFilter(filter) {
+            currentHistoryFilter = filter;
+            ['all', 'win', 'loss', 'timeout'].forEach(f => {
+                const btn = document.getElementById(`histFilter-${f}`);
+                if (btn) {
+                    btn.className = f === filter ? "px-2.5 py-1 rounded bg-amber-500 text-black font-bold transition" : "px-2.5 py-1 rounded text-slate-400 hover:text-white transition";
+                }
+            });
+            renderHistoryTable();
+        }
+
+        function renderHistoryTable() {
+            const tbody = document.getElementById('historyTableBody');
+            const totalPnlEl = document.getElementById('histTotalRealizedPnl');
+            const totalCountEl = document.getElementById('histTotalTradesCount');
+            const winCountEl = document.getElementById('histWinCountText');
+            const lossCountEl = document.getElementById('histLossCountText');
+            const historyBtnText = document.getElementById('historyBtnText');
+
+            const historyList = simState.history || [];
+            if (historyBtnText) historyBtnText.innerText = `歷史明細 (${historyList.length})`;
+
+            // 計算歷史累計數據
+            const totalRealizedPnl = historyList.reduce((acc, t) => acc + (t.pnl || 0), 0);
+            const wins = historyList.filter(t => (t.pnl || 0) > 0).length;
+            const losses = historyList.length - wins;
+
+            if (totalPnlEl) {
+                totalPnlEl.innerText = `${totalRealizedPnl >= 0 ? '+' : ''}$${totalRealizedPnl.toFixed(2)}`;
+                totalPnlEl.className = `text-sm sm:text-base font-bold ${totalRealizedPnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
+            }
+            if (totalCountEl) totalCountEl.innerText = `${historyList.length} 筆`;
+            if (winCountEl) winCountEl.innerText = `${wins} 筆 (${historyList.length ? Math.round(wins/historyList.length*100) : 0}%)`;
+            if (lossCountEl) lossCountEl.innerText = `${losses} 筆`;
+
+            if (!tbody) return;
+
+            if (historyList.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="8" class="py-8 text-center text-slate-500 font-sans">當前尚無任何平倉記錄。</td></tr>`;
+                return;
+            }
+
+            let displayList = [...historyList];
+            if (currentHistoryFilter === 'win') {
+                displayList = displayList.filter(t => (t.pnl || 0) > 0);
+            } else if (currentHistoryFilter === 'loss') {
+                displayList = displayList.filter(t => (t.pnl || 0) <= 0 && !t.reason.includes('超時'));
+            } else if (currentHistoryFilter === 'timeout') {
+                displayList = displayList.filter(t => t.reason && t.reason.includes('超時'));
+            }
+
+            if (displayList.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="8" class="py-6 text-center text-slate-500 font-sans">無符合該篩選條件的平倉記錄。</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = displayList.map((trade, idx) => {
+                const isWin = (trade.pnl || 0) > 0;
+                const pnlColor = isWin ? 'text-emerald-400' : 'text-rose-400';
+                
+                // 區分離場標籤顏色與樣式
+                let reasonBadgeClass = "bg-slate-800 text-slate-300 border-slate-700";
+                if (trade.reason.includes('止盈') || trade.reason.includes('TP') || trade.reason.includes('尾倉')) {
+                    reasonBadgeClass = "bg-emerald-950/60 text-emerald-300 border-emerald-500/40";
+                } else if (trade.reason.includes('保本')) {
+                    reasonBadgeClass = "bg-sky-950/60 text-sky-300 border-sky-500/40";
+                } else if (trade.reason.includes('止損') || trade.reason.includes('SL')) {
+                    reasonBadgeClass = "bg-rose-950/60 text-rose-300 border-rose-500/40";
+                } else if (trade.reason.includes('超時')) {
+                    reasonBadgeClass = "bg-amber-950/60 text-amber-300 border-amber-500/40";
+                }
+
+                return `
+                    <tr class="hover:bg-slate-900/60 transition">
+                        <td class="py-2 px-2.5 text-slate-500 text-[10px]">${idx + 1}</td>
+                        <td class="py-2 px-2.5">
+                            <span class="font-bold text-white">${trade.symbol}</span>
+                        </td>
+                        <td class="py-2 px-2.5 text-right text-slate-300">
+                            $${formatPrice(trade.entryPrice)} $\rightarrow$ $${formatPrice(trade.exitPrice)}
+                        </td>
+                        <td class="py-2 px-2.5 text-right font-bold ${pnlColor}">
+                            ${isWin ? '+' : ''}${(trade.pnlPct || 0).toFixed(2)}%
+                        </td>
+                        <td class="py-2 px-2.5 text-right font-mono font-bold ${pnlColor}">
+                            ${isWin ? '+' : ''}$${(trade.pnl || 0).toFixed(2)}
+                        </td>
+                        <td class="py-2 px-2.5 text-center text-slate-400">
+                            ${trade.durationMin || 0}m
+                        </td>
+                        <td class="py-2 px-2.5">
+                            <span class="px-2 py-0.5 rounded border text-[10px] font-sans inline-block ${reasonBadgeClass}">
+                                ${trade.reason}
+                            </span>
+                        </td>
+                        <td class="py-2 px-2.5 text-right text-slate-500 text-[10px]">
+                            ${trade.closedAt || '--'}
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
         function setPosFilter(filter) {
             currentPosFilter = filter;
             ['all', 'win', 'loss', 'moon'].forEach(f => {
@@ -1621,6 +1826,11 @@
             const winRateEl = document.getElementById('simWinRateDisplay');
             const ratioEl = document.getElementById('simTradesRatio');
             const moonCountEl = document.getElementById('simMoonBagCount');
+            const historyBtnText = document.getElementById('historyBtnText');
+
+            if (historyBtnText && simState.history) {
+                historyBtnText.innerText = `歷史明細 (${simState.history.length})`;
+            }
 
             if (balEl) balEl.innerText = `$${simState.balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
             const totalPnlPct = ((simState.balance - simState.initialBalance) / simState.initialBalance) * 100;
