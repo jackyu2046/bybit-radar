@@ -1546,20 +1546,20 @@
 
             if (simPositionViewMode === 'table') {
                 container.innerHTML = `
-                    <div class="overflow-x-auto max-h-[380px] overflow-y-auto">
-                        <table class="w-full text-left text-xs border-collapse font-mono">
-                            <thead class="bg-slate-950 text-slate-400 sticky top-0 z-10 text-[11px] border-b border-crypto-border">
+                    <div class="overflow-x-auto max-h-[380px] overflow-y-auto -mx-2 sm:mx-0">
+                        <table class="w-full text-left text-xs border-collapse font-mono min-w-[700px] sm:min-w-full">
+                            <thead class="bg-slate-950 text-slate-400 sticky top-0 z-10 text-[10px] sm:text-[11px] border-b border-crypto-border">
                                 <tr>
-                                    <th class="py-2 px-3">#</th>
-                                    <th class="py-2 px-3">幣種</th>
-                                    <th class="py-2 px-3 text-right">開倉價</th>
-                                    <th class="py-2 px-3 text-right">現價</th>
-                                    <th class="py-2 px-3 text-right">浮動盈虧 (%)</th>
-                                    <th class="py-2 px-3 text-right">盈虧 ($)</th>
-                                    <th class="py-2 px-3 text-center">防守止損 (SL)</th>
-                                    <th class="py-2 px-3 text-center">目標 (TP1/TP2)</th>
-                                    <th class="py-2 px-3 text-center">狀態</th>
-                                    <th class="py-2 px-3 text-right">操作</th>
+                                    <th class="py-2 px-2 sm:px-3">#</th>
+                                    <th class="py-2 px-2 sm:px-3">幣種</th>
+                                    <th class="py-2 px-2 sm:px-3 text-right">開倉價</th>
+                                    <th class="py-2 px-2 sm:px-3 text-right">現價</th>
+                                    <th class="py-2 px-2 sm:px-3 text-right">浮動盈虧 (%)</th>
+                                    <th class="py-2 px-2 sm:px-3 text-right">盈虧 ($)</th>
+                                    <th class="py-2 px-2 sm:px-3 text-center">防守止損 (SL)</th>
+                                    <th class="py-2 px-2 sm:px-3 text-center">目標 (TP1/TP2)</th>
+                                    <th class="py-2 px-2 sm:px-3 text-center">狀態</th>
+                                    <th class="py-2 px-2 sm:px-3 text-right">操作</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-crypto-border/40">
@@ -1576,21 +1576,21 @@
 
                                     return `
                                         <tr class="hover:bg-slate-900/60 transition" id="pos-row-${pos.id}">
-                                            <td class="py-1.5 px-3 text-slate-500 text-[10px]">${idx + 1}</td>
-                                            <td class="py-1.5 px-3">
-                                                <div class="flex items-center gap-1.5">
-                                                    <span class="font-bold text-white">${pos.symbol}</span>
+                                            <td class="py-1.5 px-2 sm:px-3 text-slate-500 text-[10px]">${idx + 1}</td>
+                                            <td class="py-1.5 px-2 sm:px-3">
+                                                <div class="flex items-center gap-1">
+                                                    <span class="font-bold text-white text-xs">${pos.symbol}</span>
                                                     <span class="text-[9px] px-1 py-0.2 rounded bg-amber-500/20 text-amber-300 font-mono">${holdMin}m</span>
                                                 </div>
                                             </td>
-                                            <td class="py-1.5 px-3 text-right text-slate-300">$${formatPrice(pos.entryPrice)}</td>
-                                            <td class="py-1.5 px-3 text-right font-semibold text-white" id="pos-price-${pos.id}">$${formatPrice(pos.currentPrice)}</td>
-                                            <td class="py-1.5 px-3 text-right font-bold ${pnlColor}" id="pos-pnlpct-${pos.id}">${isWin ? '+' : ''}${pnlPct.toFixed(2)}%</td>
-                                            <td class="py-1.5 px-3 text-right font-mono ${pnlColor}" id="pos-pnlusdt-${pos.id}">${isWin ? '+' : ''}$${pnlUsdt.toFixed(2)}</td>
-                                            <td class="py-1.5 px-3 text-center text-rose-400 text-[11px]">$${formatPrice(pos.stopLoss)}</td>
-                                            <td class="py-1.5 px-3 text-center text-emerald-400 text-[10px]">$${formatPrice(pos.tp1)} / $${formatPrice(pos.tp2)}</td>
-                                            <td class="py-1.5 px-3 text-center text-[10px]">${statusBadge}</td>
-                                            <td class="py-1.5 px-3 text-right">
+                                            <td class="py-1.5 px-2 sm:px-3 text-right text-slate-300">$${formatPrice(pos.entryPrice)}</td>
+                                            <td class="py-1.5 px-2 sm:px-3 text-right font-semibold text-white" id="pos-price-${pos.id}">$${formatPrice(pos.currentPrice)}</td>
+                                            <td class="py-1.5 px-2 sm:px-3 text-right font-bold ${pnlColor}" id="pos-pnlpct-${pos.id}">${isWin ? '+' : ''}${pnlPct.toFixed(2)}%</td>
+                                            <td class="py-1.5 px-2 sm:px-3 text-right font-mono ${pnlColor}" id="pos-pnlusdt-${pos.id}">${isWin ? '+' : ''}$${pnlUsdt.toFixed(2)}</td>
+                                            <td class="py-1.5 px-2 sm:px-3 text-center text-rose-400 text-[10px] sm:text-[11px]">$${formatPrice(pos.stopLoss)}</td>
+                                            <td class="py-1.5 px-2 sm:px-3 text-center text-emerald-400 text-[9px] sm:text-[10px]">$${formatPrice(pos.tp1)} / $${formatPrice(pos.tp2)}</td>
+                                            <td class="py-1.5 px-2 sm:px-3 text-center text-[10px]">${statusBadge}</td>
+                                            <td class="py-1.5 px-2 sm:px-3 text-right">
                                                 <button onclick="closePositionManually('${pos.id}')" class="px-2 py-0.5 rounded bg-slate-800 hover:bg-rose-900/60 text-rose-300 text-[10px] font-semibold border border-crypto-border">
                                                     平倉
                                                 </button>
@@ -1603,8 +1603,9 @@
                     </div>
                 `;
             } else {
+                // 卡片視圖：手機端預設單欄/雙欄小卡，排版清晰不擁擠
                 container.innerHTML = `
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-2.5 max-h-[500px] overflow-y-auto pr-1">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-2.5 max-h-[500px] overflow-y-auto pr-0.5">
                         ${list.map(pos => {
                             const pnlPct = ((pos.currentPrice - pos.entryPrice) / pos.entryPrice) * 100;
                             const pnlUsdt = ((pos.currentPrice - pos.entryPrice) / pos.entryPrice) * (pos.qty * pos.entryPrice);
@@ -1616,11 +1617,11 @@
                                 <div class="bg-slate-900 border ${pos.isMoonBag ? 'border-purple-500/50' : (isWin ? 'border-emerald-500/40' : 'border-rose-500/40')} rounded-xl p-2.5 flex flex-col justify-between space-y-2">
                                     <div class="flex items-start justify-between">
                                         <div>
-                                            <div class="flex items-center gap-1">
+                                            <div class="flex items-center gap-1.5">
                                                 <span class="font-bold text-white font-mono text-xs">${pos.symbol}</span>
                                                 <span class="text-[9px] px-1 py-0.2 rounded bg-amber-500/20 text-amber-300 font-mono">做多</span>
                                             </div>
-                                            <span class="text-[9px] text-slate-400 block mt-0.5">持倉: ${holdMin}m</span>
+                                            <span class="text-[9px] text-slate-400 block mt-0.5">已持倉: ${holdMin}m</span>
                                         </div>
                                         <div class="text-right">
                                             <div class="font-bold font-mono text-xs ${pnlColor}">
@@ -1632,26 +1633,26 @@
                                         </div>
                                     </div>
 
-                                    <div class="bg-slate-950/60 p-1.5 rounded border border-crypto-border/50 text-[10px] font-mono space-y-0.5">
+                                    <div class="bg-slate-950/60 p-2 rounded-lg border border-crypto-border/50 text-[10px] font-mono space-y-1">
                                         <div class="flex justify-between text-slate-400">
                                             <span>開倉/現價:</span>
                                             <span class="text-slate-200">$${formatPrice(pos.entryPrice)} / $${formatPrice(pos.currentPrice)}</span>
                                         </div>
                                         <div class="flex justify-between text-rose-400">
-                                            <span>SL:</span>
+                                            <span>防守止損:</span>
                                             <span>$${formatPrice(pos.stopLoss)}</span>
                                         </div>
                                         <div class="flex justify-between text-emerald-400">
-                                            <span>TP1/2:</span>
+                                            <span>目標 TP1/2:</span>
                                             <span>$${formatPrice(pos.tp1)} / $${formatPrice(pos.tp2)}</span>
                                         </div>
                                     </div>
 
                                     <div class="flex items-center justify-between pt-0.5">
-                                        <span class="text-[9px] ${pos.isMoonBag ? 'text-purple-300 font-bold' : 'text-slate-400'}">
-                                            ${pos.isMoonBag ? '🚀 尾倉狂飆' : (pos.tp1Reached ? '🛡️ 保本鎖定' : '⚡ 推進')}
+                                        <span class="text-[10px] ${pos.isMoonBag ? 'text-purple-300 font-bold' : (pos.tp1Reached ? 'text-cyan-300' : 'text-slate-400')}">
+                                            ${pos.isMoonBag ? '🚀 尾倉狂飆' : (pos.tp1Reached ? '🛡️ 保本鎖定' : '⚡ 推進中')}
                                         </span>
-                                        <button onclick="closePositionManually('${pos.id}')" class="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-rose-900/60 text-rose-300 text-[9px] font-semibold border border-crypto-border">
+                                        <button onclick="closePositionManually('${pos.id}')" class="px-2 py-0.5 rounded bg-slate-800 hover:bg-rose-900/60 text-rose-300 text-[10px] font-semibold border border-crypto-border">
                                             平倉
                                         </button>
                                     </div>
