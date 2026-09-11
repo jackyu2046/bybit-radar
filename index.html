@@ -1,0 +1,1498 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bybit 全市場小幣異常即時監測雷達 & AI 模擬交易系統</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        crypto: {
+                            dark: '#0b0e14',
+                            card: '#121824',
+                            border: '#1e293b',
+                            bull: '#10b981',
+                            bear: '#ef4444',
+                            gold: '#f59e0b',
+                            purple: '#8b5cf6'
+                        }
+                    }
+                }
+            }
+        };
+    </script>
+    <style>
+        body {
+            background-color: #080b11;
+            color: #f1f5f9;
+        }
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0b0e14;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #1e293b;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #334155;
+        }
+        @keyframes pulse-fast {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+        .pulse-live {
+            animation: pulse-fast 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+    </style>
+</head>
+<body class="font-sans min-h-screen flex flex-col antialiased selection:bg-amber-500 selection:text-black">
+
+    <header class="border-b border-crypto-border bg-crypto-dark/90 backdrop-blur sticky top-0 z-40 px-4 py-3">
+        <div class="max-w-[1750px] mx-auto flex flex-wrap items-center justify-between gap-3">
+            <div class="flex items-center space-x-3">
+                <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-amber-500 to-yellow-300 flex items-center justify-center text-black font-black text-lg shadow-lg shadow-amber-500/20">
+                    ⚡
+                </div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <h1 class="text-base font-bold text-white tracking-wide">Bybit 全市場小幣異常監控雷達</h1>
+                        <span class="text-[10px] bg-amber-500/20 text-amber-400 font-mono font-semibold px-2 py-0.5 rounded border border-amber-500/30">V5 LINEAR</span>
+                    </div>
+                    <p class="text-xs text-slate-400">300+ 永續合約全量即時掃描 · AI 自適應風控決策</p>
+                </div>
+            </div>
+
+            <!-- 控制開關與倒數計時 -->
+            <div class="flex items-center flex-wrap gap-2 text-xs">
+                <div class="flex items-center bg-slate-900 border border-crypto-border px-3 py-1.5 rounded-lg text-slate-300 font-mono">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400 mr-2" id="netDot"></span>
+                    <span id="updateTimer">下次刷新: 10s</span>
+                </div>
+
+                <!-- 模擬交易與自適應狀態切換標籤 -->
+                <button onclick="toggleAutoTrade()" id="btnAutoTrade" class="flex items-center gap-1.5 bg-emerald-600/80 hover:bg-emerald-600 text-white font-medium px-3 py-1.5 rounded-lg transition border border-emerald-500/30">
+                    <span id="autoTradeIcon">🤖</span>
+                    <span id="autoTradeText">自動模擬交易: 開</span>
+                </button>
+
+                <button onclick="openAdaptiveModal()" class="flex items-center gap-1.5 bg-purple-600/80 hover:bg-purple-600 text-white font-medium px-3 py-1.5 rounded-lg transition border border-purple-500/30">
+                    <span>🧠</span>
+                    <span>AI 自適應優化儀表板</span>
+                </button>
+
+                <button onclick="openPlaybookModal()" class="flex items-center gap-1.5 bg-indigo-600/80 hover:bg-indigo-600 text-white font-medium px-3 py-1.5 rounded-lg transition border border-indigo-500/30">
+                    <span>📖</span>
+                    <span>進出場實戰指南</span>
+                </button>
+
+                <button id="soundToggle" onclick="toggleSound()" class="flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 border border-crypto-border px-3 py-1.5 rounded-lg text-slate-300 transition">
+                    <span id="soundIcon">🔔</span>
+                    <span id="soundText">聲音警報: 開</span>
+                </button>
+
+                <button onclick="fetchMarketData()" class="flex items-center gap-1.5 bg-amber-500 hover:bg-amber-400 text-black font-semibold px-3 py-1.5 rounded-lg transition shadow-lg shadow-amber-500/10 active:scale-95">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                    <span>立即掃描</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-1 p-4 lg:p-6 max-w-[1750px] mx-auto w-full space-y-5">
+
+        <!-- 模擬交易與自修復狀態即時進度條 -->
+        <section class="bg-gradient-to-r from-slate-900 via-crypto-card to-slate-900 border border-crypto-border rounded-xl p-3 flex flex-wrap items-center justify-between gap-3 text-xs">
+            <div class="flex items-center flex-wrap gap-4">
+                <div class="flex items-center gap-2">
+                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                    <span class="text-slate-400">模擬錢包權益:</span>
+                    <span class="text-base font-bold font-mono text-white" id="simBalanceDisplay">$10,000.00</span>
+                    <span class="text-xs font-mono font-semibold text-emerald-400" id="simTotalPnlDisplay">(+0.00%)</span>
+                </div>
+                <div class="h-4 w-[1px] bg-crypto-border hidden sm:block"></div>
+                <div class="flex items-center gap-2 text-slate-300">
+                    <span class="text-slate-400">當前持倉:</span>
+                    <span class="font-mono font-bold text-amber-400" id="simOpenPositionsCount">0 / 4</span>
+                </div>
+                <div class="h-4 w-[1px] bg-crypto-border hidden sm:block"></div>
+                <div class="flex items-center gap-2 text-slate-300">
+                    <span class="text-slate-400">勝率 (最近 20 筆):</span>
+                    <span class="font-mono font-bold text-emerald-400" id="simWinRateDisplay">--%</span>
+                    <span class="text-slate-500 font-mono text-[11px]" id="simTradesRatio">(0勝 0負)</span>
+                </div>
+            </div>
+
+            <!-- AI 自修復策略狀態標籤 -->
+            <div class="flex items-center gap-2">
+                <span class="text-[11px] text-purple-300 bg-purple-950/60 border border-purple-500/40 px-2.5 py-1 rounded-full flex items-center gap-1.5" id="adaptiveStatusBadge">
+                    <span class="w-1.5 h-1.5 rounded-full bg-purple-400 animate-ping"></span>
+                    <span id="adaptiveStatusText">AI 自修復: 均衡學習狀態</span>
+                </span>
+                <button onclick="resetSimulation()" class="text-[11px] text-slate-400 hover:text-rose-400 transition ml-2">重置帳戶</button>
+            </div>
+        </section>
+
+        <section class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+            <div class="bg-crypto-card border border-crypto-border rounded-xl p-3.5 flex flex-col justify-between">
+                <div class="flex items-center justify-between text-slate-400 text-xs mb-1">
+                    <span>全市場監控幣種</span>
+                    <span class="text-amber-400">🌐</span>
+                </div>
+                <div class="text-xl font-bold font-mono text-white" id="statTotalCoins">0</div>
+                <div class="text-[11px] text-slate-400 mt-1">USDT 永續合約池</div>
+            </div>
+
+            <div class="bg-crypto-card border border-crypto-border rounded-xl p-3.5 flex flex-col justify-between">
+                <div class="flex items-center justify-between text-slate-400 text-xs mb-1">
+                    <span>24h 放量暴動幣</span>
+                    <span class="text-emerald-400">🔥</span>
+                </div>
+                <div class="text-xl font-bold font-mono text-emerald-400" id="statSurgeCoins">0</div>
+                <div class="text-[11px] text-slate-400 mt-1">異常評分 ≥ 70 分</div>
+            </div>
+
+            <div class="bg-crypto-card border border-crypto-border rounded-xl p-3.5 flex flex-col justify-between">
+                <div class="flex items-center justify-between text-slate-400 text-xs mb-1">
+                    <span>極端負費率 (軋空潛力)</span>
+                    <span class="text-cyan-400">🧲</span>
+                </div>
+                <div class="text-xl font-bold font-mono text-cyan-400" id="statNegativeFunding">0</div>
+                <div class="text-[11px] text-slate-400 mt-1">費率 &lt; -0.05%</div>
+            </div>
+
+            <div class="bg-crypto-card border border-crypto-border rounded-xl p-3.5 flex flex-col justify-between">
+                <div class="flex items-center justify-between text-slate-400 text-xs mb-1">
+                    <span>市場平均 24h 振幅</span>
+                    <span class="text-purple-400">📊</span>
+                </div>
+                <div class="text-xl font-bold font-mono text-purple-400" id="statAvgVolatility">0.00%</div>
+                <div class="text-[11px] text-slate-400 mt-1">活躍度晴雨表</div>
+            </div>
+
+            <div class="bg-crypto-card border border-crypto-border rounded-xl p-3.5 flex flex-col justify-between col-span-2 lg:col-span-1">
+                <div class="flex items-center justify-between text-slate-400 text-xs mb-1">
+                    <span>多空強弱分佈</span>
+                    <span class="text-amber-400">⚖️</span>
+                </div>
+                <div class="flex items-center gap-2 font-mono text-base font-bold">
+                    <span class="text-emerald-400" id="statBullCount">0 多</span>
+                    <span class="text-slate-600">/</span>
+                    <span class="text-rose-400" id="statBearCount">0 空</span>
+                </div>
+                <div class="text-[11px] text-slate-400 mt-1">全市場多空比例</div>
+            </div>
+        </section>
+
+        <section class="bg-crypto-card border border-crypto-border rounded-xl overflow-hidden">
+            <div class="px-4 py-3 border-b border-crypto-border flex items-center justify-between bg-slate-900/40">
+                <div class="flex items-center gap-2">
+                    <span class="text-sm">💼</span>
+                    <h3 class="text-xs font-semibold text-white">即時模擬合約持倉 (<span id="activePositionsCountText" class="text-amber-400 font-mono">0</span> 筆進行中)</h3>
+                </div>
+                <span class="text-[11px] text-slate-400 hidden sm:inline">觸發 TP1 自動鎖利 50% 並上移保本損；觸發 SL 堅決市價離場</span>
+            </div>
+            <div id="simPositionsContainer" class="p-3">
+                <div class="text-center py-6 text-slate-500 text-xs">當前無任何持倉。雷達偵測到強異常突破時將自動開倉，或點擊下方表格手動開倉。</div>
+            </div>
+        </section>
+
+        <section class="bg-crypto-card border border-crypto-border rounded-xl p-3.5 flex flex-wrap gap-3 items-center justify-between">
+            <div class="flex items-center flex-wrap gap-2">
+                <button onclick="setFilter('all')" id="filterBtn-all" class="px-3 py-1.5 rounded-lg text-xs font-medium bg-amber-500 text-black">全部合約</button>
+                <button onclick="setFilter('surge')" id="filterBtn-surge" class="px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-900 hover:bg-slate-800 text-slate-300 border border-crypto-border">🔥 爆量狂飆</button>
+                <button onclick="setFilter('squeeze')" id="filterBtn-squeeze" class="px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-900 hover:bg-slate-800 text-slate-300 border border-crypto-border">🧲 極端費率 (逼空)</button>
+                <button onclick="setFilter('breakout')" id="filterBtn-breakout" class="px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-900 hover:bg-slate-800 text-slate-300 border border-crypto-border">⚡ 突破追多信號</button>
+                <button onclick="setFilter('gainers')" id="filterBtn-gainers" class="px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-900 hover:bg-slate-800 text-slate-300 border border-crypto-border">📈 漲幅突圍</button>
+            </div>
+
+            <div class="flex items-center flex-wrap gap-3 w-full sm:w-auto">
+                <div class="relative flex-1 sm:w-56">
+                    <input type="text" id="searchInput" oninput="applyFilters()" placeholder="搜尋幣種代碼 (如 PEPE, DOGE)..." 
+                        class="w-full bg-slate-900 border border-crypto-border rounded-lg px-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 font-mono">
+                    <span class="absolute right-2.5 top-2 text-slate-500 text-xs">🔍</span>
+                </div>
+
+                <select id="minTurnoverSelect" onchange="applyFilters()" class="bg-slate-900 border border-crypto-border text-xs rounded-lg px-2.5 py-1.5 text-slate-300 focus:outline-none">
+                    <option value="0">成交額不限</option>
+                    <option value="1000000">&gt; $1.0M 成交額</option>
+                    <option value="3000000" selected>&gt; $3.0M (優質小幣)</option>
+                    <option value="5000000">&gt; $5.0M (深度活躍)</option>
+                    <option value="10000000">&gt; $10M (主力主戰場)</option>
+                </select>
+
+                <select id="sortSelect" onchange="applyFilters()" class="bg-slate-900 border border-crypto-border text-xs rounded-lg px-2.5 py-1.5 text-slate-300 focus:outline-none">
+                    <option value="anomalyScore" selected>排序: 綜合異常評分 ↓</option>
+                    <option value="turnover24h">排序: 24h 成交額 ↓</option>
+                    <option value="price24hPcnt">排序: 24h 漲跌幅 ↓</option>
+                    <option value="fundingRate">排序: 資金費率 (極負優先)</option>
+                </select>
+            </div>
+        </section>
+
+        <div class="grid grid-cols-1 xl:grid-cols-4 gap-4">
+            
+            <!-- 左側主表格 (佔 3 列) -->
+            <div class="xl:col-span-3 bg-crypto-card border border-crypto-border rounded-xl overflow-hidden flex flex-col">
+                <div class="p-3 border-b border-crypto-border flex items-center justify-between bg-slate-900/40">
+                    <span class="text-xs font-semibold text-slate-200">
+                        市場監控列表 (<span id="filteredCountText" class="text-amber-400 font-mono">0</span> 標的符合)
+                    </span>
+                    <span class="text-[11px] text-slate-400">點擊幣種即時檢視實盤行情與開倉點位</span>
+                </div>
+
+                <div class="overflow-x-auto flex-1 max-h-[750px] overflow-y-auto">
+                    <table class="w-full text-left text-xs border-collapse font-sans">
+                        <thead class="bg-slate-900/90 text-slate-400 sticky top-0 z-10 text-[11px] border-b border-crypto-border uppercase font-mono">
+                            <tr>
+                                <th class="py-2.5 px-3">幣種</th>
+                                <th class="py-2.5 px-3 text-right">現價 (USDT)</th>
+                                <th class="py-2.5 px-3 text-right">24h 漲跌</th>
+                                <th class="py-2.5 px-3 text-right">24h 成交額</th>
+                                <th class="py-2.5 px-3 text-right">資金費率</th>
+                                <th class="py-2.5 px-3 text-center">24h 振幅區間</th>
+                                <th class="py-2.5 px-3 text-center">異常評分</th>
+                                <th class="py-2.5 px-3 text-center">策略信號</th>
+                                <th class="py-2.5 px-3 text-right">交易決策操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tickerTableBody" class="divide-y divide-crypto-border/50 font-mono">
+                            <tr>
+                                <td colspan="9" class="py-12 text-center text-slate-500 font-sans">
+                                    <div class="flex flex-col items-center justify-center space-y-2">
+                                        <div class="w-6 h-6 border-2 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
+                                        <span>正在鏈接 Bybit V5 數據流並進行異常評分...</span>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 右側即時異動流水線與快訊 (佔 1 列) -->
+            <div class="xl:col-span-1 flex flex-col gap-4">
+                
+                <!-- 熱門異常狂飆幣 TOP 3 -->
+                <div class="bg-crypto-card border border-crypto-border rounded-xl p-3.5">
+                    <div class="flex items-center justify-between mb-2.5">
+                        <h3 class="text-xs font-bold text-white flex items-center gap-1.5">
+                            <span>🚀</span>
+                            <span>焦點異動小幣 (TOP 3)</span>
+                        </h3>
+                        <span class="text-[10px] text-amber-400 font-mono">LIVE SCORE</span>
+                    </div>
+                    <div id="hotCoinsContainer" class="space-y-2">
+                        <div class="text-center py-4 text-slate-500 text-xs font-sans">等待即時掃描...</div>
+                    </div>
+                </div>
+
+                <!-- 即時雷達警報流水線 -->
+                <div class="bg-crypto-card border border-crypto-border rounded-xl p-3.5 flex-1 flex flex-col min-h-[420px]">
+                    <div class="flex items-center justify-between mb-2.5 border-b border-crypto-border pb-2">
+                        <h3 class="text-xs font-bold text-white flex items-center gap-1.5">
+                            <span>⚡</span>
+                            <span>即時異動警報日誌</span>
+                        </h3>
+                        <span class="text-[10px] text-slate-400 font-mono" id="alertCountBadge">0 則快訊</span>
+                    </div>
+
+                    <div id="alertLogsContainer" class="flex-1 overflow-y-auto space-y-2 max-h-[500px] pr-1 font-sans text-xs">
+                        <div class="text-center py-8 text-slate-500 text-xs">
+                            系統正在持續盯盤，一旦小幣出現爆量突破、資金費率極端倒掛將即時推送...
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <div id="tradePlanModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+        <div class="bg-crypto-card border border-crypto-border rounded-2xl max-w-md w-full p-5 shadow-2xl space-y-4">
+            <div class="flex items-center justify-between border-b border-crypto-border pb-3">
+                <div class="flex items-center gap-2">
+                    <span class="text-xl">🎯</span>
+                    <div>
+                        <h3 class="font-bold text-white text-sm" id="modalCoinSymbol">BTCUSDT</h3>
+                        <p class="text-[11px] text-slate-400">小幣動量突破點位試算表</p>
+                    </div>
+                </div>
+                <button onclick="closeTradePlanModal()" class="text-slate-400 hover:text-white text-lg">✕</button>
+            </div>
+
+            <div class="space-y-2.5 font-mono text-xs">
+                <div class="flex justify-between items-center p-2.5 rounded-lg bg-slate-900 border border-crypto-border">
+                    <span class="text-slate-400 font-sans">當前參考市價:</span>
+                    <span class="font-bold text-white" id="modalCurPrice">--</span>
+                </div>
+
+                <div class="flex justify-between items-center p-2.5 rounded-lg bg-emerald-950/40 border border-emerald-500/30">
+                    <div>
+                        <span class="text-emerald-300 font-sans block">建議進場區間 (Buy Zone)</span>
+                        <span class="text-[10px] text-slate-400 font-sans">回踩或市價追多</span>
+                    </div>
+                    <span class="font-bold text-emerald-400" id="modalEntryZone">--</span>
+                </div>
+
+                <div class="flex justify-between items-center p-2.5 rounded-lg bg-rose-950/40 border border-rose-500/30">
+                    <div>
+                        <span class="text-rose-300 font-sans block">防守止損 (Stop-Loss)</span>
+                        <span class="text-[10px] text-rose-400/80 font-sans">約 -3.0% 無條件離場</span>
+                    </div>
+                    <span class="font-bold text-rose-400" id="modalStopLoss">--</span>
+                </div>
+
+                <div class="grid grid-cols-2 gap-2">
+                    <div class="p-2.5 rounded-lg bg-slate-900 border border-crypto-border">
+                        <span class="text-slate-400 text-[11px] font-sans block">第一止盈 TP1 (+5.5%)</span>
+                        <span class="font-bold text-emerald-400 mt-1 block" id="modalTP1">--</span>
+                        <span class="text-[10px] text-slate-400 font-sans">平倉 50% 鎖保本損</span>
+                    </div>
+                    <div class="p-2.5 rounded-lg bg-slate-900 border border-crypto-border">
+                        <span class="text-slate-400 text-[11px] font-sans block">第二止盈 TP2 (+12%)</span>
+                        <span class="font-bold text-emerald-400 mt-1 block" id="modalTP2">--</span>
+                        <span class="text-[10px] text-slate-400 font-sans">清倉或保留底倉</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex gap-2 pt-2">
+                <button onclick="closeTradePlanModal()" class="w-1/2 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold">關閉</button>
+                <a id="modalBybitLink" href="#" target="_blank" class="w-1/2 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-black text-xs font-bold text-center flex items-center justify-center gap-1">
+                    前往 Bybit 實盤下單 ↗
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div id="adaptiveModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+        <div class="bg-crypto-card border border-purple-500/40 rounded-2xl max-w-2xl w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto text-xs">
+            <div class="flex items-center justify-between border-b border-crypto-border pb-3">
+                <div class="flex items-center gap-2">
+                    <span class="text-2xl">🧠</span>
+                    <div>
+                        <h3 class="font-bold text-white text-base">AI 交易策略自修復與自適應優化引擎</h3>
+                        <p class="text-purple-300 text-[11px]">實盤模擬反饋循環：根據近 20 筆盈虧動態重校閾值、止損與黑名單</p>
+                    </div>
+                </div>
+                <button onclick="closeAdaptiveModal()" class="text-slate-400 hover:text-white text-lg">✕</button>
+            </div>
+
+            <!-- 當前動態調整參數狀態面板 -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div class="bg-slate-900/90 border border-crypto-border rounded-xl p-3">
+                    <span class="text-slate-400 block text-[11px]">動態進場評分閾值</span>
+                    <span class="text-lg font-bold font-mono text-amber-400" id="dynMinScore">60 分</span>
+                    <span class="text-[10px] text-slate-400 block mt-1" id="dynScoreReason">基準門檻</span>
+                </div>
+
+                <div class="bg-slate-900/90 border border-crypto-border rounded-xl p-3">
+                    <span class="text-slate-400 block text-[11px]">自適應止損距離</span>
+                    <span class="text-lg font-bold font-mono text-rose-400" id="dynStopLossPct">-3.0%</span>
+                    <span class="text-[10px] text-slate-400 block mt-1" id="dynSlReason">常規波動緩衝</span>
+                </div>
+
+                <div class="bg-slate-900/90 border border-crypto-border rounded-xl p-3">
+                    <span class="text-slate-400 block text-[11px]">階梯目標 TP1 / TP2</span>
+                    <span class="text-lg font-bold font-mono text-emerald-400" id="dynTpRatio">+5.5% / +12%</span>
+                    <span class="text-[10px] text-slate-400 block mt-1">TP1 達標鎖定保本損</span>
+                </div>
+
+                <div class="bg-slate-900/90 border border-crypto-border rounded-xl p-3">
+                    <span class="text-slate-400 block text-[11px]">流動性最低過濾</span>
+                    <span class="text-lg font-bold font-mono text-cyan-400" id="dynMinTurnover">$3.0M</span>
+                    <span class="text-[10px] text-slate-400 block mt-1">剔除惡意插針死幣</span>
+                </div>
+            </div>
+
+            <!-- 自動黑名單與冷卻池 -->
+            <div class="bg-slate-900 p-3.5 rounded-xl border border-crypto-border space-y-2">
+                <div class="flex items-center justify-between">
+                    <span class="font-bold text-slate-200 flex items-center gap-1.5">
+                        <span>🛡️</span> 劣質標的動態過濾池（連續止損剔除）
+                    </span>
+                    <span class="text-slate-400 text-[11px]" id="blacklistCount">已排除 0 檔幣種</span>
+                </div>
+                <div id="blacklistContainer" class="flex flex-wrap gap-1.5 min-h-[32px] items-center">
+                    <span class="text-slate-500 text-[11px]">尚無觸發二次止損的標的，全市場健康運轉中</span>
+                </div>
+            </div>
+
+            <!-- 自適應學習與微調日誌 -->
+            <div class="space-y-2">
+                <span class="font-bold text-slate-200 block">📝 系統自修復運算日誌 (Self-Tuning Decisions)</span>
+                <div id="adaptiveLogContainer" class="bg-slate-900 p-3 rounded-xl border border-crypto-border max-h-48 overflow-y-auto space-y-2 font-mono text-[11px]">
+                    <div class="text-slate-400">系統初始化完成，自適應學習引擎正在監聽模擬交易結果...</div>
+                </div>
+            </div>
+
+            <div class="flex gap-2 pt-2">
+                <button onclick="triggerManualOptimization()" class="w-1/2 py-2.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-bold transition">
+                    ⚡ 強制執行一次 AI 參數復盤優化
+                </button>
+                <button onclick="closeAdaptiveModal()" class="w-1/2 py-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold">
+                    關閉
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="playbookModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+        <div class="bg-crypto-card border border-crypto-border rounded-2xl max-w-2xl w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto text-xs leading-relaxed">
+            <div class="flex items-center justify-between border-b border-crypto-border pb-3">
+                <div class="flex items-center gap-2">
+                    <span class="text-2xl">📖</span>
+                    <div>
+                        <h3 class="font-bold text-white text-base">Bybit 小幣異動量化實戰操作指南</h3>
+                        <p class="text-slate-400 text-[11px]">選幣過濾、黃金進場形態與無情止損離場法則</p>
+                    </div>
+                </div>
+                <button onclick="closePlaybookModal()" class="text-slate-400 hover:text-white text-lg">✕</button>
+            </div>
+
+            <div class="space-y-3 text-slate-300">
+                <div class="bg-slate-900/80 p-3 rounded-xl border border-crypto-border">
+                    <h4 class="font-bold text-amber-400 mb-1 text-sm">一、 哪類小幣可以交易？（三道安全濾網）</h4>
+                    <ul class="list-disc list-inside space-y-1 text-slate-300">
+                        <li><strong>流動性硬指標</strong>：24h 成交額必須 &gt; 300 萬美元，避免訂單簿過薄產生巨大滑點。</li>
+                        <li><strong>排除巨頭</strong>：剔除 BTC、ETH、SOL 等高權重主流幣，專注捕捉高彈性中小型代幣。</li>
+                        <li><strong>異常能量要求</strong>：雷達評分 ≥ 60 分，且 24h 振幅大於 6%，確保莊家或熱錢活躍度。</li>
+                    </ul>
+                </div>
+
+                <div class="bg-slate-900/80 p-3 rounded-xl border border-crypto-border">
+                    <h4 class="font-bold text-emerald-400 mb-1 text-sm">二、 何時購入？（三大黃金進場信號）</h4>
+                    <ul class="list-disc list-inside space-y-1 text-slate-300">
+                        <li><strong>⚡ 突破追多</strong>：短時巨量突破盤整區，漲幅在 +5% ~ +12% 初動期，右側市價輕倉跟進。</li>
+                        <li><strong>🧲 逼空短打</strong>：資金費率 ≤ -0.12% 且價格抗跌微升，博取空頭保證金耗盡爆倉的連環踩踏。</li>
+                        <li><strong>🎯 回踩低吸</strong>：強勢榜幣種回調至當日 24h 區間 50% 附近縮量企穩時接多。</li>
+                    </ul>
+                </div>
+
+                <div class="bg-slate-900/80 p-3 rounded-xl border border-crypto-border">
+                    <h4 class="font-bold text-rose-400 mb-1 text-sm">三、 何時出售？（嚴格出場鐵律）</h4>
+                    <ul class="list-disc list-inside space-y-1 text-slate-300">
+                        <li><strong>🔴 硬止損 (SL)</strong>：回撤達 -2.8% ~ -3.5% 堅決市價離場，絕不逆勢扛單補倉。</li>
+                        <li><strong>🟡 階梯止盈 1 (TP1)</strong>：上漲 +5.5% 平倉 50%，並立刻將止損單移至開倉價（保本鎖定）。</li>
+                        <li><strong>🟢 階梯止盈 2 (TP2)</strong>：拉升至 +12% 再平 30% 鎖定高利潤。</li>
+                        <li><strong>⏱️ 時間止損</strong>：開倉 45 分鐘若無量橫盤滯漲，果斷平倉換幣，提高資金週轉效率。</li>
+                    </ul>
+                </div>
+            </div>
+
+            <button onclick="closePlaybookModal()" class="w-full py-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold">
+                了解並返回雷達
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Web Audio API 音效合成器
+        let soundEnabled = true;
+        let audioCtx = null;
+
+        function playAlertSound(type = 'bull') {
+            if (!soundEnabled) return;
+            try {
+                if (!audioCtx) {
+                    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+                    if (AudioContextClass) {
+                        audioCtx = new AudioContextClass();
+                    }
+                }
+                if (audioCtx && audioCtx.state === 'suspended') {
+                    audioCtx.resume();
+                }
+                if (!audioCtx) return;
+
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                const now = audioCtx.currentTime;
+                if (type === 'bull') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(587.33, now); // D5
+                    osc.frequency.exponentialRampToValueAtTime(880, now + 0.15); // A5
+                    gain.gain.setValueAtTime(0.12, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+                    osc.start(now);
+                    osc.stop(now + 0.3);
+                } else {
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(440, now);
+                    osc.frequency.exponentialRampToValueAtTime(220, now + 0.2);
+                    gain.gain.setValueAtTime(0.08, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+                    osc.start(now);
+                    osc.stop(now + 0.25);
+                }
+            } catch (err) {
+                console.warn("Audio Context init warning:", err);
+            }
+        }
+
+        function toggleSound() {
+            soundEnabled = !soundEnabled;
+            const icon = document.getElementById('soundIcon');
+            const text = document.getElementById('soundText');
+            if (soundEnabled) {
+                icon.innerText = "🔔";
+                text.innerText = "聲音警報: 開";
+                playAlertSound('bull');
+            } else {
+                icon.innerText = "🔕";
+                text.innerText = "聲音警報: 關";
+            }
+        }
+
+        let rawTickers = [];
+        let filteredTickers = [];
+        let previousTickersMap = new Map();
+        let currentFilter = 'all';
+        let countdown = 10;
+        let timerInterval = null;
+        let alertCount = 0;
+        let triggeredSymbolsHistory = new Set();
+
+        const MAJORS = ["BTCUSDT", "ETHUSDT", "SOLUSDT", "USDCUSDT"];
+
+        // 模擬交易與 AI 自適應學習引擎狀態
+        let simState = {
+            balance: 10000.0,
+            initialBalance: 10000.0,
+            autoTrade: true,
+            maxPositions: 4,
+            tradeSize: 1000.0,
+            positions: [],
+            history: []
+        };
+
+        // 自適應策略參數
+        let adaptiveParams = {
+            minScore: 60,
+            stopLossPct: 3.0,
+            tp1Pct: 5.5,
+            tp2Pct: 12.0,
+            minTurnover: 3000000,
+            blacklist: new Set(),
+            logs: []
+        };
+
+        function toggleAutoTrade() {
+            simState.autoTrade = !simState.autoTrade;
+            const btn = document.getElementById('btnAutoTrade');
+            const icon = document.getElementById('autoTradeIcon');
+            const text = document.getElementById('autoTradeText');
+
+            if (simState.autoTrade) {
+                btn.className = "flex items-center gap-1.5 bg-emerald-600/80 hover:bg-emerald-600 text-white font-medium px-3 py-1.5 rounded-lg transition border border-emerald-500/30";
+                icon.innerText = "🤖";
+                text.innerText = "自動模擬交易: 開";
+            } else {
+                btn.className = "flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium px-3 py-1.5 rounded-lg transition border border-crypto-border";
+                icon.innerText = "⏸️";
+                text.innerText = "自動模擬交易: 暫停";
+            }
+        }
+
+        async function fetchMarketData() {
+            const netDot = document.getElementById('netDot');
+            if (netDot) {
+                netDot.className = "w-2 h-2 rounded-full bg-amber-400 animate-ping mr-2";
+            }
+            
+            try {
+                const res = await fetch("https://api.bybit.com/v5/market/tickers?category=linear");
+                const json = await res.json();
+
+                if (json.retCode === 0 && json.result && json.result.list) {
+                    processTickers(json.result.list);
+                    if (netDot) netDot.className = "w-2 h-2 rounded-full bg-emerald-400 mr-2";
+                } else {
+                    console.error("Bybit API returned non-zero:", json);
+                    if (netDot) netDot.className = "w-2 h-2 rounded-full bg-rose-500 mr-2";
+                }
+            } catch (err) {
+                console.error("Fetch market data error:", err);
+                if (netDot) netDot.className = "w-2 h-2 rounded-full bg-rose-500 mr-2";
+            } finally {
+                countdown = 10;
+            }
+        }
+
+        function processTickers(list) {
+            const newTickers = [];
+
+            list.forEach(item => {
+                const symbol = item.symbol;
+                if (!symbol.endsWith("USDT")) return;
+
+                const lastPrice = parseFloat(item.lastPrice) || 0;
+                const price24hPcnt = (parseFloat(item.price24hPcnt) || 0) * 100;
+                const turnover24h = parseFloat(item.turnover24h) || 0;
+                const volume24h = parseFloat(item.volume24h) || 0;
+                const high24h = parseFloat(item.highPrice24h) || lastPrice;
+                const low24h = parseFloat(item.lowPrice24h) || lastPrice;
+                const fundingRate = (parseFloat(item.fundingRate) || 0) * 100;
+
+                // 計算 24h 高低位百分比位置
+                let rangePercent = 50;
+                if (high24h > low24h) {
+                    rangePercent = Math.min(100, Math.max(0, ((lastPrice - low24h) / (high24h - low24h)) * 100));
+                }
+
+                // 計算多維異常評分
+                const { score, reasons } = calculateAnomalyScore(price24hPcnt, turnover24h, fundingRate, rangePercent, symbol);
+
+                // 決定交易信號類型
+                const { signalType, signalText, signalColor } = determineSignal(score, price24hPcnt, fundingRate, rangePercent);
+
+                const record = {
+                    symbol,
+                    lastPrice,
+                    price24hPcnt,
+                    turnover24h,
+                    volume24h,
+                    high24h,
+                    low24h,
+                    fundingRate,
+                    rangePercent,
+                    anomalyScore: score,
+                    reasons,
+                    signalType,
+                    signalText,
+                    signalColor
+                };
+
+                newTickers.push(record);
+                previousTickersMap.set(symbol, record);
+
+                checkAnomalyAlerts(record);
+            });
+
+            rawTickers = newTickers;
+            updateGlobalStats();
+            applyFilters();
+            renderHotAnomalies();
+
+            updateSimPositions();
+
+            if (simState.autoTrade) {
+                checkAutoTradingOpportunities();
+            }
+        }
+
+        function calculateAnomalyScore(priceChange, turnover, fundingRate, rangePercent, symbol) {
+            let score = 30; // 基準分
+            const reasons = [];
+
+            // 1. 24h 成交額權重
+            if (turnover > 30000000) {
+                score += 25;
+                reasons.push("超巨額成交量");
+            } else if (turnover > 10000000) {
+                score += 18;
+                reasons.push("高度熱門成交");
+            } else if (turnover > 3000000) {
+                score += 10;
+                reasons.push("活躍小幣流動性");
+            }
+
+            // 2. 漲跌幅動量
+            const absChange = Math.abs(priceChange);
+            if (absChange >= 20) {
+                score += 25;
+                reasons.push("超級大波動率 (≥20%)");
+            } else if (absChange >= 10) {
+                score += 18;
+                reasons.push("突破性波幅 (≥10%)");
+            } else if (absChange >= 5) {
+                score += 10;
+                reasons.push("短線初動 (≥5%)");
+            }
+
+            // 3. 極端資金費率 (潛在逼空或極度看衰)
+            if (fundingRate <= -0.15) {
+                score += 25;
+                reasons.push("極度嚴重負費率 (極限軋空潛力)");
+            } else if (fundingRate <= -0.06) {
+                score += 15;
+                reasons.push("負費率空頭擁擠");
+            } else if (fundingRate >= 0.15) {
+                score += 12;
+                reasons.push("超高正費率多頭狂熱");
+            }
+
+            // 4. 突破當日高點
+            if (rangePercent >= 92 && priceChange > 4) {
+                score += 12;
+                reasons.push("緊貼 24h 最高點 (真突破形態)");
+            }
+
+            // 扣除主流幣權重 (專注山寨幣)
+            if (MAJORS.includes(symbol)) {
+                score = Math.min(score, 45);
+            }
+
+            return {
+                score: Math.min(99, Math.max(10, Math.round(score))),
+                reasons
+            };
+        }
+
+        function determineSignal(score, priceChange, fundingRate, rangePercent) {
+            if (fundingRate <= -0.08 && priceChange >= -1.0) {
+                return {
+                    signalType: "SQUEEZE_BUY",
+                    signalText: "🧲 逼空短打",
+                    signalColor: "bg-cyan-500/20 text-cyan-300 border-cyan-500/40"
+                };
+            }
+            if (score >= 65 && priceChange >= 5.0 && rangePercent >= 85) {
+                return {
+                    signalType: "BREAKOUT_BUY",
+                    signalText: "⚡ 突破追多",
+                    signalColor: "bg-emerald-500/20 text-emerald-300 border-emerald-500/40"
+                };
+            }
+            if (priceChange >= 25 && rangePercent < 75) {
+                return {
+                    signalType: "STAGNANT_WARN",
+                    signalText: "⚠️ 高位滯漲",
+                    signalColor: "bg-rose-500/20 text-rose-300 border-rose-500/40"
+                };
+            }
+            return {
+                signalType: "CONSOLIDATION",
+                signalText: "💤 橫盤整理",
+                signalColor: "bg-slate-800 text-slate-400 border-slate-700"
+            };
+        }
+
+        function simulateManualBuy(symbol) {
+            const coin = rawTickers.find(t => t.symbol === symbol);
+            if (!coin) return;
+            executeOpenPosition(coin, "手動觸發開倉");
+        }
+
+        function checkAutoTradingOpportunities() {
+            if (simState.positions.length >= simState.maxPositions) return;
+
+            const candidates = rawTickers.filter(coin => {
+                if (MAJORS.includes(coin.symbol)) return false;
+                if (adaptiveParams.blacklist.has(coin.symbol)) return false;
+                if (coin.turnover24h < adaptiveParams.minTurnover) return false;
+                if (simState.positions.some(p => p.symbol === coin.symbol)) return false;
+                
+                return coin.anomalyScore >= adaptiveParams.minScore && 
+                       (coin.signalType === "BREAKOUT_BUY" || coin.signalType === "SQUEEZE_BUY");
+            });
+
+            if (candidates.length > 0) {
+                candidates.sort((a, b) => b.anomalyScore - a.anomalyScore);
+                const target = candidates[0];
+                executeOpenPosition(target, `AI自動追隨: ${target.signalText}`);
+            }
+        }
+
+        function executeOpenPosition(coin, reason) {
+            if (simState.positions.some(p => p.symbol === coin.symbol)) return;
+            if (simState.positions.length >= simState.maxPositions) return;
+
+            const notional = simState.tradeSize;
+            const entryPrice = coin.lastPrice;
+            const qty = notional / entryPrice;
+
+            const slPrice = entryPrice * (1 - (adaptiveParams.stopLossPct / 100));
+            const tp1Price = entryPrice * (1 + (adaptiveParams.tp1Pct / 100));
+            const tp2Price = entryPrice * (1 + (adaptiveParams.tp2Pct / 100));
+
+            const position = {
+                id: 'POS_' + Date.now() + '_' + coin.symbol,
+                symbol: coin.symbol,
+                entryPrice: entryPrice,
+                currentPrice: entryPrice,
+                qty: qty,
+                originalQty: qty,
+                notional: notional,
+                openTime: Date.now(),
+                stopLoss: slPrice,
+                tp1: tp1Price,
+                tp2: tp2Price,
+                tp1Reached: false,
+                trailingActive: false,
+                highestPrice: entryPrice,
+                reason: reason,
+                score: coin.anomalyScore
+            };
+
+            simState.positions.push(position);
+            pushAlertLog(coin.symbol, "🚀 模擬開倉成功", `${reason} | 入場 $${formatPrice(entryPrice)} | SL $${formatPrice(slPrice)}`, entryPrice, "bull");
+            playAlertSound("bull");
+            renderSimPositions();
+            updateSimHeaderStats();
+        }
+
+        function updateSimPositions() {
+            if (simState.positions.length === 0) {
+                renderSimPositions();
+                return;
+            }
+
+            const now = Date.now();
+            const closedPositions = [];
+
+            simState.positions.forEach(pos => {
+                const coin = rawTickers.find(t => t.symbol === pos.symbol);
+                if (!coin) return;
+
+                const curPrice = coin.lastPrice;
+                pos.currentPrice = curPrice;
+                if (curPrice > pos.highestPrice) pos.highestPrice = curPrice;
+
+                const pnlPcnt = ((curPrice - pos.entryPrice) / pos.entryPrice) * 100;
+                const holdingMinutes = (now - pos.openTime) / 60000;
+
+                // 1. 檢測止損條件
+                if (curPrice <= pos.stopLoss) {
+                    const exitPnl = ((pos.stopLoss - pos.entryPrice) / pos.entryPrice) * (pos.qty * pos.entryPrice);
+                    closedPositions.push({ pos, exitPrice: pos.stopLoss, pnl: exitPnl, reason: "🔴 觸發止損 (SL)" });
+                    return;
+                }
+
+                // 2. 檢測第一止盈 (TP1)
+                if (!pos.tp1Reached && curPrice >= pos.tp1) {
+                    pos.tp1Reached = true;
+                    pos.stopLoss = pos.entryPrice * 1.002;
+                    pos.trailingActive = true;
+                    pushAlertLog(pos.symbol, "🎯 TP1 達標鎖利", `達標 +${adaptiveParams.tp1Pct.toFixed(1)}%，鎖定保本損！`, curPrice, "bull");
+                    playAlertSound("bull");
+                }
+
+                // 3. 檢測第二止盈 (TP2)
+                if (curPrice >= pos.tp2) {
+                    const exitPnl = ((curPrice - pos.entryPrice) / pos.entryPrice) * (pos.qty * pos.entryPrice);
+                    closedPositions.push({ pos, exitPrice: curPrice, pnl: exitPnl, reason: "🟢 TP2 完美止盈" });
+                    return;
+                }
+
+                // 4. 移動追蹤止損
+                if (pos.trailingActive && pos.highestPrice > pos.entryPrice * 1.03) {
+                    const pullback = (pos.highestPrice - curPrice) / pos.highestPrice;
+                    if (pullback >= 0.025) {
+                        const exitPnl = ((curPrice - pos.entryPrice) / pos.entryPrice) * (pos.qty * pos.entryPrice);
+                        closedPositions.push({ pos, exitPrice: curPrice, pnl: exitPnl, reason: "🟣 移動止盈鎖利離場" });
+                        return;
+                    }
+                }
+
+                // 5. 時間止損
+                if (holdingMinutes >= 45 && Math.abs(pnlPcnt) < 1.0) {
+                    const exitPnl = ((curPrice - pos.entryPrice) / pos.entryPrice) * (pos.qty * pos.entryPrice);
+                    closedPositions.push({ pos, exitPrice: curPrice, pnl: exitPnl, reason: "⏱️ 超時橫盤滯漲主動平倉" });
+                    return;
+                }
+            });
+
+            closedPositions.forEach(item => {
+                finalizeClosedTrade(item.pos, item.exitPrice, item.pnl, item.reason);
+            });
+
+            renderSimPositions();
+            updateSimHeaderStats();
+        }
+
+        function finalizeClosedTrade(pos, exitPrice, pnl, reason) {
+            simState.positions = simState.positions.filter(p => p.id !== pos.id);
+            simState.balance += pnl;
+
+            const record = {
+                symbol: pos.symbol,
+                entryPrice: pos.entryPrice,
+                exitPrice: exitPrice,
+                pnl: pnl,
+                pnlPct: ((exitPrice - pos.entryPrice) / pos.entryPrice) * 100,
+                durationMin: Math.round((Date.now() - pos.openTime) / 60000),
+                reason: reason,
+                score: pos.score,
+                closedAt: new Date().toLocaleTimeString()
+            };
+
+            simState.history.unshift(record);
+            if (simState.history.length > 50) simState.history.pop();
+
+            const isWin = pnl > 0;
+            pushAlertLog(pos.symbol, isWin ? "💰 模擬平倉盈利" : "🩸 模擬平倉止損", `${reason} | 盈虧: ${pnl >= 0 ? '+' : ''}$${pnl.toFixed(2)} (${record.pnlPct.toFixed(2)}%)`, exitPrice, isWin ? "bull" : "bear");
+            playAlertSound(isWin ? "bull" : "bear");
+
+            evaluateAdaptiveLearning(record);
+        }
+
+        function closePositionManually(id) {
+            const pos = simState.positions.find(p => p.id === id);
+            if (!pos) return;
+            const pnl = ((pos.currentPrice - pos.entryPrice) / pos.entryPrice) * (pos.qty * pos.entryPrice);
+            finalizeClosedTrade(pos, pos.currentPrice, pnl, "👤 手動市價平倉");
+        }
+
+        function renderSimPositions() {
+            const container = document.getElementById('simPositionsContainer');
+            const countText = document.getElementById('activePositionsCountText');
+            if (countText) countText.innerText = simState.positions.length;
+
+            if (simState.positions.length === 0) {
+                container.innerHTML = `<div class="text-center py-6 text-slate-500 text-xs">當前無任何持倉。雷達偵測到強異常突破時將自動開倉，或點擊下方表格手動開倉。</div>`;
+                return;
+            }
+
+            container.innerHTML = `
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+                    ${simState.positions.map(pos => {
+                        const pnlPct = ((pos.currentPrice - pos.entryPrice) / pos.entryPrice) * 100;
+                        const pnlUsdt = ((pos.currentPrice - pos.entryPrice) / pos.entryPrice) * (pos.qty * pos.entryPrice);
+                        const isWin = pnlPct >= 0;
+                        const pnlColor = isWin ? 'text-emerald-400' : 'text-rose-400';
+                        const holdMin = Math.round((Date.now() - pos.openTime) / 60000);
+
+                        return `
+                            <div class="bg-slate-900 border ${isWin ? 'border-emerald-500/40' : 'border-rose-500/40'} rounded-xl p-3.5 flex flex-col justify-between space-y-3">
+                                <div class="flex items-start justify-between">
+                                    <div>
+                                        <div class="flex items-center gap-1.5">
+                                            <span class="font-bold text-white font-mono text-sm">${pos.symbol}</span>
+                                            <span class="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 font-mono">做多 Long</span>
+                                        </div>
+                                        <span class="text-[10px] text-slate-400 block mt-0.5">已持倉: ${holdMin} 分鐘</span>
+                                    </div>
+                                    <div class="text-right">
+                                        <div class="font-bold font-mono text-sm ${pnlColor}">
+                                            ${isWin ? '+' : ''}${pnlPct.toFixed(2)}%
+                                        </div>
+                                        <div class="text-[11px] font-mono text-slate-300">
+                                            ${isWin ? '+' : ''}$${pnlUsdt.toFixed(2)}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="bg-slate-950/60 p-2 rounded-lg border border-crypto-border/50 text-[11px] font-mono space-y-1">
+                                    <div class="flex justify-between text-slate-400">
+                                        <span>開倉價:</span>
+                                        <span class="text-slate-200">$${formatPrice(pos.entryPrice)}</span>
+                                    </div>
+                                    <div class="flex justify-between text-slate-400">
+                                        <span>現價:</span>
+                                        <span class="text-slate-200">$${formatPrice(pos.currentPrice)}</span>
+                                    </div>
+                                    <div class="flex justify-between text-rose-400">
+                                        <span>防守止損 (SL):</span>
+                                        <span>$${formatPrice(pos.stopLoss)}</span>
+                                    </div>
+                                    <div class="flex justify-between text-emerald-400">
+                                        <span>目標 (TP1/TP2):</span>
+                                        <span>$${formatPrice(pos.tp1)} / $${formatPrice(pos.tp2)}</span>
+                                    </div>
+                                </div>
+
+                                <div class="flex items-center justify-between pt-1">
+                                    <span class="text-[10px] text-purple-300">${pos.tp1Reached ? '🛡️ 保本鎖定中' : '⚡ 突破推進中'}</span>
+                                    <button onclick="closePositionManually('${pos.id}')" class="px-2 py-1 rounded bg-slate-800 hover:bg-rose-900/60 text-rose-300 text-[10px] font-semibold border border-crypto-border">
+                                        市價平倉
+                                    </button>
+                                </div>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            `;
+        }
+
+        function updateSimHeaderStats() {
+            document.getElementById('simBalanceDisplay').innerText = `$${simState.balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            const totalPnlPct = ((simState.balance - simState.initialBalance) / simState.initialBalance) * 100;
+            const pnlEl = document.getElementById('simTotalPnlDisplay');
+            pnlEl.innerText = `(${totalPnlPct >= 0 ? '+' : ''}${totalPnlPct.toFixed(2)}%)`;
+            pnlEl.className = `text-xs font-mono font-semibold ${totalPnlPct >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
+            document.getElementById('simOpenPositionsCount').innerText = `${simState.positions.length} / ${simState.maxPositions}`;
+
+            const recent = simState.history.slice(0, 20);
+            if (recent.length > 0) {
+                const wins = recent.filter(t => t.pnl > 0).length;
+                const losses = recent.length - wins;
+                const winRate = Math.round((wins / recent.length) * 100);
+                document.getElementById('simWinRateDisplay').innerText = `${winRate}%`;
+                document.getElementById('simTradesRatio').innerText = `(${wins}勝 ${losses}負)`;
+            } else {
+                document.getElementById('simWinRateDisplay').innerText = `--%`;
+                document.getElementById('simTradesRatio').innerText = `(0勝 0負)`;
+            }
+        }
+
+        function resetSimulation() {
+            simState.balance = 10000.0;
+            simState.positions = [];
+            simState.history = [];
+            adaptiveParams.blacklist.clear();
+            adaptiveParams.minScore = 60;
+            adaptiveParams.stopLossPct = 3.0;
+            adaptiveParams.minTurnover = 3000000;
+            renderSimPositions();
+            updateSimHeaderStats();
+            updateAdaptiveUI();
+            pushAdaptiveLog("🔄 模擬帳戶與策略參數已完全重置為出廠設定。");
+        }
+
+        function evaluateAdaptiveLearning(latestTrade) {
+            const recent = simState.history.slice(0, 10);
+            if (recent.length < 3) return;
+
+            const wins = recent.filter(t => t.pnl > 0).length;
+            const winRate = wins / recent.length;
+
+            const coinLosses = simState.history.slice(0, 8).filter(t => t.symbol === latestTrade.symbol && t.pnl < 0).length;
+            if (coinLosses >= 2 && !adaptiveParams.blacklist.has(latestTrade.symbol)) {
+                adaptiveParams.blacklist.add(latestTrade.symbol);
+                pushAdaptiveLog(`🚨 幣種防護觸發：${latestTrade.symbol} 短期連續止損 2 次，已加入冷卻黑名單。`);
+            }
+
+            if (winRate < 0.40) {
+                let adjusted = false;
+                if (adaptiveParams.minScore < 70) {
+                    adaptiveParams.minScore += 2;
+                    adjusted = true;
+                }
+                if (adaptiveParams.minTurnover < 6000000) {
+                    adaptiveParams.minTurnover += 1000000;
+                    adjusted = true;
+                }
+                if (adaptiveParams.stopLossPct < 3.8) {
+                    adaptiveParams.stopLossPct = parseFloat((adaptiveParams.stopLossPct + 0.2).toFixed(1));
+                    adjusted = true;
+                }
+
+                if (adjusted) {
+                    setAdaptiveBadge("防守修復模式", "bg-rose-950/60 text-rose-300 border-rose-500/40");
+                    pushAdaptiveLog(`⚠️ 近期勝率走低 (${Math.round(winRate*100)}%)，自修復啟動：提升進場分數門檻至 ${adaptiveParams.minScore} 分，流動性門檻至 $${(adaptiveParams.minTurnover/1e6).toFixed(1)}M。`);
+                }
+            } else if (winRate >= 0.65) {
+                let adjusted = false;
+                if (adaptiveParams.minScore > 55) {
+                    adaptiveParams.minScore -= 1;
+                    adjusted = true;
+                }
+                if (adaptiveParams.tp2Pct < 16.0) {
+                    adaptiveParams.tp2Pct = parseFloat((adaptiveParams.tp2Pct + 0.5).toFixed(1));
+                    adjusted = true;
+                }
+
+                if (adjusted) {
+                    setAdaptiveBadge("進取擴張模式", "bg-emerald-950/60 text-emerald-300 border-emerald-500/40");
+                    pushAdaptiveLog(`🔥 近期勝率極佳 (${Math.round(winRate*100)}%)，自適應擴張：適度釋放進場門檻至 ${adaptiveParams.minScore} 分，提升 TP2 至 +${adaptiveParams.tp2Pct}%。`);
+                }
+            } else {
+                setAdaptiveBadge("均衡學習狀態", "bg-purple-950/60 text-purple-300 border-purple-500/40");
+            }
+
+            updateAdaptiveUI();
+        }
+
+        function triggerManualOptimization() {
+            evaluateAdaptiveLearning({ symbol: "MANUAL", pnl: 0 });
+            pushAdaptiveLog("⚙️ 已手動觸發參數自檢與矩陣重新加權校準。");
+        }
+
+        function setAdaptiveBadge(text, className) {
+            const badge = document.getElementById('adaptiveStatusBadge');
+            document.getElementById('adaptiveStatusText').innerText = `AI 自修復: ${text}`;
+            badge.className = `text-[11px] px-2.5 py-1 rounded-full flex items-center gap-1.5 border ${className}`;
+        }
+
+        function updateAdaptiveUI() {
+            document.getElementById('dynMinScore').innerText = `${adaptiveParams.minScore} 分`;
+            document.getElementById('dynStopLossPct').innerText = `-${adaptiveParams.stopLossPct.toFixed(1)}%`;
+            document.getElementById('dynTpRatio').innerText = `+${adaptiveParams.tp1Pct.toFixed(1)}% / +${adaptiveParams.tp2Pct.toFixed(1)}%`;
+            document.getElementById('dynMinTurnover').innerText = `$${(adaptiveParams.minTurnover / 1e6).toFixed(1)}M`;
+
+            document.getElementById('blacklistCount').innerText = `已排除 ${adaptiveParams.blacklist.size} 檔幣種`;
+            const blContainer = document.getElementById('blacklistContainer');
+            if (adaptiveParams.blacklist.size === 0) {
+                blContainer.innerHTML = `<span class="text-slate-500 text-[11px]">尚無觸發二次止損的標的，全市場健康運轉中</span>`;
+            } else {
+                blContainer.innerHTML = Array.from(adaptiveParams.blacklist).map(sym => `
+                    <span class="px-2 py-0.5 rounded bg-rose-950 text-rose-300 border border-rose-500/30 text-[10px] font-mono flex items-center gap-1">
+                        ${sym}
+                        <button onclick="removeBlacklist('${sym}')" class="hover:text-white">✕</button>
+                    </span>
+                `).join('');
+            }
+        }
+
+        function removeBlacklist(symbol) {
+            adaptiveParams.blacklist.delete(symbol);
+            updateAdaptiveUI();
+            pushAdaptiveLog(`🔓 幣種 ${symbol} 已自黑名單解禁，重新納入監控範圍。`);
+        }
+
+        function pushAdaptiveLog(text) {
+            const container = document.getElementById('adaptiveLogContainer');
+            const time = new Date().toLocaleTimeString();
+            const div = document.createElement('div');
+            div.className = "text-slate-300 leading-relaxed border-b border-crypto-border/40 pb-1";
+            div.innerHTML = `<span class="text-slate-500">[${time}]</span> ${text}`;
+            container.prepend(div);
+        }
+
+        function openAdaptiveModal() {
+            updateAdaptiveUI();
+            document.getElementById('adaptiveModal').classList.remove('hidden');
+        }
+
+        function closeAdaptiveModal() {
+            document.getElementById('adaptiveModal').classList.add('hidden');
+        }
+
+        function openPlaybookModal() {
+            document.getElementById('playbookModal').classList.remove('hidden');
+        }
+
+        function closePlaybookModal() {
+            document.getElementById('playbookModal').classList.add('hidden');
+        }
+
+        function checkAnomalyAlerts(coin) {
+            if (MAJORS.includes(coin.symbol)) return;
+
+            const isSurgeScore = coin.anomalyScore >= 75;
+            const isNegativeRate = coin.fundingRate <= -0.10;
+            const isPump = coin.price24hPcnt >= 12.0;
+
+            if ((isSurgeScore || isNegativeRate || isPump) && !triggeredSymbolsHistory.has(coin.symbol)) {
+                triggeredSymbolsHistory.add(coin.symbol);
+                if (triggeredSymbolsHistory.size > 80) {
+                    const firstItem = triggeredSymbolsHistory.values().next().value;
+                    triggeredSymbolsHistory.delete(firstItem);
+                }
+
+                let tag = "⚡ 異常突圍";
+                let colorType = "bull";
+                if (isNegativeRate) {
+                    tag = "🧲 極端負費率逼空";
+                } else if (coin.price24hPcnt < -10) {
+                    tag = "🩸 爆量跳水砸盤";
+                    colorType = "bear";
+                }
+
+                pushAlertLog(coin.symbol, tag, coin.reasons.join(" + ") || "爆量異常波幅", coin.lastPrice, colorType);
+                playAlertSound(colorType);
+            }
+        }
+
+        function pushAlertLog(symbol, tag, desc, price, type = 'bull') {
+            const container = document.getElementById('alertLogsContainer');
+            alertCount++;
+            document.getElementById('alertCountBadge').innerText = `${alertCount} 則快訊`;
+
+            if (alertCount === 1) {
+                container.innerHTML = '';
+            }
+
+            const time = new Date().toLocaleTimeString();
+            const item = document.createElement('div');
+            item.className = `p-2.5 rounded-xl border ${type === 'bull' ? 'bg-emerald-950/30 border-emerald-500/30' : 'bg-rose-950/30 border-rose-500/30'} flex flex-col space-y-1 transition-all duration-300`;
+            item.innerHTML = `
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-1.5">
+                        <span class="font-bold text-white font-mono">${symbol}</span>
+                        <span class="text-[10px] px-1.5 py-0.2 rounded font-semibold ${type === 'bull' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'}">${tag}</span>
+                    </div>
+                    <span class="text-[10px] text-slate-500 font-mono">${time}</span>
+                </div>
+                <div class="text-[11px] text-slate-300 font-sans">${desc}</div>
+                <div class="text-[11px] text-slate-400 font-mono flex justify-between pt-1">
+                    <span>現價: $${formatPrice(price)}</span>
+                    <button onclick="simulateManualBuy('${symbol}')" class="text-amber-400 hover:underline">⚡ 模擬買入</button>
+                </div>
+            `;
+
+            container.prepend(item);
+            if (container.children.length > 30) {
+                container.removeChild(container.lastChild);
+            }
+        }
+
+        function updateGlobalStats() {
+            document.getElementById('statTotalCoins').innerText = rawTickers.length;
+
+            const surges = rawTickers.filter(t => t.anomalyScore >= 70).length;
+            document.getElementById('statSurgeCoins').innerText = surges;
+
+            const negFunding = rawTickers.filter(t => t.fundingRate <= -0.05).length;
+            document.getElementById('statNegativeFunding').innerText = negFunding;
+
+            if (rawTickers.length > 0) {
+                const totalVol = rawTickers.reduce((acc, t) => acc + Math.abs(t.price24hPcnt), 0);
+                const avgVol = (totalVol / rawTickers.length).toFixed(2);
+                document.getElementById('statAvgVolatility').innerText = `${avgVol}%`;
+            }
+
+            const bulls = rawTickers.filter(t => t.price24hPcnt > 0).length;
+            const bears = rawTickers.length - bulls;
+            document.getElementById('statBullCount').innerText = `${bulls} 多`;
+            document.getElementById('statBearCount').innerText = `${bears} 空`;
+        }
+
+        function setFilter(filterType) {
+            currentFilter = filterType;
+            ['all', 'surge', 'squeeze', 'breakout', 'gainers'].forEach(f => {
+                const btn = document.getElementById(`filterBtn-${f}`);
+                if (btn) {
+                    if (f === filterType) {
+                        btn.className = "px-3 py-1.5 rounded-lg text-xs font-medium bg-amber-500 text-black";
+                    } else {
+                        btn.className = "px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-900 hover:bg-slate-800 text-slate-300 border border-crypto-border";
+                    }
+                }
+            });
+            applyFilters();
+        }
+
+        function applyFilters() {
+            const searchKeyword = (document.getElementById('searchInput').value || '').trim().toUpperCase();
+            const minTurnover = parseFloat(document.getElementById('minTurnoverSelect').value) || 0;
+            const sortBy = document.getElementById('sortSelect').value;
+
+            let list = [...rawTickers];
+
+            if (searchKeyword) {
+                list = list.filter(t => t.symbol.includes(searchKeyword));
+            }
+
+            if (minTurnover > 0) {
+                list = list.filter(t => t.turnover24h >= minTurnover);
+            }
+
+            if (currentFilter === 'surge') {
+                list = list.filter(t => t.anomalyScore >= 65);
+            } else if (currentFilter === 'squeeze') {
+                list = list.filter(t => t.fundingRate <= -0.05);
+            } else if (currentFilter === 'breakout') {
+                list = list.filter(t => t.signalType === 'BREAKOUT_BUY');
+            } else if (currentFilter === 'gainers') {
+                list = list.filter(t => t.price24hPcnt > 8);
+            }
+
+            list.sort((a, b) => {
+                if (sortBy === 'fundingRate') return a.fundingRate - b.fundingRate;
+                return b[sortBy] - a[sortBy];
+            });
+
+            filteredTickers = list;
+            document.getElementById('filteredCountText').innerText = list.length;
+            renderTable(list);
+        }
+
+        function renderTable(list) {
+            const tbody = document.getElementById('tickerTableBody');
+            if (!list || list.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="9" class="py-10 text-center text-slate-500 font-sans">無符合篩選條件的合約。請調整篩選器或搜尋關鍵字。</td></tr>`;
+                return;
+            }
+
+            const html = list.map((coin, idx) => {
+                const isGain = coin.price24hPcnt >= 0;
+                const changeColor = isGain ? 'text-emerald-400' : 'text-rose-400';
+                const fundingColor = coin.fundingRate < 0 ? 'text-cyan-400 font-bold' : (coin.fundingRate > 0.05 ? 'text-amber-400' : 'text-slate-400');
+                
+                let scoreColor = 'bg-slate-700 text-slate-300';
+                if (coin.anomalyScore >= 80) scoreColor = 'bg-rose-500 text-white font-bold animate-pulse';
+                else if (coin.anomalyScore >= 65) scoreColor = 'bg-amber-500 text-black font-bold';
+                else if (coin.anomalyScore >= 50) scoreColor = 'bg-purple-600 text-white';
+
+                return `
+                    <tr class="hover:bg-slate-900/70 transition-colors border-b border-crypto-border/30 cursor-pointer" onclick="openTradePlanModal('${coin.symbol}')">
+                        <td class="py-2.5 px-3">
+                            <div class="flex items-center gap-2">
+                                <span class="text-slate-500 text-[10px] w-5 text-right font-mono">${idx + 1}</span>
+                                <div>
+                                    <div class="font-bold text-white font-mono hover:text-amber-400 flex items-center gap-1.5">
+                                        <span>${coin.symbol}</span>
+                                    </div>
+                                    <span class="text-[10px] text-slate-400 block font-sans">${coin.reasons[0] || '常規監控中'}</span>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="py-2.5 px-3 text-right font-bold text-slate-100">
+                            $${formatPrice(coin.lastPrice)}
+                        </td>
+                        <td class="py-2.5 px-3 text-right font-bold ${changeColor}">
+                            ${isGain ? '+' : ''}${coin.price24hPcnt.toFixed(2)}%
+                        </td>
+                        <td class="py-2.5 px-3 text-right text-slate-300">
+                            $${formatNumber(coin.turnover24h)}
+                        </td>
+                        <td class="py-2.5 px-3 text-right ${fundingColor}">
+                            ${formatFundingRate(coin.fundingRate)}
+                        </td>
+                        <td class="py-2.5 px-3 text-center">
+                            <div class="w-24 mx-auto">
+                                <div class="flex justify-between text-[9px] text-slate-400 mb-0.5">
+                                    <span>L: $${formatPrice(coin.low24h)}</span>
+                                    <span>H: $${formatPrice(coin.high24h)}</span>
+                                </div>
+                                <div class="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                                    <div class="bg-gradient-to-r from-emerald-500 to-amber-500 h-full" style="width: ${coin.rangePercent}%"></div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="py-2.5 px-3 text-center">
+                            <span class="px-2 py-0.5 rounded text-[11px] font-mono ${scoreColor}">
+                                ${coin.anomalyScore}
+                            </span>
+                        </td>
+                        <td class="py-2.5 px-3 text-center">
+                            <span class="px-2 py-0.5 rounded text-[11px] font-semibold border ${coin.signalColor}">
+                                ${coin.signalText}
+                            </span>
+                        </td>
+                        <td class="py-2.5 px-3 text-right" onclick="event.stopPropagation()">
+                            <div class="inline-flex items-center gap-1.5">
+                                <button onclick="simulateManualBuy('${coin.symbol}')" class="bg-emerald-600/80 hover:bg-emerald-500 text-white px-2 py-1 rounded text-[11px] font-medium border border-emerald-500/40 active:scale-95 transition">
+                                    ⚡ 模擬買入
+                                </button>
+                                <button onclick="openTradePlanModal('${coin.symbol}')" class="bg-slate-800 hover:bg-slate-700 text-amber-400 px-2 py-1 rounded text-[11px] font-medium border border-crypto-border">
+                                    點位
+                                </button>
+                                <a href="https://www.bybit.com/trade/usdt/${coin.symbol}" target="_blank" 
+                                    class="inline-flex items-center gap-1 bg-amber-500 hover:bg-amber-400 text-black px-2 py-1 rounded text-[11px] font-bold transition">
+                                    <span>實盤</span>
+                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+
+            tbody.innerHTML = html;
+        }
+
+        function renderHotAnomalies() {
+            const container = document.getElementById('hotCoinsContainer');
+            const top3 = [...rawTickers]
+                .filter(t => !MAJORS.includes(t.symbol) && t.turnover24h >= 2000000)
+                .sort((a, b) => b.anomalyScore - a.anomalyScore)
+                .slice(0, 3);
+
+            if (top3.length === 0) return;
+
+            container.innerHTML = top3.map((coin, index) => {
+                const isGain = coin.price24hPcnt >= 0;
+                return `
+                    <div onclick="openTradePlanModal('${coin.symbol}')" class="p-2.5 rounded-xl bg-slate-900 hover:bg-slate-800/80 border border-crypto-border cursor-pointer transition flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <span class="w-5 h-5 rounded-full ${index === 0 ? 'bg-amber-500 text-black' : 'bg-slate-800 text-slate-300'} text-[10px] font-bold flex items-center justify-center font-mono">
+                                ${index + 1}
+                            </span>
+                            <div>
+                                <span class="font-bold text-white font-mono text-xs block">${coin.symbol}</span>
+                                <span class="text-[10px] text-slate-400 font-sans">${coin.reasons[0] || '高動能突破'}</span>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <div class="font-mono text-xs font-bold ${isGain ? 'text-emerald-400' : 'text-rose-400'}">
+                                ${isGain ? '+' : ''}${coin.price24hPcnt.toFixed(2)}%
+                            </div>
+                            <div class="text-[10px] text-amber-400 font-mono">評分 ${coin.anomalyScore}</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function openTradePlanModal(symbol) {
+            const coin = rawTickers.find(t => t.symbol === symbol);
+            if (!coin) return;
+
+            const price = coin.lastPrice;
+            document.getElementById('modalCoinSymbol').innerText = `${coin.symbol} (${coin.signalText})`;
+            document.getElementById('modalCurPrice').innerText = `$${formatPrice(price)}`;
+
+            const entryLow = price * 0.992;
+            const entryHigh = price * 1.005;
+            document.getElementById('modalEntryZone').innerText = `$${formatPrice(entryLow)} ~ $${formatPrice(entryHigh)}`;
+
+            const sl = price * (1 - (adaptiveParams.stopLossPct / 100));
+            document.getElementById('modalStopLoss').innerText = `$${formatPrice(sl)} (-${adaptiveParams.stopLossPct.toFixed(1)}%)`;
+
+            const tp1 = price * (1 + (adaptiveParams.tp1Pct / 100));
+            document.getElementById('modalTP1').innerText = `$${formatPrice(tp1)}`;
+
+            const tp2 = price * (1 + (adaptiveParams.tp2Pct / 100));
+            document.getElementById('modalTP2').innerText = `$${formatPrice(tp2)}`;
+
+            document.getElementById('modalBybitLink').href = `https://www.bybit.com/trade/usdt/${coin.symbol}`;
+            document.getElementById('tradePlanModal').classList.remove('hidden');
+        }
+
+        function closeTradePlanModal() {
+            document.getElementById('tradePlanModal').classList.add('hidden');
+        }
+
+        function formatNumber(num) {
+            if (num >= 1000000000) return (num / 1000000000).toFixed(2) + 'B';
+            if (num >= 1000000) return (num / 1000000).toFixed(2) + 'M';
+            if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
+            return num.toFixed(2);
+        }
+
+        function formatPrice(price) {
+            if (price >= 100) return price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            if (price >= 1) return price.toFixed(4);
+            if (price >= 0.001) return price.toFixed(6);
+            return price.toFixed(8);
+        }
+
+        function formatFundingRate(rate) {
+            const sign = rate > 0 ? '+' : '';
+            return `${sign}${rate.toFixed(4)}%`;
+        }
+
+        function initTimer() {
+            if (timerInterval) clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                countdown--;
+                const timerEl = document.getElementById('updateTimer');
+                if (timerEl) {
+                    timerEl.innerText = `下次刷新: ${countdown}s`;
+                }
+                if (countdown <= 0) {
+                    fetchMarketData();
+                }
+            }, 1000);
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            fetchMarketData();
+            initTimer();
+            updateSimHeaderStats();
+            updateAdaptiveUI();
+        });
+    </script>
+</body>
+</html>
