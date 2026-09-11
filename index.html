@@ -72,6 +72,7 @@
                     <div class="flex items-center gap-2">
                         <h1 class="text-base font-bold text-white tracking-wide">Bybit 全市場小幣異常監控雷達</h1>
                         <span class="text-[10px] bg-amber-500/20 text-amber-400 font-mono font-semibold px-2 py-0.5 rounded border border-amber-500/30">V5 LINEAR</span>
+                        <span class="text-[10px] bg-emerald-500/20 text-emerald-400 font-mono font-semibold px-1.5 py-0.5 rounded border border-emerald-500/30" title="已啟用瀏覽器永久儲存">💾 LOCALSTORAGE</span>
                     </div>
                     <p class="text-xs text-slate-400">300+ 永續合約全量即時掃描 · AI 自適應風控決策</p>
                 </div>
@@ -143,7 +144,7 @@
                     <span class="w-1.5 h-1.5 rounded-full bg-purple-400 animate-ping"></span>
                     <span id="adaptiveStatusText">AI 自修復: 均衡學習狀態</span>
                 </span>
-                <button onclick="resetSimulation()" class="text-[11px] text-slate-400 hover:text-rose-400 transition ml-2">重置帳戶</button>
+                <button onclick="confirmResetSimulation()" class="text-[11px] text-slate-400 hover:text-rose-400 transition ml-2 border border-slate-700 px-2 py-0.5 rounded hover:border-rose-500/50">重置帳戶</button>
             </div>
         </section>
 
@@ -322,6 +323,7 @@
         </div>
     </main>
 
+    <!-- 點位計算彈窗 -->
     <div id="tradePlanModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 hidden">
         <div class="bg-crypto-card border border-crypto-border rounded-2xl max-w-md w-full p-5 shadow-2xl space-y-4">
             <div class="flex items-center justify-between border-b border-crypto-border pb-3">
@@ -380,6 +382,7 @@
         </div>
     </div>
 
+    <!-- AI 自適應模態框 -->
     <div id="adaptiveModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 hidden">
         <div class="bg-crypto-card border border-purple-500/40 rounded-2xl max-w-2xl w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto text-xs">
             <div class="flex items-center justify-between border-b border-crypto-border pb-3">
@@ -387,7 +390,7 @@
                     <span class="text-2xl">🧠</span>
                     <div>
                         <h3 class="font-bold text-white text-base">AI 交易策略自修復與自適應優化引擎</h3>
-                        <p class="text-purple-300 text-[11px]">實盤模擬反饋循環：根據近 20 筆盈虧動態重校閾值、止損與黑名單</p>
+                        <p class="text-purple-300 text-[11px]">實盤模擬反饋循環：根據近 20 筆盈虧動態重校閾值、止損與黑名單 (已自動儲存)</p>
                     </div>
                 </div>
                 <button onclick="closeAdaptiveModal()" class="text-slate-400 hover:text-white text-lg">✕</button>
@@ -452,6 +455,7 @@
         </div>
     </div>
 
+    <!-- 實戰指南模態框 -->
     <div id="playbookModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 hidden">
         <div class="bg-crypto-card border border-crypto-border rounded-2xl max-w-2xl w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto text-xs leading-relaxed">
             <div class="flex items-center justify-between border-b border-crypto-border pb-3">
@@ -502,7 +506,53 @@
     </div>
 
     <script>
-        // Web Audio API 音效合成器
+        // ==========================================
+        // 1. 本地儲存 (localStorage) 管理模組
+        // ==========================================
+        const STORAGE_KEY_SIM = 'bybit_radar_sim_state_v1';
+        const STORAGE_KEY_ADAPTIVE = 'bybit_radar_adaptive_v1';
+
+        function saveToStorage() {
+            try {
+                // 保存模擬交易帳戶狀態
+                localStorage.setItem(STORAGE_KEY_SIM, JSON.stringify(simState));
+
+                // 保存 AI 自適應學習狀態 (Set 需要轉為 Array 才能存成 JSON)
+                const adaptiveData = {
+                    ...adaptiveParams,
+                    blacklist: Array.from(adaptiveParams.blacklist)
+                };
+                localStorage.setItem(STORAGE_KEY_ADAPTIVE, JSON.stringify(adaptiveData));
+            } catch (err) {
+                console.warn("寫入 localStorage 失敗:", err);
+            }
+        }
+
+        function loadFromStorage() {
+            try {
+                const simSaved = localStorage.getItem(STORAGE_KEY_SIM);
+                if (simSaved) {
+                    const parsed = JSON.parse(simSaved);
+                    simState = { ...simState, ...parsed };
+                }
+
+                const adaptiveSaved = localStorage.getItem(STORAGE_KEY_ADAPTIVE);
+                if (adaptiveSaved) {
+                    const parsed = JSON.parse(adaptiveSaved);
+                    adaptiveParams = {
+                        ...adaptiveParams,
+                        ...parsed,
+                        blacklist: new Set(parsed.blacklist || [])
+                    };
+                }
+            } catch (err) {
+                console.warn("讀取 localStorage 失敗，已恢復預設值:", err);
+            }
+        }
+
+        // ==========================================
+        // 2. 音效模組
+        // ==========================================
         let soundEnabled = true;
         let audioCtx = null;
 
@@ -562,6 +612,9 @@
             }
         }
 
+        // ==========================================
+        // 3. 核心狀態變數
+        // ==========================================
         let rawTickers = [];
         let filteredTickers = [];
         let previousTickersMap = new Map();
@@ -573,7 +626,7 @@
 
         const MAJORS = ["BTCUSDT", "ETHUSDT", "SOLUSDT", "USDCUSDT"];
 
-        // 模擬交易與 AI 自適應學習引擎狀態
+        // 預設模擬交易狀態
         let simState = {
             balance: 10000.0,
             initialBalance: 10000.0,
@@ -584,7 +637,7 @@
             history: []
         };
 
-        // 自適應策略參數
+        // 預設自適應策略參數
         let adaptiveParams = {
             minScore: 60,
             stopLossPct: 3.0,
@@ -597,6 +650,11 @@
 
         function toggleAutoTrade() {
             simState.autoTrade = !simState.autoTrade;
+            saveToStorage();
+            updateAutoTradeButtonUI();
+        }
+
+        function updateAutoTradeButtonUI() {
             const btn = document.getElementById('btnAutoTrade');
             const icon = document.getElementById('autoTradeIcon');
             const text = document.getElementById('autoTradeText');
@@ -612,6 +670,9 @@
             }
         }
 
+        // ==========================================
+        // 4. API 請求與行情運算
+        // ==========================================
         async function fetchMarketData() {
             const netDot = document.getElementById('netDot');
             if (netDot) {
@@ -703,7 +764,6 @@
             let score = 30; // 基準分
             const reasons = [];
 
-            // 1. 24h 成交額權重
             if (turnover > 30000000) {
                 score += 25;
                 reasons.push("超巨額成交量");
@@ -715,7 +775,6 @@
                 reasons.push("活躍小幣流動性");
             }
 
-            // 2. 漲跌幅動量
             const absChange = Math.abs(priceChange);
             if (absChange >= 20) {
                 score += 25;
@@ -728,7 +787,6 @@
                 reasons.push("短線初動 (≥5%)");
             }
 
-            // 3. 極端資金費率 (潛在逼空或極度看衰)
             if (fundingRate <= -0.15) {
                 score += 25;
                 reasons.push("極度嚴重負費率 (極限軋空潛力)");
@@ -740,13 +798,11 @@
                 reasons.push("超高正費率多頭狂熱");
             }
 
-            // 4. 突破當日高點
             if (rangePercent >= 92 && priceChange > 4) {
                 score += 12;
                 reasons.push("緊貼 24h 最高點 (真突破形態)");
             }
 
-            // 扣除主流幣權重 (專注山寨幣)
             if (MAJORS.includes(symbol)) {
                 score = Math.min(score, 45);
             }
@@ -844,6 +900,8 @@
             };
 
             simState.positions.push(position);
+            saveToStorage(); // 立即儲存持倉變更
+
             pushAlertLog(coin.symbol, "🚀 模擬開倉成功", `${reason} | 入場 $${formatPrice(entryPrice)} | SL $${formatPrice(slPrice)}`, entryPrice, "bull");
             playAlertSound("bull");
             renderSimPositions();
@@ -858,14 +916,21 @@
 
             const now = Date.now();
             const closedPositions = [];
+            let priceChanged = false;
 
             simState.positions.forEach(pos => {
                 const coin = rawTickers.find(t => t.symbol === pos.symbol);
                 if (!coin) return;
 
                 const curPrice = coin.lastPrice;
-                pos.currentPrice = curPrice;
-                if (curPrice > pos.highestPrice) pos.highestPrice = curPrice;
+                if (pos.currentPrice !== curPrice) {
+                    pos.currentPrice = curPrice;
+                    priceChanged = true;
+                }
+                if (curPrice > pos.highestPrice) {
+                    pos.highestPrice = curPrice;
+                    priceChanged = true;
+                }
 
                 const pnlPcnt = ((curPrice - pos.entryPrice) / pos.entryPrice) * 100;
                 const holdingMinutes = (now - pos.openTime) / 60000;
@@ -882,6 +947,7 @@
                     pos.tp1Reached = true;
                     pos.stopLoss = pos.entryPrice * 1.002;
                     pos.trailingActive = true;
+                    priceChanged = true;
                     pushAlertLog(pos.symbol, "🎯 TP1 達標鎖利", `達標 +${adaptiveParams.tp1Pct.toFixed(1)}%，鎖定保本損！`, curPrice, "bull");
                     playAlertSound("bull");
                 }
@@ -915,6 +981,10 @@
                 finalizeClosedTrade(item.pos, item.exitPrice, item.pnl, item.reason);
             });
 
+            if (priceChanged || closedPositions.length > 0) {
+                saveToStorage();
+            }
+
             renderSimPositions();
             updateSimHeaderStats();
         }
@@ -937,6 +1007,8 @@
 
             simState.history.unshift(record);
             if (simState.history.length > 50) simState.history.pop();
+
+            saveToStorage(); // 立即儲存平倉歷史與餘額變更
 
             const isWin = pnl > 0;
             pushAlertLog(pos.symbol, isWin ? "💰 模擬平倉盈利" : "🩸 模擬平倉止損", `${reason} | 盈虧: ${pnl >= 0 ? '+' : ''}$${pnl.toFixed(2)} (${record.pnlPct.toFixed(2)}%)`, exitPrice, isWin ? "bull" : "bear");
@@ -1044,6 +1116,12 @@
             }
         }
 
+        function confirmResetSimulation() {
+            if (confirm("確定要重置所有模擬交易數據、清空持倉與歷史戰績嗎？此操作將清空本地存檔。")) {
+                resetSimulation();
+            }
+        }
+
         function resetSimulation() {
             simState.balance = 10000.0;
             simState.positions = [];
@@ -1052,12 +1130,27 @@
             adaptiveParams.minScore = 60;
             adaptiveParams.stopLossPct = 3.0;
             adaptiveParams.minTurnover = 3000000;
+            adaptiveParams.logs = [];
+
+            // 清空本地儲存
+            localStorage.removeItem(STORAGE_KEY_SIM);
+            localStorage.removeItem(STORAGE_KEY_ADAPTIVE);
+            saveToStorage();
+
             renderSimPositions();
             updateSimHeaderStats();
             updateAdaptiveUI();
+            
+            const logContainer = document.getElementById('adaptiveLogContainer');
+            if (logContainer) {
+                logContainer.innerHTML = `<div class="text-slate-400">🔄 模擬帳戶與策略參數已完全重置為出廠設定。</div>`;
+            }
             pushAdaptiveLog("🔄 模擬帳戶與策略參數已完全重置為出廠設定。");
         }
 
+        // ==========================================
+        // 5. AI 自修復與自適應學習模組
+        // ==========================================
         function evaluateAdaptiveLearning(latestTrade) {
             const recent = simState.history.slice(0, 10);
             if (recent.length < 3) return;
@@ -1109,16 +1202,19 @@
                 setAdaptiveBadge("均衡學習狀態", "bg-purple-950/60 text-purple-300 border-purple-500/40");
             }
 
+            saveToStorage();
             updateAdaptiveUI();
         }
 
         function triggerManualOptimization() {
             evaluateAdaptiveLearning({ symbol: "MANUAL", pnl: 0 });
             pushAdaptiveLog("⚙️ 已手動觸發參數自檢與矩陣重新加權校準。");
+            saveToStorage();
         }
 
         function setAdaptiveBadge(text, className) {
             const badge = document.getElementById('adaptiveStatusBadge');
+            if (!badge) return;
             document.getElementById('adaptiveStatusText').innerText = `AI 自修復: ${text}`;
             badge.className = `text-[11px] px-2.5 py-1 rounded-full flex items-center gap-1.5 border ${className}`;
         }
@@ -1145,21 +1241,41 @@
 
         function removeBlacklist(symbol) {
             adaptiveParams.blacklist.delete(symbol);
+            saveToStorage();
             updateAdaptiveUI();
             pushAdaptiveLog(`🔓 幣種 ${symbol} 已自黑名單解禁，重新納入監控範圍。`);
         }
 
         function pushAdaptiveLog(text) {
-            const container = document.getElementById('adaptiveLogContainer');
             const time = new Date().toLocaleTimeString();
-            const div = document.createElement('div');
-            div.className = "text-slate-300 leading-relaxed border-b border-crypto-border/40 pb-1";
-            div.innerHTML = `<span class="text-slate-500">[${time}]</span> ${text}`;
-            container.prepend(div);
+            const logEntry = `[${time}] ${text}`;
+            
+            if (!adaptiveParams.logs) adaptiveParams.logs = [];
+            adaptiveParams.logs.unshift(logEntry);
+            if (adaptiveParams.logs.length > 25) adaptiveParams.logs.pop();
+
+            const container = document.getElementById('adaptiveLogContainer');
+            if (container) {
+                const div = document.createElement('div');
+                div.className = "text-slate-300 leading-relaxed border-b border-crypto-border/40 pb-1";
+                div.innerHTML = `<span class="text-slate-500">[${time}]</span> ${text}`;
+                container.prepend(div);
+            }
+            saveToStorage();
+        }
+
+        function renderStoredAdaptiveLogs() {
+            const container = document.getElementById('adaptiveLogContainer');
+            if (!container || !adaptiveParams.logs || adaptiveParams.logs.length === 0) return;
+            
+            container.innerHTML = adaptiveParams.logs.map(log => `
+                <div class="text-slate-300 leading-relaxed border-b border-crypto-border/40 pb-1">${log}</div>
+            `).join('');
         }
 
         function openAdaptiveModal() {
             updateAdaptiveUI();
+            renderStoredAdaptiveLogs();
             document.getElementById('adaptiveModal').classList.remove('hidden');
         }
 
@@ -1175,6 +1291,9 @@
             document.getElementById('playbookModal').classList.add('hidden');
         }
 
+        // ==========================================
+        // 6. 即時異動警報模組
+        // ==========================================
         function checkAnomalyAlerts(coin) {
             if (MAJORS.includes(coin.symbol)) return;
 
@@ -1236,6 +1355,9 @@
             }
         }
 
+        // ==========================================
+        // 7. UI 與表格渲染模組
+        // ==========================================
         function updateGlobalStats() {
             document.getElementById('statTotalCoins').innerText = rawTickers.length;
 
@@ -1487,11 +1609,20 @@
             }, 1000);
         }
 
+        // ==========================================
+        // 8. 頁面啟動與初始化
+        // ==========================================
         window.addEventListener('DOMContentLoaded', () => {
+            // 優先載入本地儲存的交易紀錄與學習數據
+            loadFromStorage();
+            updateAutoTradeButtonUI();
+            updateSimHeaderStats();
+            renderSimPositions();
+            updateAdaptiveUI();
+
+            // 啟動行情抓取與刷新倒數
             fetchMarketData();
             initTimer();
-            updateSimHeaderStats();
-            updateAdaptiveUI();
         });
     </script>
 </body>
