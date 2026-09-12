@@ -81,19 +81,19 @@
                             <span class="text-[9px] bg-amber-500/20 text-amber-400 font-mono font-semibold px-1.5 py-0.2 rounded border border-amber-500/30">V6.5 AI CORE</span>
                             <span class="text-[9px] bg-sky-500/20 text-sky-400 font-mono font-semibold px-1.5 py-0.2 rounded border border-sky-500/30 cursor-pointer" onclick="openCloudModal()" id="cloudBadgeText">☁️ 雲端同頻</span>
                         </div>
-                        <p class="text-[11px] text-slate-400 hidden sm:block">Coinglass OI 真突破 · GMGN 1h 初動量 · 自適應防插針 SL · 30% 奔馳尾倉 · Gemini 2.0 智慧覆盤</p>
+                        <p class="text-[11px] text-slate-400 hidden sm:block">Coinglass OI 真突破 · GMGN 1h 初動量 · 自適應防插針 SL · 30% 奔馳尾倉 · Gemini 2.5 智慧覆盤</p>
                     </div>
                 </div>
             </div>
 
-            <!-- 控制按鈕列 (手機端單行橫向滑動，電腦端自動平鋪) -->
+            <!-- 控制按鈕列 -->
             <div class="flex items-center gap-1.5 text-xs overflow-x-auto no-scrollbar py-0.5 md:flex-wrap md:overflow-visible">
                 <div class="flex items-center bg-slate-900 border border-crypto-border px-2.5 py-1 rounded-lg text-slate-300 font-mono whitespace-nowrap text-[11px]">
                     <span class="w-2 h-2 rounded-full bg-emerald-400 mr-1.5" id="netDot"></span>
                     <span id="updateTimer">下次刷新: 10s</span>
                 </div>
 
-                <!-- 大盤風控即時監測燈號 (BTC Beta Gate) -->
+                <!-- 大盤風控即時監測燈號 -->
                 <div class="flex items-center bg-slate-900 border border-crypto-border px-2 py-1 rounded-lg text-slate-300 font-mono whitespace-nowrap text-[11px]" id="marketGateBadge" title="BTC 1h 系統性風險防護閘門">
                     <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 mr-1.5" id="marketGateDot"></span>
                     <span id="marketGateText">大盤: 正常</span>
@@ -219,7 +219,6 @@
                 </div>
 
                 <div class="flex items-center flex-wrap gap-2">
-                    <!-- 持倉篩選 -->
                     <div class="flex items-center bg-slate-950 border border-crypto-border rounded-lg p-0.5 text-[11px]">
                         <button onclick="setPosFilter('all')" id="posFilter-all" class="px-2 py-0.5 rounded bg-amber-500 text-black font-bold transition">全部</button>
                         <button onclick="setPosFilter('win')" id="posFilter-win" class="px-2 py-0.5 rounded text-slate-400 hover:text-white transition">浮盈中</button>
@@ -227,7 +226,6 @@
                         <button onclick="setPosFilter('moon')" id="posFilter-moon" class="px-2 py-0.5 rounded text-slate-400 hover:text-white transition">🚀 尾倉狂飆</button>
                     </div>
 
-                    <!-- 視圖切換 (預設嚴格為表格) -->
                     <div class="flex items-center bg-slate-950 border border-crypto-border rounded-lg p-0.5 text-xs">
                         <button onclick="togglePositionView('table')" id="btnViewTable" class="px-2.5 py-1 rounded bg-amber-500 text-black font-bold flex items-center gap-1 transition">
                             <span>📋</span> 表格精簡
@@ -416,14 +414,14 @@
         </div>
     </main>
 
-    <!-- Gemini 智慧體檢與自動調參彈窗 -->
+    <!-- Gemini 2.5 智慧體檢與自動調參彈窗 -->
     <div id="geminiModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5 hidden">
         <div class="bg-crypto-card border border-blue-500/50 rounded-2xl max-w-2xl w-full p-4 sm:p-6 shadow-2xl space-y-3.5 max-h-[90vh] flex flex-col text-xs">
             <div class="flex items-center justify-between border-b border-crypto-border pb-2.5">
                 <div class="flex items-center gap-2">
                     <span class="text-2xl">✨</span>
                     <div>
-                        <h3 class="font-bold text-white text-base">Gemini 2.0 智慧策略體檢與自動調參</h3>
+                        <h3 class="font-bold text-white text-base">Gemini 2.5 智慧策略體檢與自動調參</h3>
                         <p class="text-[11px] text-blue-300">讀取實盤平倉紀錄，分析虧損成因，自動推薦下階段最優參數</p>
                     </div>
                 </div>
@@ -437,7 +435,7 @@
                     <span class="text-[10px] text-slate-500">金鑰僅存於瀏覽器本地，不上傳伺服器</span>
                 </div>
                 <div class="flex gap-2">
-                    <input type="password" id="geminiApiKeyInput" placeholder="請貼上你的 Gemini API Key (如 AIzaSy...)" 
+                    <input type="password" id="geminiApiKeyInput" placeholder="請貼上你的 Gemini API Key (如 AIzaSy... 或 AQ...)" 
                         class="flex-1 bg-slate-950 border border-crypto-border rounded-lg px-2.5 py-1.5 text-white text-xs focus:outline-none focus:border-blue-500">
                     <button onclick="saveGeminiApiKey()" class="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold whitespace-nowrap text-xs">
                         儲存金鑰
@@ -961,7 +959,6 @@
                     };
                 }
 
-                // 載入使用者儲存的 Gemini API Key
                 const savedGeminiKey = localStorage.getItem(STORAGE_KEY_GEMINI_APIKEY);
                 const geminiInput = document.getElementById('geminiApiKeyInput');
                 if (savedGeminiKey && geminiInput) {
@@ -1702,7 +1699,7 @@
             pushAdaptiveLog(`🔓 幣種 ${sym} 已從黑名單解除，重新納入監控池。`);
         }
 
-        /* Gemini 2.0 智慧策略體檢模組 */
+        /* Gemini 2.5 智慧策略體檢模組 (含多模型自動容錯) */
         function openGeminiAuditModal() {
             const modal = document.getElementById('geminiModal');
             if (modal) modal.classList.remove('hidden');
@@ -1737,7 +1734,7 @@
             if (applyBar) applyBar.classList.add('hidden');
             if (btn) {
                 btn.disabled = true;
-                btn.innerHTML = `<div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div> 正在連線 Gemini 2.0 進行多因子覆盤...`;
+                btn.innerHTML = `<div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div> 正在連線 Gemini 2.5 進行多因子覆盤...`;
             }
 
             reportArea.innerHTML = `
@@ -1784,24 +1781,54 @@ ${JSON.stringify(activePositions.map(p => ({ symbol: p.symbol, entry: p.entryPri
 `;
 
             try {
-                // 使用 Google 官方 Gemini 2.0 / 1.5 API 端點
-                const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+                // 依序嘗試最新可用的 Gemini 模型端點 (自動容錯機制)
+                const candidateModels = [
+                    'gemini-2.5-flash',
+                    'gemini-2.5-flash-lite',
+                    'gemini-2.0-flash',
+                    'gemini-flash-latest'
+                ];
 
-                const response = await fetch(endpoint, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        contents: [{ parts: [{ text: promptText }] }]
-                    })
-                });
+                let replyText = null;
+                let usedModel = null;
+                let lastErr = null;
 
-                const result = await response.json();
+                for (const model of candidateModels) {
+                    try {
+                        const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+                        const response = await fetch(endpoint, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                contents: [{ parts: [{ text: promptText }] }]
+                            })
+                        });
 
-                if (!response.ok || result.error) {
-                    throw new Error(result.error ? result.error.message : "API 請求失敗");
+                        const result = await response.json();
+                        if (response.ok && result.candidates && result.candidates[0]) {
+                            replyText = result.candidates[0].content.parts[0].text;
+                            usedModel = model;
+                            break;
+                        } else if (result.error) {
+                            lastErr = new Error(result.error.message || `模型 ${model} 請求失敗`);
+                            // 若是 404 (模型名稱不相容)，自動嘗試下一組模型
+                            if (result.error.code === 404 || (result.error.message && result.error.message.includes('not found'))) {
+                                continue;
+                            }
+                            throw lastErr;
+                        }
+                    } catch (e) {
+                        lastErr = e;
+                        if (e.message && e.message.includes('not found')) {
+                            continue;
+                        }
+                        throw e;
+                    }
                 }
 
-                const replyText = result.candidates[0].content.parts[0].text;
+                if (!replyText) {
+                    throw lastErr || new Error("無法連線至任何 Gemini 模型端點，請確認 API Key 是否正確啟用。");
+                }
                 
                 // 解析 Markdown 與抽出 JSON 配置
                 let formattedHtml = replyText
@@ -1813,6 +1840,10 @@ ${JSON.stringify(activePositions.map(p => ({ symbol: p.symbol, entry: p.entryPri
 
                 reportArea.innerHTML = `
                     <div class="space-y-2 text-xs">
+                        <div class="p-2 rounded-lg bg-blue-950/40 border border-blue-500/30 text-blue-300 text-[11px] mb-2 flex items-center justify-between">
+                            <span>🤖 體檢模型：${usedModel}</span>
+                            <span class="text-emerald-400 font-bold">● 分析成功</span>
+                        </div>
                         ${formattedHtml}
                     </div>
                 `;
@@ -1834,14 +1865,14 @@ ${JSON.stringify(activePositions.map(p => ({ symbol: p.symbol, entry: p.entryPri
                     }
                 }
 
-                showToast("Gemini 智慧策略體檢完成！", "✨");
+                showToast(`Gemini 智慧策略體檢完成 (${usedModel})！`, "✨");
             } catch (err) {
                 console.error("Gemini API Error:", err);
                 reportArea.innerHTML = `
                     <div class="p-4 rounded-xl bg-rose-950/40 border border-rose-500/40 text-rose-300 text-xs space-y-2">
                         <div class="font-bold">❌ 連線 Gemini API 失敗：</div>
                         <div>${err.message}</div>
-                        <div class="text-[11px] text-slate-400">請確認 API Key 是否正確且具備 Gemini 1.5 / 2.0 訪問權限。</div>
+                        <div class="text-[11px] text-slate-400">請至 Google AI Studio 確認你的 API Key 是否有效。</div>
                     </div>
                 `;
                 showToast("體檢失敗: " + err.message, "❌");
