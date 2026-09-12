@@ -1700,52 +1700,52 @@
         }
 
         /* Gemini 2.5 智慧策略體檢模組 (含多模型自動容錯) */
-        function openGeminiAuditModal() {
-            const modal = document.getElementById('geminiModal');
-            if (modal) modal.classList.remove('hidden');
+    function openGeminiAuditModal() {
+        const modal = document.getElementById('geminiModal');
+        if (modal) modal.classList.remove('hidden');
+    }
+
+    function closeGeminiAuditModal() {
+        const modal = document.getElementById('geminiModal');
+        if (modal) modal.classList.add('hidden');
+    }
+
+    async function runGeminiStrategyAudit() {
+        const apiKeyInput = document.getElementById('geminiApiKeyInput');
+        const apiKey = (apiKeyInput ? apiKeyInput.value.trim() : '') || localStorage.getItem(STORAGE_KEY_GEMINI_APIKEY);
+
+        if (!apiKey) {
+            showToast("請先在上方輸入並儲存 Gemini API Key！", "⚠️");
+            return;
         }
 
-        function closeGeminiAuditModal() {
-            const modal = document.getElementById('geminiModal');
-            if (modal) modal.classList.add('hidden');
+        const recentHistory = simState.history.slice(0, 30);
+        const activePositions = simState.positions;
+
+        if (recentHistory.length < 3) {
+            showToast("平倉記錄不足 3 筆，請累積更多數據後再體檢", "⚠️");
+            return;
         }
 
-        async function runGeminiStrategyAudit() {
-            const apiKeyInput = document.getElementById('geminiApiKeyInput');
-            const apiKey = (apiKeyInput ? apiKeyInput.value.trim() : '') || localStorage.getItem(STORAGE_KEY_GEMINI_APIKEY);
+        const reportArea = document.getElementById('geminiReportArea');
+        const btn = document.getElementById('btnStartAudit');
+        const applyBar = document.getElementById('geminiApplyBar');
 
-            if (!apiKey) {
-                showToast("請先在上方輸入並儲存 Gemini API Key！", "⚠️");
-                return;
-            }
+        if (applyBar) applyBar.classList.add('hidden');
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = `<div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div> 正在連線 Gemini 進行多因子覆盤...`;
+        }
 
-            const recentHistory = simState.history.slice(0, 30);
-            const activePositions = simState.positions;
+        reportArea.innerHTML = `
+            <div class="flex flex-col items-center justify-center py-12 space-y-3">
+                <div class="w-8 h-8 border-3 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                <span class="text-slate-300 font-mono text-xs">正在分析 ${recentHistory.length} 筆平倉明細與 ${activePositions.length} 筆未平倉單...</span>
+                <span class="text-slate-500 text-[11px]" id="geminiAuditStepText">計算 MAE / MFE、止損洗盤率與當前盤面風格特徵...</span>
+            </div>
+        `;
 
-            if (recentHistory.length < 3) {
-                showToast("平倉記錄不足 3 筆，請累積更多數據後再體檢", "⚠️");
-                return;
-            }
-
-            const reportArea = document.getElementById('geminiReportArea');
-            const btn = document.getElementById('btnStartAudit');
-            const applyBar = document.getElementById('geminiApplyBar');
-
-            if (applyBar) applyBar.classList.add('hidden');
-            if (btn) {
-                btn.disabled = true;
-                btn.innerHTML = `<div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div> 正在連線 Gemini 進行多因子覆盤...`;
-            }
-
-            reportArea.innerHTML = `
-                <div class="flex flex-col items-center justify-center py-12 space-y-3">
-                    <div class="w-8 h-8 border-3 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-                    <span class="text-slate-300 font-mono text-xs">正在分析 ${recentHistory.length} 筆平倉明細與 ${activePositions.length} 筆未平倉單...</span>
-                    <span class="text-slate-500 text-[11px]" id="geminiAuditStepText">計算 MAE / MFE、止損洗盤率與當前盤面風格特徵...</span>
-                </div>
-            `;
-
-            const promptText = `
+        const promptText = `
 你是一位頂尖的加密貨幣量化基金操盤手與高頻突破交易專家。
 以下是我們在 Bybit 小幣永續合約實盤模擬系統中的最新運算數據：
 
@@ -1780,138 +1780,136 @@ ${JSON.stringify(activePositions.map(p => ({ symbol: p.symbol, entry: p.entryPri
 \`\`\`
 `;
 
-            try {
-                // 優先調用回應最快、算力負載最寬裕的輕量/標準模型，避開高負載
-                const candidateModels = [
-                    'gemini-2.5-flash-lite',
-                    'gemini-2.0-flash',
-                    'gemini-2.0-flash-lite',
-                    'gemini-2.5-flash',
-                    'gemini-flash-latest'
-                ];
+        try {
+            // 優先調用回應最快、算力負載最寬裕且不消耗思考 Token 的高速模型
+            const candidateModels = [
+                'gemini-2.0-flash',
+                'gemini-2.0-flash-lite',
+                'gemini-2.5-flash-lite',
+                'gemini-2.5-flash',
+                'gemini-flash-latest'
+            ];
 
-                let replyText = null;
-                let usedModel = null;
-                let lastErr = null;
+            let replyText = null;
+            let usedModel = null;
+            let lastErr = null;
 
-                const stepTextEl = document.getElementById('geminiAuditStepText');
+            const stepTextEl = document.getElementById('geminiAuditStepText');
 
-                for (let i = 0; i < candidateModels.length; i++) {
-                    const model = candidateModels[i];
-                    if (stepTextEl) {
-                        stepTextEl.innerText = `正在嘗試連線 ${model} 端點分析數據...`;
-                    }
+            for (let i = 0; i < candidateModels.length; i++) {
+                const model = candidateModels[i];
+                if (stepTextEl) {
+                    stepTextEl.innerText = `正在嘗試連線 ${model} 端點分析數據...`;
+                }
 
-                    try {
-                        const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-                        const response = await fetch(endpoint, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                contents: [{ parts: [{ text: promptText }] }],
-                                generationConfig: {
-                                    temperature: 0.2,
-                                    maxOutputTokens: 2048
-                                }
-                            })
-                        });
-
-                        const result = await response.json();
-                        if (response.ok && result.candidates && result.candidates[0] && result.candidates[0].content) {
-                            replyText = result.candidates[0].content.parts[0].text;
-                            usedModel = model;
-                            break;
-                        } else if (result.error) {
-                            const errCode = result.error.code;
-                            const errMsg = (result.error.message || '').toLowerCase();
-                            lastErr = new Error(result.error.message || `模型 ${model} 回傳錯誤`);
-
-                            // 404 (端點不存在) 或 429/503/high demand (算力壅塞)，自動平滑切換至下一款模型
-                            const isBusyOrNotFound = errCode === 404 || errCode === 503 || errCode === 429 || 
-                                                     errMsg.includes('high demand') || 
-                                                     errMsg.includes('not found') || 
-                                                     errMsg.includes('resource exhausted') ||
-                                                     errMsg.includes('quota');
-
-                            if (isBusyOrNotFound && i < candidateModels.length - 1) {
-                                console.warn(`模型 ${model} 繁忙或不可用 (${result.error.message})，自動切換至下一款模型...`);
-                                // 稍候 500ms 後切換下一款
-                                await new Promise(r => setTimeout(r, 500));
-                                continue;
+                try {
+                    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+                    const response = await fetch(endpoint, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            contents: [{ parts: [{ text: promptText }] }],
+                            generationConfig: {
+                                temperature: 0.2,
+                                maxOutputTokens: 8192 // 擴增至 8192 Tokens，徹底杜絕回答腰斬問題
                             }
-                            throw lastErr;
-                        }
-                    } catch (e) {
-                        lastErr = e;
-                        const msg = (e.message || '').toLowerCase();
-                        if ((msg.includes('high demand') || msg.includes('not found') || msg.includes('503') || msg.includes('429')) && i < candidateModels.length - 1) {
-                            console.warn(`捕獲網路或模型錯誤，自動切換下一組模型: ${e.message}`);
-                            await new Promise(r => setTimeout(r, 500));
+                        })
+                    });
+
+                    const result = await response.json();
+                    if (response.ok && result.candidates && result.candidates[0] && result.candidates[0].content) {
+                        replyText = result.candidates[0].content.parts[0].text;
+                        usedModel = model;
+                        break;
+                    } else if (result.error) {
+                        const errCode = result.error.code;
+                        const errMsg = (result.error.message || '').toLowerCase();
+                        lastErr = new Error(result.error.message || `模型 ${model} 回傳錯誤`);
+
+                        // 遇到 404、503、429 或 high demand，自動切換至下一個模型
+                        const isBusyOrNotFound = errCode === 404 || errCode === 503 || errCode === 429 || 
+                                                 errMsg.includes('high demand') || 
+                                                 errMsg.includes('not found') || 
+                                                 errMsg.includes('resource exhausted') ||
+                                                 errMsg.includes('quota');
+
+                        if (isBusyOrNotFound && i < candidateModels.length - 1) {
+                            console.warn(`模型 ${model} 繁忙或不可用，自動切換至下一組模型...`);
+                            await new Promise(r => setTimeout(r, 400));
                             continue;
                         }
-                        throw e;
+                        throw lastErr;
                     }
-                }
-
-                if (!replyText) {
-                    throw lastErr || new Error("所有 Gemini 模型端點目前均繁忙，請稍後片刻再試。");
-                }
-                
-                // 解析 Markdown 與抽出 JSON 配置
-                let formattedHtml = replyText
-                    .replace(/### (.*?)\n/g, '<h4 class="font-bold text-amber-400 text-xs mt-3 mb-1">$1</h4>')
-                    .replace(/## (.*?)\n/g, '<h3 class="font-bold text-blue-300 text-sm mt-3 mb-1">$1</h3>')
-                    .replace(/\*\*(.*?)\*\*/g, '<strong class="text-white">$1</strong>')
-                    .replace(/\n\n/g, '<br><br>')
-                    .replace(/\n- /g, '<br>• ');
-
-                reportArea.innerHTML = `
-                    <div class="space-y-2 text-xs">
-                        <div class="p-2 rounded-lg bg-blue-950/40 border border-blue-500/30 text-blue-300 text-[11px] mb-2 flex items-center justify-between">
-                            <span>🤖 體檢模型：${usedModel}</span>
-                            <span class="text-emerald-400 font-bold">● 分析成功</span>
-                        </div>
-                        ${formattedHtml}
-                    </div>
-                `;
-
-                // 嘗試抽離出 JSON 參數
-                const jsonMatch = replyText.match(/```json\s*([\s\S]*?)\s*```/);
-                if (jsonMatch && jsonMatch[1]) {
-                    try {
-                        const parsedParams = JSON.parse(jsonMatch[1]);
-                        lastRecommendedGeminiParams = parsedParams;
-
-                        const paramSummary = document.getElementById('geminiParamSummaryText');
-                        if (paramSummary) {
-                            paramSummary.innerText = `建議門檻: ${parsedParams.recommendedMinScore}分 | 止損: -${parsedParams.recommendedStopLossPct}% | TP1: +${parsedParams.recommendedTp1Pct}% | 黑名單: ${parsedParams.suggestedBlacklist ? parsedParams.suggestedBlacklist.join(', ') : '無'}`;
-                        }
-                        if (applyBar) applyBar.classList.remove('hidden');
-                    } catch (e) {
-                        console.warn("JSON parse error from Gemini:", e);
+                } catch (e) {
+                    lastErr = e;
+                    const msg = (e.message || '').toLowerCase();
+                    if ((msg.includes('high demand') || msg.includes('not found') || msg.includes('503') || msg.includes('429')) && i < candidateModels.length - 1) {
+                        await new Promise(r => setTimeout(r, 400));
+                        continue;
                     }
-                }
-
-                showToast(`Gemini 智慧策略體檢完成 (${usedModel})！`, "✨");
-            } catch (err) {
-                console.error("Gemini API Error:", err);
-                reportArea.innerHTML = `
-                    <div class="p-4 rounded-xl bg-rose-950/40 border border-rose-500/40 text-rose-300 text-xs space-y-2">
-                        <div class="font-bold">❌ 連線 Gemini API 失敗：</div>
-                        <div>${err.message}</div>
-                        <div class="text-[11px] text-slate-400">Google 伺服器端目前算力較為繁忙，可點擊下方按鈕再次重試。</div>
-                    </div>
-                `;
-                showToast("體檢失敗: " + err.message, "❌");
-            } finally {
-                if (btn) {
-                    btn.disabled = false;
-                    btn.innerHTML = `<span>✨</span><span>重新執行 Gemini 策略體檢</span>`;
+                    throw e;
                 }
             }
-        }
 
-        function applyGeminiRecommendedParams() {
+            if (!replyText) {
+                throw lastErr || new Error("所有 Gemini 模型端點目前均繁忙，請稍後片刻再試。");
+            }
+            
+            // 解析 Markdown
+            let formattedHtml = replyText
+                .replace(/### (.*?)\n/g, '<h4 class="font-bold text-amber-400 text-xs mt-3 mb-1">$1</h4>')
+                .replace(/## (.*?)\n/g, '<h3 class="font-bold text-blue-300 text-sm mt-3 mb-1">$1</h3>')
+                .replace(/\*\*(.*?)\*\*/g, '<strong class="text-white">$1</strong>')
+                .replace(/\n\n/g, '<br><br>')
+                .replace(/\n- /g, '<br>• ');
+
+            reportArea.innerHTML = `
+                <div class="space-y-2 text-xs">
+                    <div class="p-2 rounded-lg bg-blue-950/40 border border-blue-500/30 text-blue-300 text-[11px] mb-2 flex items-center justify-between">
+                        <span>🤖 體檢模型：${usedModel}</span>
+                        <span class="text-emerald-400 font-bold">● 分析完整生成</span>
+                    </div>
+                    ${formattedHtml}
+                </div>
+            `;
+
+            // 抽離出 JSON 參數並點亮「一鍵套用」按鈕
+            const jsonMatch = replyText.match(/```json\s*([\s\S]*?)\s*```/);
+            if (jsonMatch && jsonMatch[1]) {
+                try {
+                    const parsedParams = JSON.parse(jsonMatch[1]);
+                    lastRecommendedGeminiParams = parsedParams;
+
+                    const paramSummary = document.getElementById('geminiParamSummaryText');
+                    if (paramSummary) {
+                        paramSummary.innerText = `建議門檻: ${parsedParams.recommendedMinScore}分 | 止損: -${parsedParams.recommendedStopLossPct}% | TP1: +${parsedParams.recommendedTp1Pct}% | 黑名單: ${parsedParams.suggestedBlacklist ? parsedParams.suggestedBlacklist.join(', ') : '無'}`;
+                    }
+                    if (applyBar) applyBar.classList.remove('hidden');
+                } catch (e) {
+                    console.warn("JSON parse error from Gemini:", e);
+                }
+            }
+
+            showToast(`Gemini 智慧策略體檢完成 (${usedModel})！`, "✨");
+        } catch (err) {
+            console.error("Gemini API Error:", err);
+            reportArea.innerHTML = `
+                <div class="p-4 rounded-xl bg-rose-950/40 border border-rose-500/40 text-rose-300 text-xs space-y-2">
+                    <div class="font-bold">❌ 連線 Gemini API 失敗：</div>
+                    <div>${err.message}</div>
+                    <div class="text-[11px] text-slate-400">若伺服器繁忙，請稍候 3~5 秒再次點擊重試。</div>
+                </div>
+            `;
+            showToast("體檢失敗: " + err.message, "❌");
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = `<span>✨</span><span>重新執行 Gemini 策略體檢</span>`;
+            }
+        }
+    }
+
+    function applyGeminiRecommendedParams() {
             if (!lastRecommendedGeminiParams) return;
 
             const p = lastRecommendedGeminiParams;
