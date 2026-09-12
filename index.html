@@ -1804,16 +1804,27 @@ ${JSON.stringify(activePositions.map(p => ({ symbol: p.symbol, entry: p.entryPri
 
                 try {
                     const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+                    
+                    // 關鍵修復：針對 2.5 系列模型關閉思考模式 (thinking_budget: 0)，防止 High Demand 算力排隊與 Token 消耗腰斬
+                    const requestBody = {
+                        contents: [{ parts: [{ text: promptText }] }],
+                        generationConfig: {
+                            temperature: 0.2,
+                            maxOutputTokens: 8192
+                        }
+                    };
+
+                    // 若調用 Gemini 2.5 系列，關閉思考模式以達到即時回傳
+                    if (model.includes('2.5')) {
+                        requestBody.generationConfig.thinking_config = {
+                            thinking_budget: 0
+                        };
+                    }
+
                     const response = await fetch(endpoint, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            contents: [{ parts: [{ text: promptText }] }],
-                            generationConfig: {
-                                temperature: 0.2,
-                                maxOutputTokens: 8192 // 擴增至 8192 Tokens，徹底杜絕回答腰斬問題
-                            }
-                        })
+                        body: JSON.stringify(requestBody)
                     });
 
                     const result = await response.json();
