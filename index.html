@@ -919,13 +919,13 @@
         };
 
         let adaptiveParams = {
-            minScore: 78,
+            minScore: 82,
             stopLossPct: 4.5,
             tp1Pct: 4.0,
             tp2Pct: 10.0,
             trailingPct: 6.5,
             minTurnover: 6000000,
-            blacklist: new Set()
+            blacklist: new Set(["AKEUSDT", "NIULAIUSDT", "FFUSDT"])
         };
 
         let lastRecommendedGeminiParams = null;
