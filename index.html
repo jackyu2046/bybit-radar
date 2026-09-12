@@ -78,7 +78,7 @@
                     <div>
                         <div class="flex items-center gap-1.5">
                             <h1 class="text-sm md:text-base font-bold text-white tracking-wide">Bybit 全市場小幣異常監控雷達</h1>
-                            <span class="text-[9px] bg-amber-500/20 text-amber-400 font-mono font-semibold px-1.5 py-0.2 rounded border border-amber-500/30">V7.0 PRO</span>
+                            <span class="text-[9px] bg-amber-500/20 text-amber-400 font-mono font-semibold px-1.5 py-0.2 rounded border border-amber-500/30">V7.5 PRO</span>
                             <span class="text-[9px] bg-sky-500/20 text-sky-400 font-mono font-semibold px-1.5 py-0.2 rounded border border-sky-500/30 cursor-pointer" onclick="openCloudModal()" id="cloudBadgeText">☁️ 雲端同頻</span>
                         </div>
                         <p class="text-[11px] text-slate-400 hidden sm:block">Coinglass OI 真突破 · GMGN 1h 初動量 · 階梯鎖利 SL · 30% 奔馳尾倉 · Gemini 智慧覆盤</p>
@@ -109,7 +109,6 @@
                     <span id="historyBtnText">歷史明細 (0)</span>
                 </button>
 
-                <!-- 一鍵 Gemini 智慧體檢專屬按鈕 -->
                 <button onclick="openGeminiAuditModal()" class="flex items-center gap-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-medium px-2.5 py-1 rounded-lg transition border border-blue-400/40 shadow-md shadow-blue-500/20 whitespace-nowrap text-[11px]">
                     <span>✨</span>
                     <span>Gemini 體檢</span>
@@ -683,7 +682,7 @@
         </div>
     </div>
 
-    <!-- 歷史平倉成交明細與盈虧復盤彈窗 -->
+    <!-- 歷史平倉成交明細與盈虧復盤彈窗 (修正結構) -->
     <div id="historyModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5 hidden">
         <div class="bg-crypto-card border border-crypto-border rounded-2xl max-w-4xl w-full p-4 sm:p-5 shadow-2xl space-y-3.5 max-h-[90vh] flex flex-col text-xs">
             <div class="flex items-center justify-between border-b border-crypto-border pb-2.5">
@@ -1134,7 +1133,6 @@
             }
         }
 
-        /* Bybit API 請求與數據計算 */
         async function fetchMarketData() {
             const netDot = document.getElementById('netDot');
             if (netDot) netDot.className = "w-2 h-2 rounded-full bg-amber-400 animate-ping mr-1.5";
@@ -1160,7 +1158,7 @@
         function processTickers(list) {
             const newTickers = [];
 
-            // 1. 先檢測大盤龍頭 BTC 的 1 小時動量 (Beta 風控)
+            // 1. 檢測大盤 BTC 走勢
             const btcItem = list.find(i => i.symbol === "BTCUSDT");
             let isBtcDumping = false;
             if (btcItem) {
@@ -1453,7 +1451,7 @@
                     playAlertSound("bull");
                 }
 
-                // 3. 階梯利潤防守：若利潤曾達到 +5.5%，將防守線主動上移至 +2.0% 鎖利，防止大賺單被洗回原點保本
+                // 3. 階梯利潤防守：若利潤曾達到 +5.5%，將防守線主動上移至 +2.0% 鎖利
                 if (!pos.tp2Reached && pos.highestPrice >= pos.entryPrice * 1.055) {
                     const lockProfitPrice = pos.entryPrice * 1.02;
                     if (pos.stopLoss < lockProfitPrice) {
@@ -1488,7 +1486,7 @@
                     }
                 }
 
-                // 6. 橫盤保護放寬至 300 分鐘 (5小時)，避免小幣莊家吸籌洗盤時被提早誤殺；且只要處於浮盈或已過 TP1，絕不強制平倉
+                // 6. 橫盤保護放寬至 300 分鐘 (5小時)
                 if (!pos.tp1Reached && holdingMinutes >= 300 && pnlPcnt < 0 && pnlPcnt > -2.5) {
                     const exitPnl = ((curPrice - pos.entryPrice) / pos.entryPrice) * (pos.qty * pos.entryPrice);
                     closedPositions.push({ pos, exitPrice: curPrice, pnl: exitPnl, reason: "⏱️ 5小時無動能微虧換幣" });
@@ -1559,7 +1557,6 @@
             });
         }
 
-        /* 賣飛追蹤與 AI 自修復學習 */
         function addFomoTracker(symbol, entryPrice, exitPrice) {
             if (simState.fomoTrackers.some(f => f.symbol === symbol)) return;
             simState.fomoTrackers.unshift({
@@ -1707,7 +1704,7 @@
             pushAdaptiveLog(`🔓 幣種 ${sym} 已從黑名單解除，重新納入監控池。`);
         }
 
-        /* Gemini 智慧策略體檢模組 (強效平滑相容端點) */
+        /* Gemini 智慧策略體檢模組 (修復並優先調用已驗證可行的端點) */
         function openGeminiAuditModal() {
             const modal = document.getElementById('geminiModal');
             if (modal) modal.classList.remove('hidden');
@@ -1789,12 +1786,12 @@ ${JSON.stringify(activePositions.map(p => ({ symbol: p.symbol, entry: p.entryPri
 `;
 
             try {
-                // 優先使用算力配額充裕、併發高且不帶強制 Thinking Token 的端點序列
+                // 還原之前成功調用過、最穩定的模型候選清單
                 const candidateModels = [
+                    'gemini-flash-latest',
                     'gemini-2.0-flash',
                     'gemini-2.0-flash-lite',
-                    'gemini-2.5-flash-lite',
-                    'gemini-2.5-flash'
+                    'gemini-3.6-flash'
                 ];
 
                 let replyText = null;
@@ -1805,19 +1802,13 @@ ${JSON.stringify(activePositions.map(p => ({ symbol: p.symbol, entry: p.entryPri
                     try {
                         const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
                         
-                        // 構建關閉思考預算的極速推論 Payload
+                        // 移除容易導致參數衝突的設定，維持乾淨的 Payload
                         const requestBody = {
                             contents: [{ parts: [{ text: promptText }] }],
                             generationConfig: {
-                                temperature: 0.2,
                                 maxOutputTokens: 8192
                             }
                         };
-
-                        // 針對 2.5 系列主動關閉思考預算，避開排隊擁擠
-                        if (model.includes('2.5')) {
-                            requestBody.generationConfig.thinking_config = { thinking_budget: 0 };
-                        }
 
                         const response = await fetch(endpoint, {
                             method: 'POST',
@@ -1832,17 +1823,12 @@ ${JSON.stringify(activePositions.map(p => ({ symbol: p.symbol, entry: p.entryPri
                             break;
                         } else if (result.error) {
                             lastErr = new Error(result.error.message || `模型 ${model} 請求失敗`);
-                            // 遇到 503 / 429 / 404 自動切換至下一個備援模型
-                            if (result.error.code === 503 || result.error.code === 429 || result.error.code === 404 || 
-                               (result.error.message && (result.error.message.includes('high demand') || result.error.message.includes('not found')))) {
-                                await new Promise(r => setTimeout(r, 1000));
-                                continue;
-                            }
-                            throw lastErr;
+                            await new Promise(r => setTimeout(r, 800));
+                            continue;
                         }
                     } catch (e) {
                         lastErr = e;
-                        await new Promise(r => setTimeout(r, 1000));
+                        await new Promise(r => setTimeout(r, 800));
                         continue;
                     }
                 }
@@ -1891,7 +1877,7 @@ ${JSON.stringify(activePositions.map(p => ({ symbol: p.symbol, entry: p.entryPri
                     <div class="p-4 rounded-xl bg-rose-950/40 border border-rose-500/40 text-rose-300 text-xs space-y-2">
                         <div class="font-bold">❌ 連線 Gemini API 失敗：</div>
                         <div>${err.message}</div>
-                        <div class="text-[11px] text-slate-400">伺服器繁忙，請稍候 3~5 秒再次點擊「重新執行 Gemini 策略體檢」。</div>
+                        <div class="text-[11px] text-slate-400">伺服器繁忙或模型更新，請稍候 3~5 秒再次點擊「重新執行 Gemini 策略體檢」。</div>
                     </div>
                 `;
                 showToast("體檢失敗: " + err.message, "❌");
@@ -1928,7 +1914,6 @@ ${JSON.stringify(activePositions.map(p => ({ symbol: p.symbol, entry: p.entryPri
             closeGeminiAuditModal();
         }
 
-        /* UI 渲染與按鈕切換邏輯 */
         function togglePositionView(mode) {
             simPositionViewMode = mode;
             const btnTable = document.getElementById('btnViewTable');
@@ -2083,7 +2068,6 @@ ${JSON.stringify(activePositions.map(p => ({ symbol: p.symbol, entry: p.entryPri
             }
         }
 
-        /* 主市場表格篩選與渲染 */
         function setFilter(filter) {
             currentFilter = filter;
             ['all', 'oiSurge', 'momentum1h', 'surge', 'squeeze', 'pullback'].forEach(f => {
@@ -2202,7 +2186,7 @@ ${JSON.stringify(activePositions.map(p => ({ symbol: p.symbol, entry: p.entryPri
             renderHotCoins();
         }
 
-        /* 歷史平倉明細渲染 */
+        /* 歷史平倉明細渲染 (支援 300 筆) */
         function openHistoryModal() {
             renderHistoryTable();
             document.getElementById('historyModal').classList.remove('hidden');
@@ -2247,7 +2231,7 @@ ${JSON.stringify(activePositions.map(p => ({ symbol: p.symbol, entry: p.entryPri
             let list = [...simState.history];
             if (currentHistoryFilter === 'win') list = list.filter(t => t.pnl > 0);
             else if (currentHistoryFilter === 'loss') list = list.filter(t => t.pnl < 0);
-            else if (currentHistoryFilter === 'timeout') list = list.filter(t => t.reason.includes("超時") || t.reason.includes("5小時"));
+            else if (currentHistoryFilter === 'timeout') list = list.filter(t => t.reason.includes("超時") || t.reason.includes("5小時") || t.reason.includes("3小時"));
 
             if (list.length === 0) {
                 tbody.innerHTML = `<tr><td colspan="8" class="py-8 text-center text-slate-500 font-sans">無符合記錄。</td></tr>`;
@@ -2398,14 +2382,14 @@ ${JSON.stringify(activePositions.map(p => ({ symbol: p.symbol, entry: p.entryPri
         }
 
         function updateSimHeaderStats() {
-            // 1. 計算所有進行中持倉的未實現浮動盈虧 (Unrealized PNL)
+            // 1. 計算進行中持倉的未實現盈虧 (Unrealized PNL)
             let unrealizedPnl = 0;
             simState.positions.forEach(pos => {
                 const curPrice = allMarketPrices.get(pos.symbol) || pos.currentPrice;
                 unrealizedPnl += ((curPrice - pos.entryPrice) / pos.entryPrice) * (pos.qty * pos.entryPrice);
             });
 
-            // 2. 計算總動態資產權益 Equity = 帳戶可用餘額 + 未實現盈虧
+            // 2. 總動態權益 = 可用餘額 + 未實現浮盈
             const totalEquity = simState.balance + unrealizedPnl;
             const totalPnlPct = ((totalEquity - simState.initialBalance) / simState.initialBalance) * 100;
 
