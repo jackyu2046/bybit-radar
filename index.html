@@ -9,7 +9,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-    <!-- Firebase SDK (v8 相容版，支援單檔案直接運行) -->
+    <!-- Firebase SDK (v8 相容版) -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 
@@ -78,10 +78,10 @@
                     <div>
                         <div class="flex items-center gap-1.5">
                             <h1 class="text-sm md:text-base font-bold text-white tracking-wide">Bybit 全市場小幣異常監控雷達</h1>
-                            <span class="text-[9px] bg-amber-500/20 text-amber-400 font-mono font-semibold px-1.5 py-0.2 rounded border border-amber-500/30">V6 LINEAR</span>
+                            <span class="text-[9px] bg-amber-500/20 text-amber-400 font-mono font-semibold px-1.5 py-0.2 rounded border border-amber-500/30">V6.5 AI CORE</span>
                             <span class="text-[9px] bg-sky-500/20 text-sky-400 font-mono font-semibold px-1.5 py-0.2 rounded border border-sky-500/30 cursor-pointer" onclick="openCloudModal()" id="cloudBadgeText">☁️ 雲端同頻</span>
                         </div>
-                        <p class="text-[11px] text-slate-400 hidden sm:block">Coinglass OI 真突破 · GMGN 1h 初動量 · 自適應防插針 SL · 30% 奔馳尾倉</p>
+                        <p class="text-[11px] text-slate-400 hidden sm:block">Coinglass OI 真突破 · GMGN 1h 初動量 · 自適應防插針 SL · 30% 奔馳尾倉 · Gemini 2.0 智慧覆盤</p>
                     </div>
                 </div>
             </div>
@@ -93,8 +93,8 @@
                     <span id="updateTimer">下次刷新: 10s</span>
                 </div>
 
-                <!-- 大盤風控即時監測燈號 (BTC/ETH Beta Gate 視覺化) -->
-                <div class="flex items-center bg-slate-900 border border-crypto-border px-2 py-1 rounded-lg text-slate-300 font-mono whitespace-nowrap text-[11px]" id="marketGateBadge" title="BTC / ETH 1h 系統性風險防護閘門">
+                <!-- 大盤風控即時監測燈號 (BTC Beta Gate) -->
+                <div class="flex items-center bg-slate-900 border border-crypto-border px-2 py-1 rounded-lg text-slate-300 font-mono whitespace-nowrap text-[11px]" id="marketGateBadge" title="BTC 1h 系統性風險防護閘門">
                     <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 mr-1.5" id="marketGateDot"></span>
                     <span id="marketGateText">大盤: 正常</span>
                 </div>
@@ -107,6 +107,12 @@
                 <button onclick="openHistoryModal()" class="flex items-center gap-1 bg-amber-600/80 hover:bg-amber-600 text-white font-medium px-2.5 py-1 rounded-lg transition border border-amber-500/30 whitespace-nowrap text-[11px]">
                     <span>📜</span>
                     <span id="historyBtnText">歷史明細 (0)</span>
+                </button>
+
+                <!-- 一鍵 Gemini 智慧體檢專屬按鈕 -->
+                <button onclick="openGeminiAuditModal()" class="flex items-center gap-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-medium px-2.5 py-1 rounded-lg transition border border-blue-400/40 shadow-md shadow-blue-500/20 whitespace-nowrap text-[11px]">
+                    <span>✨</span>
+                    <span>Gemini 體檢</span>
                 </button>
 
                 <button onclick="openCloudModal()" class="flex items-center gap-1 bg-sky-600/80 hover:bg-sky-600 text-white font-medium px-2.5 py-1 rounded-lg transition border border-sky-500/30 whitespace-nowrap text-[11px]">
@@ -188,9 +194,9 @@
 
                 <div class="flex items-center bg-slate-950 border border-crypto-border rounded-lg p-0.5 text-[11px]">
                     <span class="text-slate-400 px-1.5">每筆:</span>
-                    <button onclick="setTradeSize(10)" id="btnSize10" class="px-2 py-0.5 rounded bg-emerald-600 text-white font-bold transition">$10</button>
+                    <button onclick="setTradeSize(10)" id="btnSize10" class="px-2 py-0.5 rounded text-slate-400 hover:text-white transition">$10</button>
                     <button onclick="setTradeSize(50)" id="btnSize50" class="px-2 py-0.5 rounded text-slate-400 hover:text-white transition">$50</button>
-                    <button onclick="setTradeSize(100)" id="btnSize100" class="px-2 py-0.5 rounded text-slate-400 hover:text-white transition">$100</button>
+                    <button onclick="setTradeSize(100)" id="btnSize100" class="px-2 py-0.5 rounded bg-emerald-600 text-white font-bold transition">$100</button>
                 </div>
 
                 <span class="text-[11px] text-purple-300 bg-purple-950/60 border border-purple-500/40 px-2 py-0.5 rounded-full flex items-center gap-1" id="adaptiveStatusBadge">
@@ -207,9 +213,9 @@
                 <div class="flex items-center gap-2">
                     <span class="text-sm">💼</span>
                     <h3 class="text-xs font-semibold text-white">
-                        即時模擬合約持倉 (<span id="activePositionsCountText" class="text-amber-400 font-mono">0</span> 筆進行中 · 每筆 <span id="posTradeSizeDisplay" class="text-emerald-400 font-mono">$10</span>)
+                        即時模擬合約持倉 (<span id="activePositionsCountText" class="text-amber-400 font-mono">0</span> 筆進行中 · 每筆 <span id="posTradeSizeDisplay" class="text-emerald-400 font-mono">$100</span>)
                     </h3>
-                    <span class="text-[10px] text-slate-400 hidden xl:inline">| TP1 (+4.0% 平35%移保本) · TP2 (+9.5% 平35%) · 30% 尾倉高點回撤-7%移動鎖利 · 浮盈永不超時平倉</span>
+                    <span class="text-[10px] text-slate-400 hidden xl:inline">| TP1 (+4.0% 平35%移保本) · TP2 (+9.5% 平35%) · 30% 尾倉高點回撤-7%移動鎖利</span>
                 </div>
 
                 <div class="flex items-center flex-wrap gap-2">
@@ -409,6 +415,62 @@
             </div>
         </div>
     </main>
+
+    <!-- Gemini 智慧體檢與自動調參彈窗 -->
+    <div id="geminiModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5 hidden">
+        <div class="bg-crypto-card border border-blue-500/50 rounded-2xl max-w-2xl w-full p-4 sm:p-6 shadow-2xl space-y-3.5 max-h-[90vh] flex flex-col text-xs">
+            <div class="flex items-center justify-between border-b border-crypto-border pb-2.5">
+                <div class="flex items-center gap-2">
+                    <span class="text-2xl">✨</span>
+                    <div>
+                        <h3 class="font-bold text-white text-base">Gemini 2.0 智慧策略體檢與自動調參</h3>
+                        <p class="text-[11px] text-blue-300">讀取實盤平倉紀錄，分析虧損成因，自動推薦下階段最優參數</p>
+                    </div>
+                </div>
+                <button onclick="closeGeminiAuditModal()" class="text-slate-400 hover:text-white text-lg p-1">✕</button>
+            </div>
+
+            <!-- API Key 設定區 (只儲存於本地 LocalStorage) -->
+            <div class="p-3 bg-slate-900 rounded-xl border border-crypto-border space-y-1.5 font-mono">
+                <div class="flex justify-between items-center text-[11px]">
+                    <span class="text-slate-300 font-sans font-medium">🔑 Google AI Studio API Key：</span>
+                    <span class="text-[10px] text-slate-500">金鑰僅存於瀏覽器本地，不上傳伺服器</span>
+                </div>
+                <div class="flex gap-2">
+                    <input type="password" id="geminiApiKeyInput" placeholder="請貼上你的 Gemini API Key (如 AIzaSy...)" 
+                        class="flex-1 bg-slate-950 border border-crypto-border rounded-lg px-2.5 py-1.5 text-white text-xs focus:outline-none focus:border-blue-500">
+                    <button onclick="saveGeminiApiKey()" class="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold whitespace-nowrap text-xs">
+                        儲存金鑰
+                    </button>
+                </div>
+            </div>
+
+            <!-- 體檢報告展示區 -->
+            <div class="flex-1 overflow-y-auto max-h-[360px] rounded-xl border border-crypto-border bg-slate-950 p-3.5 space-y-2.5 text-slate-200 leading-relaxed font-sans" id="geminiReportArea">
+                <div class="text-center py-10 text-slate-500">
+                    <span>點擊下方「⚡ 開始執行 Gemini 策略體檢」按鈕，大模型將自動分析最近 30 筆成交紀錄與盈虧比。</span>
+                </div>
+            </div>
+
+            <!-- 一鍵套用建議參數區 (初始隱藏，生成後顯示) -->
+            <div id="geminiApplyBar" class="p-2.5 bg-indigo-950/40 border border-indigo-500/40 rounded-xl flex items-center justify-between hidden">
+                <div class="text-[11px]">
+                    <span class="font-bold text-indigo-300 block">🎯 已生成優化參數配置！</span>
+                    <span class="text-slate-400 text-[10px]" id="geminiParamSummaryText">建議門檻: -- 分 | 止損: -%</span>
+                </div>
+                <button onclick="applyGeminiRecommendedParams()" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-md shadow-emerald-500/20 active:scale-95 transition flex items-center gap-1">
+                    <span>⚡ 一鍵套用此參數</span>
+                </button>
+            </div>
+
+            <div class="flex gap-2 pt-1">
+                <button onclick="runGeminiStrategyAudit()" id="btnStartAudit" class="w-full py-2.5 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs shadow-lg shadow-blue-500/20 flex items-center justify-center gap-1.5 transition">
+                    <span>✨</span>
+                    <span>開始執行 Gemini 策略體檢</span>
+                </button>
+            </div>
+        </div>
+    </div>
 
     <!-- 雲端同步視窗 -->
     <div id="cloudModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 hidden">
@@ -697,7 +759,7 @@
         </div>
     </div>
 
-    <!-- 自訂確認視窗 (代替原生 confirm) -->
+    <!-- 自訂確認視窗 -->
     <div id="customConfirmModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 hidden">
         <div class="bg-crypto-card border border-rose-500/40 rounded-2xl max-w-sm w-full p-4 shadow-2xl space-y-3 text-xs">
             <h3 class="font-bold text-white text-sm">⚠️ 重置確認</h3>
@@ -709,7 +771,7 @@
         </div>
     </div>
 
-    <!-- 自訂 Toast 提示泡泡 (代替原生 alert) -->
+    <!-- 自訂 Toast 提示泡泡 -->
     <div id="toastNotification" class="fixed bottom-5 right-5 z-[70] bg-slate-900 border border-amber-500/50 text-white px-3.5 py-2 rounded-xl shadow-2xl text-xs flex items-center gap-2 transform transition-all duration-300 translate-y-20 opacity-0 pointer-events-none">
         <span id="toastIcon">💡</span>
         <span id="toastMsg">通知內容</span>
@@ -725,7 +787,6 @@
             showToast(`已複製房間名稱：${input.value}，可直接貼到手機！`, '📋');
         }
         
-        /* Toast 提示函式 */
         function showToast(msg, icon = '💡') {
             const toast = document.getElementById('toastNotification');
             const msgEl = document.getElementById('toastMsg');
@@ -828,8 +889,9 @@
         const STORAGE_KEY_ROOM = 'bybit_radar_room_id_v2';
         const STORAGE_KEY_SIM = 'bybit_radar_sim_state_v3';
         const STORAGE_KEY_ADAPTIVE = 'bybit_radar_adaptive_v3';
+        const STORAGE_KEY_GEMINI_APIKEY = 'bybit_radar_gemini_api_key';
 
-        // 嚴格排除非小幣：主流幣、美股、半導體 ETF 等 (不參與新開倉與雷達推薦)
+        // 嚴格排除非小幣：主流幣、美股、半導體 ETF 等
         const EXCLUDED_SYMBOLS = [
             "BTCUSDT", "ETHUSDT", "SOLUSDT", "USDCUSDT",
             "SOXLUSDT", "AAPLUSDT", "NVDAUSDT", "TSLAUSDT",
@@ -847,31 +909,31 @@
         let timerInterval = null;
         let alertCount = 0;
         let triggeredSymbolsHistory = new Set();
-        let allMarketPrices = new Map(); // 保存全市場（含美股、主流幣）的最新成交價
+        let allMarketPrices = new Map();
 
         let simState = {
             balance: 100000.0,
             initialBalance: 100000.0,
             autoTrade: true,
             maxPositions: 100,
-            tradeSize: 10.0,
+            tradeSize: 100.0,
             positions: [],
             history: [],
             fomoTrackers: []
         };
 
-        // 最新 AI 自適應策略參數 (強制升級至防插針自適應風控)
         let adaptiveParams = {
             minScore: 68,
-            stopLossPct: 4.2,   // 放寬至 -4.2% 徹底解決 -3% 被日常雜訊頻繁掃損的痛點
-            tp1Pct: 4.0,        // 提早至 +4.0% 平 35% 並立刻移至保本線 (如 BEATUSDT 成功鎖利)
-            tp2Pct: 9.5,        // 第二目標 +9.5% 平 35%
-            trailingPct: 7.0,   // 30% 奔馳尾倉自最高點回撤 7% 鎖利 (完美捕捉 LABUSDT +25% 暴利)
+            stopLossPct: 4.2,
+            tp1Pct: 4.0,
+            tp2Pct: 9.5,
+            trailingPct: 7.0,
             minTurnover: 2500000,
             blacklist: new Set()
         };
 
-        /* 本地儲存讀取函式 (強制校準舊存檔中的脆弱止損參數) */
+        let lastRecommendedGeminiParams = null;
+
         function loadFromStorage() {
             try {
                 const simSaved = localStorage.getItem(STORAGE_KEY_SIM) 
@@ -887,7 +949,6 @@
                                    || localStorage.getItem('bybit_radar_adaptive_v1');
                 if (adaptiveSaved) {
                     const parsed = JSON.parse(adaptiveSaved);
-                    // 關鍵修正：若舊存檔中 stopLossPct 仍為死板的 3%，強制校準至自適應 4.2%
                     const validSl = (parsed.stopLossPct && parsed.stopLossPct >= 4.0) ? parsed.stopLossPct : 4.2;
                     const validTp1 = (parsed.tp1Pct && parsed.tp1Pct <= 4.5) ? parsed.tp1Pct : 4.0;
 
@@ -899,12 +960,30 @@
                         blacklist: new Set(parsed.blacklist || [])
                     };
                 }
+
+                // 載入使用者儲存的 Gemini API Key
+                const savedGeminiKey = localStorage.getItem(STORAGE_KEY_GEMINI_APIKEY);
+                const geminiInput = document.getElementById('geminiApiKeyInput');
+                if (savedGeminiKey && geminiInput) {
+                    geminiInput.value = savedGeminiKey;
+                }
             } catch (err) {
-                console.warn("讀取 localStorage 失敗，已使用預設值:", err);
+                console.warn("讀取 localStorage 失敗:", err);
             }
         }
 
-        /* 取得或建立預設房間 */
+        function saveGeminiApiKey() {
+            const input = document.getElementById('geminiApiKeyInput');
+            if (!input) return;
+            const val = input.value.trim();
+            if (!val) {
+                showToast("請先輸入有效的 Gemini API Key", "⚠️");
+                return;
+            }
+            localStorage.setItem(STORAGE_KEY_GEMINI_APIKEY, val);
+            showToast("Gemini API 金鑰已安全儲存於本地！", "🔑");
+        }
+
         function getOrCreateDefaultRoom() {
             let room = localStorage.getItem(STORAGE_KEY_ROOM) || localStorage.getItem('bybit_radar_room_id');
             if (!room) {
@@ -920,7 +999,6 @@
         let lastLocalUpdate = Date.now();
         let isSyncingFromCloud = false;
 
-        /* Firebase 資料庫初始化與監聽 */
         function initFirebaseSync() {
             try {
                 if (!firebase.apps.length) {
@@ -1049,20 +1127,6 @@
                 });
         }
 
-        function pullFromCloudForce() {
-            if (!firestoreDb) return;
-            firestoreDb.collection('bybit_sync_rooms').doc(currentRoomId).get()
-                .then(doc => {
-                    if (doc.exists) {
-                        applyCloudState(doc.data());
-                        showToast("已從雲端拉取最新資料並覆蓋本機！", "📥");
-                    } else {
-                        showToast("雲端尚無此房間的存檔", "⚠️");
-                    }
-                })
-                .catch(err => showToast("拉取失敗: " + err.message, "❌"));
-        }
-
         function saveToStorage(syncCloud = true) {
             try {
                 localStorage.setItem(STORAGE_KEY_SIM, JSON.stringify(simState));
@@ -1172,19 +1236,16 @@
             updateSimPositions();
             updateFomoTrackers();
 
-            // 若 BTC 大盤正在暴跌回調，自動暫停開立新的多單
             if (simState.autoTrade && !isBtcDumping) {
                 checkAutoTradingOpportunities();
             }
         }
 
-        /* Coinglass OI + GMGN 1h 動量異常評分演算法 */
         function calculateAnomalyScore(price24h, momentum1h, turnover, fundingRate, rangePct, oiValue) {
             let score = 30;
             const reasons = [];
             let isOiSurge = false;
 
-            // 1. Coinglass OI 持倉價值加權
             if (oiValue > 15000000) {
                 score += 25;
                 isOiSurge = true;
@@ -1195,7 +1256,6 @@
                 reasons.push("💎 OI 大幅激增 (>$5M)");
             }
 
-            // 2. GMGN 1小時初動量 (捕捉剛起步階段)
             if (momentum1h >= 3.0 && momentum1h <= 10.0) {
                 score += 25;
                 reasons.push(`🚀 1h 初動爆發 (+${momentum1h.toFixed(1)}%)`);
@@ -1204,7 +1264,6 @@
                 reasons.push("⚡ 1h 動量抬頭");
             }
 
-            // 3. 24h 流動性
             if (turnover > 20000000) {
                 score += 15;
                 reasons.push("🔥 超高熱門流動性");
@@ -1212,7 +1271,6 @@
                 score += 10;
             }
 
-            // 4. 極端負費率逼空潛力
             if (fundingRate <= -0.10) {
                 score += 20;
                 reasons.push("🧲 極限負費率逼空 (<-0.1%)");
@@ -1221,13 +1279,11 @@
                 reasons.push("🧲 空頭擁擠負費率");
             }
 
-            // 5. 突破高點形態
             if (rangePct >= 90 && price24h > 3 && price24h <= 20) {
                 score += 10;
                 reasons.push("📈 緊貼 24h 高點真突破");
             }
 
-            // 扣分項：防追高機制 (24h 已漲超過 25% 扣重分，避免接在魚尾)
             if (price24h > 25) {
                 score -= 30;
                 reasons.push("⚠️ 24h 漲幅過高 (禁止追高魚尾)");
@@ -1241,7 +1297,6 @@
         }
 
         function determineSignal(score, price24h, momentum1h, fundingRate, rangePct, isOiSurge, isBtcDumping = false) {
-            // 大盤避險保護：BTC 暴跌時禁止追多
             if (isBtcDumping) {
                 return {
                     signalType: "BTC_RISK",
@@ -1249,7 +1304,6 @@
                     signalColor: "bg-rose-950/60 text-rose-300 border-rose-500/40"
                 };
             }
-            // 防追高限制：超過 25% 嚴格禁止追多
             if (price24h > 25) {
                 return {
                     signalType: "HIGH_RISK",
@@ -1278,7 +1332,6 @@
                     signalColor: "bg-amber-500/20 text-amber-300 border-amber-500/40"
                 };
             }
-            // 回踩低吸模型 (支撐位企穩)
             if (price24h > 4.0 && price24h <= 18.0 && rangePct >= 55 && rangePct <= 75) {
                 return {
                     signalType: "PULLBACK_BUY",
@@ -1293,7 +1346,6 @@
             };
         }
 
-        /* 自動模擬開倉與管理 */
         function checkAutoTradingOpportunities() {
             if (simState.positions.length >= simState.maxPositions) return;
 
@@ -1326,7 +1378,6 @@
             if (entryPrice <= 0) return;
             const qty = notional / entryPrice;
 
-            // 嚴格採用最新自適應風控比例 (-4.2% SL / +4.0% TP1 / +9.5% TP2)
             const slPrice = entryPrice * (1 - (adaptiveParams.stopLossPct / 100));
             const tp1Price = entryPrice * (1 + (adaptiveParams.tp1Pct / 100));
             const tp2Price = entryPrice * (1 + (adaptiveParams.tp2Pct / 100));
@@ -1361,7 +1412,6 @@
             updateSimHeaderStats();
         }
 
-        /* 持倉更新、階梯止盈與 30% 奔馳尾倉管理 */
         function updateSimPositions() {
             if (simState.positions.length === 0) {
                 renderSimPositions();
@@ -1373,7 +1423,6 @@
             let priceChanged = false;
 
             simState.positions.forEach(pos => {
-                // 優先從全市場行情字典獲取最新價格
                 const curPrice = allMarketPrices.get(pos.symbol) || pos.currentPrice;
                 if (!curPrice || curPrice <= 0) return;
 
@@ -1389,14 +1438,12 @@
                 const pnlPcnt = ((curPrice - pos.entryPrice) / pos.entryPrice) * 100;
                 const holdingMinutes = (now - pos.openTime) / 60000;
 
-                // 1. 防守止損 (SL)
                 if (curPrice <= pos.stopLoss) {
                     const exitPnl = ((pos.stopLoss - pos.entryPrice) / pos.entryPrice) * (pos.qty * pos.entryPrice);
                     closedPositions.push({ pos, exitPrice: pos.stopLoss, pnl: exitPnl, reason: pos.tp1Reached ? "🛡️ 觸發保本損離場" : "🔴 觸發防守止損 (SL)" });
                     return;
                 }
 
-                // 2. TP1 達標：平倉 35% 鎖利，並上移防守至保本
                 if (!pos.tp1Reached && curPrice >= pos.tp1) {
                     pos.tp1Reached = true;
                     const closeQty = pos.originalQty * 0.35;
@@ -1406,14 +1453,13 @@
                     pos.remainingRatio -= 0.35;
                     pos.realizedPnl += tp1Pnl;
                     simState.balance += tp1Pnl;
-                    pos.stopLoss = pos.entryPrice * 1.002; // 保本價
-                    saveToStorage(true); // 止盈為關鍵事件，排程同步
+                    pos.stopLoss = pos.entryPrice * 1.002;
+                    saveToStorage(true);
 
                     pushAlertLog(pos.symbol, "🎯 TP1 達標鎖利", `平倉 35% 鎖定 +${adaptiveParams.tp1Pct}%，防守線已移至保本！`, curPrice, "bull");
                     playAlertSound("bull");
                 }
 
-                // 3. TP2 達標：再平 35% 鎖利，剩餘 30% 啟動奔馳尾倉
                 if (pos.tp1Reached && !pos.tp2Reached && curPrice >= pos.tp2) {
                     pos.tp2Reached = true;
                     const closeQty = pos.originalQty * 0.35;
@@ -1424,13 +1470,12 @@
                     pos.realizedPnl += tp2Pnl;
                     simState.balance += tp2Pnl;
                     pos.isMoonBag = true;
-                    saveToStorage(true); // 止盈為關鍵事件，排程同步
+                    saveToStorage(true);
 
                     pushAlertLog(pos.symbol, "💎 TP2 達標激活尾倉", `平倉 35%，剩餘 30% 尾倉啟動無限奔馳追蹤！`, curPrice, "bull");
                     playAlertSound("bull");
                 }
 
-                // 4. 30% 奔馳尾倉動態移動鎖利 (高點回撤 7% 離場)
                 if (pos.isMoonBag) {
                     const pullback = (pos.highestPrice - curPrice) / pos.highestPrice;
                     if (pullback >= (adaptiveParams.trailingPct / 100)) {
@@ -1440,7 +1485,6 @@
                     }
                 }
 
-                // 5. 橫盤時間止損：放寬至 180 分鐘 (3 小時)，且只要浮盈 (pnlPcnt > 0) 絕不平倉
                 if (!pos.tp1Reached && holdingMinutes >= 180 && pnlPcnt < 0 && pnlPcnt > -2.0) {
                     const exitPnl = ((curPrice - pos.entryPrice) / pos.entryPrice) * (pos.qty * pos.entryPrice);
                     closedPositions.push({ pos, exitPrice: curPrice, pnl: exitPnl, reason: "⏱️ 3小時無動能微虧離場" });
@@ -1452,7 +1496,6 @@
                 finalizeClosedTrade(item.pos, item.exitPrice, item.pnl, item.reason);
             });
 
-            // 關鍵修改：常態跳價只存 LocalStorage，不傳入雲端，防範 resource-exhausted 報錯
             if (priceChanged && closedPositions.length === 0) {
                 saveToStorage(false);
             }
@@ -1480,7 +1523,6 @@
             simState.history.unshift(record);
             if (simState.history.length > 80) simState.history.pop();
 
-            // 啟動 24h 賣飛走勢追蹤
             addFomoTracker(pos.symbol, pos.entryPrice, exitPrice);
 
             saveToStorage();
@@ -1572,12 +1614,10 @@
             const recent = simState.history.slice(0, 20);
             if (recent.length < 5) return;
 
-            // 調整：微虧離場 (例如 -1.0% 以內的時間止損換幣) 不粗暴計為重大挫敗
             const wins = recent.filter(t => t.pnl > 0).length;
             const hardLosses = recent.filter(t => t.pnlPct <= -2.5).length;
             const winRate = wins / recent.length;
 
-            // 連續觸發硬止損的標的自動加入黑名單冷卻
             const symbolHardLosses = simState.history.slice(0, 10).filter(t => t.symbol === latestTrade.symbol && t.pnlPct <= -2.5).length;
             if (symbolHardLosses >= 2 && !adaptiveParams.blacklist.has(latestTrade.symbol)) {
                 adaptiveParams.blacklist.add(latestTrade.symbol);
@@ -1592,7 +1632,6 @@
                 adaptiveParams.minTurnover = Math.min(6000000, adaptiveParams.minTurnover + 500000);
                 setAdaptiveBadge("防守修復模式", "bg-rose-950/60 text-rose-300 border-rose-500/40");
 
-                // 只有在門檻數值真正有實質改變時才寫入日誌，杜絕無效重複刷屏
                 if (adaptiveParams.minScore !== prevScore || adaptiveParams.minTurnover !== prevTurnover) {
                     pushAdaptiveLog(`⚠️ 近期勝率偏低 (${Math.round(winRate * 100)}%)，自修復微調：門檻提升至 ${adaptiveParams.minScore} 分，流動性至 $${(adaptiveParams.minTurnover/1e6).toFixed(1)}M。`);
                 }
@@ -1661,6 +1700,182 @@
             saveToStorage();
             updateAdaptiveUI();
             pushAdaptiveLog(`🔓 幣種 ${sym} 已從黑名單解除，重新納入監控池。`);
+        }
+
+        /* Gemini 2.0 智慧策略體檢模組 */
+        function openGeminiAuditModal() {
+            const modal = document.getElementById('geminiModal');
+            if (modal) modal.classList.remove('hidden');
+        }
+
+        function closeGeminiAuditModal() {
+            const modal = document.getElementById('geminiModal');
+            if (modal) modal.classList.add('hidden');
+        }
+
+        async function runGeminiStrategyAudit() {
+            const apiKeyInput = document.getElementById('geminiApiKeyInput');
+            const apiKey = (apiKeyInput ? apiKeyInput.value.trim() : '') || localStorage.getItem(STORAGE_KEY_GEMINI_APIKEY);
+
+            if (!apiKey) {
+                showToast("請先在上方輸入並儲存 Gemini API Key！", "⚠️");
+                return;
+            }
+
+            const recentHistory = simState.history.slice(0, 30);
+            const activePositions = simState.positions;
+
+            if (recentHistory.length < 3) {
+                showToast("平倉記錄不足 3 筆，請累積更多數據後再體檢", "⚠️");
+                return;
+            }
+
+            const reportArea = document.getElementById('geminiReportArea');
+            const btn = document.getElementById('btnStartAudit');
+            const applyBar = document.getElementById('geminiApplyBar');
+
+            if (applyBar) applyBar.classList.add('hidden');
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = `<div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div> 正在連線 Gemini 2.0 進行多因子覆盤...`;
+            }
+
+            reportArea.innerHTML = `
+                <div class="flex flex-col items-center justify-center py-12 space-y-3">
+                    <div class="w-8 h-8 border-3 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                    <span class="text-slate-300 font-mono text-xs">正在分析 ${recentHistory.length} 筆平倉明細與 ${activePositions.length} 筆未平倉單...</span>
+                    <span class="text-slate-500 text-[11px]">計算 MAE / MFE、止損洗盤率與當前盤面風格特徵...</span>
+                </div>
+            `;
+
+            const promptText = `
+你是一位頂尖的加密貨幣量化基金操盤手與高頻突破交易專家。
+以下是我們在 Bybit 小幣永續合約實盤模擬系統中的最新運算數據：
+
+【當前策略運行參數】：
+- 當前進場評分門檻: ${adaptiveParams.minScore} 分
+- 當前止損比例 (SL): -${adaptiveParams.stopLossPct}%
+- 第一止盈 (TP1): +${adaptiveParams.tp1Pct}% (平倉35%移保本)
+- 第二止盈 (TP2): +${adaptiveParams.tp2Pct}% (平倉35%)
+- 奔馳尾倉移動鎖利: 最高點回撤 -${adaptiveParams.trailingPct}%
+- 當前黑名單標的: ${JSON.stringify(Array.from(adaptiveParams.blacklist))}
+
+【最近平倉明細 (前 30 筆歷史)】：
+${JSON.stringify(recentHistory)}
+
+【當前進行中持倉】：
+${JSON.stringify(activePositions.map(p => ({ symbol: p.symbol, entry: p.entryPrice, cur: p.currentPrice, tp1Reached: p.tp1Reached, isMoonBag: p.isMoonBag, reason: p.reason })))}
+
+請為這套量化系統進行深度體檢覆盤，並依據以下結構提供繁體中文專業分析：
+1. 【虧損歸因深度復盤】：統計主要虧損原因（例如：假突破追高、時間超時平倉過早、特定幣種反覆被插針洗盤）。
+2. 【勝率與盈虧比健康度】：評價當前盈虧比是否覆蓋試錯成本？
+3. 【具體調參建議】：請嚴格依據下列 JSON 格式回傳優化參數配置，供系統一鍵套用：
+\`\`\`json
+{
+  "recommendedMinScore": 72,
+  "recommendedStopLossPct": 4.5,
+  "recommendedTp1Pct": 3.8,
+  "recommendedTp2Pct": 9.5,
+  "recommendedTrailingPct": 7.0,
+  "suggestedBlacklist": ["代幣名稱1", "代幣名稱2"],
+  "reason": "調整理由簡述"
+}
+\`\`\`
+`;
+
+            try {
+                // 使用 Google 官方 Gemini 2.0 / 1.5 API 端點
+                const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: promptText }] }]
+                    })
+                });
+
+                const result = await response.json();
+
+                if (!response.ok || result.error) {
+                    throw new Error(result.error ? result.error.message : "API 請求失敗");
+                }
+
+                const replyText = result.candidates[0].content.parts[0].text;
+                
+                // 解析 Markdown 與抽出 JSON 配置
+                let formattedHtml = replyText
+                    .replace(/### (.*?)\n/g, '<h4 class="font-bold text-amber-400 text-xs mt-3 mb-1">$1</h4>')
+                    .replace(/## (.*?)\n/g, '<h3 class="font-bold text-blue-300 text-sm mt-3 mb-1">$1</h3>')
+                    .replace(/\*\*(.*?)\*\*/g, '<strong class="text-white">$1</strong>')
+                    .replace(/\n\n/g, '<br><br>')
+                    .replace(/\n- /g, '<br>• ');
+
+                reportArea.innerHTML = `
+                    <div class="space-y-2 text-xs">
+                        ${formattedHtml}
+                    </div>
+                `;
+
+                // 嘗試抽離出 JSON 參數
+                const jsonMatch = replyText.match(/```json\s*([\s\S]*?)\s*```/);
+                if (jsonMatch && jsonMatch[1]) {
+                    try {
+                        const parsedParams = JSON.parse(jsonMatch[1]);
+                        lastRecommendedGeminiParams = parsedParams;
+
+                        const paramSummary = document.getElementById('geminiParamSummaryText');
+                        if (paramSummary) {
+                            paramSummary.innerText = `建議門檻: ${parsedParams.recommendedMinScore}分 | 止損: -${parsedParams.recommendedStopLossPct}% | TP1: +${parsedParams.recommendedTp1Pct}% | 黑名單: ${parsedParams.suggestedBlacklist ? parsedParams.suggestedBlacklist.join(', ') : '無'}`;
+                        }
+                        if (applyBar) applyBar.classList.remove('hidden');
+                    } catch (e) {
+                        console.warn("JSON parse error from Gemini:", e);
+                    }
+                }
+
+                showToast("Gemini 智慧策略體檢完成！", "✨");
+            } catch (err) {
+                console.error("Gemini API Error:", err);
+                reportArea.innerHTML = `
+                    <div class="p-4 rounded-xl bg-rose-950/40 border border-rose-500/40 text-rose-300 text-xs space-y-2">
+                        <div class="font-bold">❌ 連線 Gemini API 失敗：</div>
+                        <div>${err.message}</div>
+                        <div class="text-[11px] text-slate-400">請確認 API Key 是否正確且具備 Gemini 1.5 / 2.0 訪問權限。</div>
+                    </div>
+                `;
+                showToast("體檢失敗: " + err.message, "❌");
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = `<span>✨</span><span>重新執行 Gemini 策略體檢</span>`;
+                }
+            }
+        }
+
+        function applyGeminiRecommendedParams() {
+            if (!lastRecommendedGeminiParams) return;
+
+            const p = lastRecommendedGeminiParams;
+
+            if (p.recommendedMinScore) adaptiveParams.minScore = p.recommendedMinScore;
+            if (p.recommendedStopLossPct) adaptiveParams.stopLossPct = p.recommendedStopLossPct;
+            if (p.recommendedTp1Pct) adaptiveParams.tp1Pct = p.recommendedTp1Pct;
+            if (p.recommendedTp2Pct) adaptiveParams.tp2Pct = p.recommendedTp2Pct;
+            if (p.recommendedTrailingPct) adaptiveParams.trailingPct = p.recommendedTrailingPct;
+
+            if (p.suggestedBlacklist && Array.isArray(p.suggestedBlacklist)) {
+                p.suggestedBlacklist.forEach(sym => {
+                    if (sym && typeof sym === 'string') adaptiveParams.blacklist.add(sym.trim());
+                });
+            }
+
+            saveToStorage();
+            updateAdaptiveUI();
+
+            pushAdaptiveLog(`✨ 【Gemini AI 調參】已一鍵套用大模型建議：門檻 ${adaptiveParams.minScore}分，止損 -${adaptiveParams.stopLossPct}%，TP1 +${adaptiveParams.tp1Pct}%。`);
+            showToast("已成功套用 Gemini 推薦參數！", "🚀");
+            closeGeminiAuditModal();
         }
 
         /* UI 渲染與按鈕切換邏輯 */
@@ -1768,7 +1983,6 @@
                     </div>
                 `;
             } else {
-                // 卡片視圖
                 container.innerHTML = `
                     <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-2.5 max-h-[460px] overflow-y-auto pr-1">
                         ${list.map(pos => {
@@ -1983,7 +2197,7 @@
             let list = [...simState.history];
             if (currentHistoryFilter === 'win') list = list.filter(t => t.pnl > 0);
             else if (currentHistoryFilter === 'loss') list = list.filter(t => t.pnl < 0);
-            else if (currentHistoryFilter === 'timeout') list = list.filter(t => t.reason.includes("超時"));
+            else if (currentHistoryFilter === 'timeout') list = list.filter(t => t.reason.includes("超時") || t.reason.includes("3小時"));
 
             if (list.length === 0) {
                 tbody.innerHTML = `<tr><td colspan="8" class="py-8 text-center text-slate-500 font-sans">無符合記錄。</td></tr>`;
@@ -2147,7 +2361,6 @@
             const openPosEl = document.getElementById('simOpenPositionsCount');
             if (openPosEl) openPosEl.innerText = `${simState.positions.length} / ${simState.maxPositions}`;
 
-            // 即時計算當前未平倉持倉的浮盈比例
             const activeBadge = document.getElementById('simActiveWinRateBadge');
             if (activeBadge && simState.positions.length > 0) {
                 const activeWins = simState.positions.filter(p => p.currentPrice >= p.entryPrice).length;
@@ -2317,7 +2530,7 @@
             initFirebaseSync();
             updateSimHeaderStats();
             updateAdaptiveUI();
-            togglePositionView('table'); // 預設固定為精簡表格
+            togglePositionView('table');
             fetchMarketData();
             initTimer();
             renderHistoryTable();
