@@ -1104,16 +1104,34 @@
         function processTickers(list) {
             const newTickers = [];
 
+            // 1. 先檢測大盤龍頭 BTC 的 1 小時動量 (Beta 風控)
+            const btcItem = list.find(i => i.symbol === "BTCUSDT");
+            let isBtcDumping = false;
+            if (btcItem) {
+                const btcLast = parseFloat(btcItem.lastPrice) || 0;
+                const btcPrev1h = parseFloat(btcItem.prevPrice1h) || btcLast;
+                const btc1hChange = btcPrev1h > 0 ? ((btcLast - btcPrev1h) / btcPrev1h) * 100 : 0;
+                
+                const gateDot = document.getElementById('marketGateDot');
+                const gateText = document.getElementById('marketGateText');
+
+                if (btc1hChange <= -1.2) {
+                    isBtcDumping = true;
+                    if (gateDot) gateDot.className = "w-1.5 h-1.5 rounded-full bg-rose-500 animate-ping mr-1.5";
+                    if (gateText) gateText.innerHTML = `<span class="text-rose-400 font-bold">BTC回調 (${btc1hChange.toFixed(1)}%) 暫停開多</span>`;
+                } else {
+                    if (gateDot) gateDot.className = "w-1.5 h-1.5 rounded-full bg-emerald-400 mr-1.5";
+                    if (gateText) gateText.innerHTML = `<span>大盤: 正常 (${btc1hChange >= 0 ? '+' : ''}${btc1hChange.toFixed(1)}%)</span>`;
+                }
+            }
+
             list.forEach(item => {
                 const symbol = item.symbol;
                 if (!symbol.endsWith("USDT")) return;
 
                 const lastPrice = parseFloat(item.lastPrice) || 0;
-                
-                // 1. 全市場所有標的（包含美股、主流幣）均寫入最新報價字典，確保舊持倉隨時能對齊市價
                 allMarketPrices.set(symbol, lastPrice);
 
-                // 2. 雷達監控池與新開倉候選池排除美股及主流幣
                 if (EXCLUDED_SYMBOLS.includes(symbol)) return;
 
                 const price24hPcnt = (parseFloat(item.price24hPcnt) || 0) * 100;
@@ -1123,7 +1141,6 @@
                 const low24h = parseFloat(item.lowPrice24h) || lastPrice;
                 const fundingRate = (parseFloat(item.fundingRate) || 0) * 100;
 
-                // 計算 1h 初動量與合約持倉價值 (OI)
                 const prevPrice1h = parseFloat(item.prevPrice1h) || lastPrice;
                 const momentum1h = prevPrice1h > 0 ? ((lastPrice - prevPrice1h) / prevPrice1h) * 100 : 0;
                 const openInterestValue = parseFloat(item.openInterestValue) || 0;
@@ -1134,7 +1151,7 @@
                 }
 
                 const { score, reasons, isOiSurge } = calculateAnomalyScore(price24hPcnt, momentum1h, turnover24h, fundingRate, rangePercent, openInterestValue);
-                const { signalType, signalText, signalColor } = determineSignal(score, price24hPcnt, momentum1h, fundingRate, rangePercent, isOiSurge);
+                const { signalType, signalText, signalColor } = determineSignal(score, price24hPcnt, momentum1h, fundingRate, rangePercent, isOiSurge, isBtcDumping);
 
                 const record = {
                     symbol, lastPrice, price24hPcnt, momentum1h, turnover24h, volume24h,
@@ -1154,7 +1171,8 @@
             updateSimPositions();
             updateFomoTrackers();
 
-            if (simState.autoTrade) {
+            // 若 BTC 大盤正在暴跌回調，自動暫停開立新的多單
+            if (simState.autoTrade && !isBtcDumping) {
                 checkAutoTradingOpportunities();
             }
         }
