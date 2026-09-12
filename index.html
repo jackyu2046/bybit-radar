@@ -162,10 +162,11 @@
                 <div class="flex items-center gap-1.5 text-slate-300">
                     <span class="text-slate-400">持倉:</span>
                     <span class="font-mono font-bold text-amber-400" id="simOpenPositionsCount">0 / 100</span>
+                    <span class="text-[10px] text-emerald-400 font-mono font-semibold ml-0.5" id="simActiveWinRateBadge" title="當前進行中持倉的浮盈比例">(0% 浮盈)</span>
                 </div>
                 <div class="h-3 w-[1px] bg-crypto-border hidden sm:block"></div>
                 <div class="flex items-center gap-1.5 text-slate-300 cursor-pointer hover:text-amber-400 transition" onclick="openHistoryModal()" title="點擊檢視歷史平倉明細">
-                    <span class="text-slate-400">勝率 (近 50 筆):</span>
+                    <span class="text-slate-400">歷史勝率 (近 50 筆):</span>
                     <span class="font-mono font-bold text-emerald-400" id="simWinRateDisplay">--%</span>
                     <span class="text-slate-500 font-mono text-[11px]" id="simTradesRatio">(0勝 0負)</span>
                     <span class="text-[10px] text-amber-400 underline font-sans">明細 ↗</span>
@@ -1571,30 +1572,43 @@
             const recent = simState.history.slice(0, 20);
             if (recent.length < 5) return;
 
+            // 調整：微虧離場 (例如 -1.0% 以內的時間止損換幣) 不粗暴計為重大挫敗
             const wins = recent.filter(t => t.pnl > 0).length;
+            const hardLosses = recent.filter(t => t.pnlPct <= -2.5).length;
             const winRate = wins / recent.length;
 
-            // 連虧 2 次標的自動列入黑名單
-            const symbolLosses = simState.history.slice(0, 10).filter(t => t.symbol === latestTrade.symbol && t.pnl < 0).length;
-            if (symbolLosses >= 2 && !adaptiveParams.blacklist.has(latestTrade.symbol)) {
+            // 連續觸發硬止損的標的自動加入黑名單冷卻
+            const symbolHardLosses = simState.history.slice(0, 10).filter(t => t.symbol === latestTrade.symbol && t.pnlPct <= -2.5).length;
+            if (symbolHardLosses >= 2 && !adaptiveParams.blacklist.has(latestTrade.symbol)) {
                 adaptiveParams.blacklist.add(latestTrade.symbol);
                 pushAdaptiveLog(`🚨 劣質標的防護：${latestTrade.symbol} 短期連續止損 2 次，已加入動態冷卻黑名單。`);
             }
 
-            if (winRate < 0.40) {
-                adaptiveParams.minScore = Math.min(75, adaptiveParams.minScore + 1);
+            if (winRate < 0.35 || hardLosses >= 8) {
+                const prevScore = adaptiveParams.minScore;
+                const prevTurnover = adaptiveParams.minTurnover;
+
+                adaptiveParams.minScore = Math.min(78, adaptiveParams.minScore + 1);
                 adaptiveParams.minTurnover = Math.min(6000000, adaptiveParams.minTurnover + 500000);
                 setAdaptiveBadge("防守修復模式", "bg-rose-950/60 text-rose-300 border-rose-500/40");
-                pushAdaptiveLog(`⚠️ 近期勝率偏低 (${Math.round(winRate * 100)}%)，AI 自修復啟動：提升進場評分門檻至 ${adaptiveParams.minScore} 分，流動性門檻至 $${(adaptiveParams.minTurnover/1e6).toFixed(1)}M。`);
-            } else if (winRate >= 0.65) {
-                adaptiveParams.minScore = Math.max(55, adaptiveParams.minScore - 1);
+
+                // 只有在門檻數值真正有實質改變時才寫入日誌，杜絕無效重複刷屏
+                if (adaptiveParams.minScore !== prevScore || adaptiveParams.minTurnover !== prevTurnover) {
+                    pushAdaptiveLog(`⚠️ 近期勝率偏低 (${Math.round(winRate * 100)}%)，自修復微調：門檻提升至 ${adaptiveParams.minScore} 分，流動性至 $${(adaptiveParams.minTurnover/1e6).toFixed(1)}M。`);
+                }
+            } else if (winRate >= 0.55 && hardLosses <= 4) {
+                const prevScore = adaptiveParams.minScore;
+                adaptiveParams.minScore = Math.max(62, adaptiveParams.minScore - 1);
                 setAdaptiveBadge("進取擴張模式", "bg-emerald-950/60 text-emerald-300 border-emerald-500/40");
-                pushAdaptiveLog(`🔥 近期勝率極佳 (${Math.round(winRate * 100)}%)，自適應擴張：適度釋放進場門檻至 ${adaptiveParams.minScore} 分。`);
+
+                if (adaptiveParams.minScore !== prevScore) {
+                    pushAdaptiveLog(`🔥 勝率回升至 ${Math.round(winRate * 100)}%，自適應擴張：適度釋放進場門檻至 ${adaptiveParams.minScore} 分。`);
+                }
             } else {
                 setAdaptiveBadge("均衡學習狀態", "bg-purple-950/60 text-purple-300 border-purple-500/40");
             }
 
-            saveToStorage();
+            saveToStorage(false);
             updateAdaptiveUI();
         }
 
@@ -2132,6 +2146,17 @@
 
             const openPosEl = document.getElementById('simOpenPositionsCount');
             if (openPosEl) openPosEl.innerText = `${simState.positions.length} / ${simState.maxPositions}`;
+
+            // 即時計算當前未平倉持倉的浮盈比例
+            const activeBadge = document.getElementById('simActiveWinRateBadge');
+            if (activeBadge && simState.positions.length > 0) {
+                const activeWins = simState.positions.filter(p => p.currentPrice >= p.entryPrice).length;
+                const activeWinPct = Math.round((activeWins / simState.positions.length) * 100);
+                activeBadge.innerText = `(${activeWinPct}% 浮盈中 · ${activeWins}/${simState.positions.length})`;
+                activeBadge.className = `text-[10px] font-mono font-semibold ml-0.5 ${activeWinPct >= 50 ? 'text-emerald-400' : 'text-amber-400'}`;
+            } else if (activeBadge) {
+                activeBadge.innerText = `(0 倉位)`;
+            }
 
             const moonBags = simState.positions.filter(p => p.isMoonBag).length;
             const moonBagEl = document.getElementById('simMoonBagCount');
