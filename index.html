@@ -439,22 +439,27 @@
 
             <div>
                 <label class="block text-slate-300 font-medium mb-1">同步房間名稱 (Room ID)</label>
-                <input type="text" id="cloudRoomInput" value=""
-                    class="w-full bg-slate-900 border border-crypto-border rounded-lg px-3 py-1.5 text-white font-mono text-xs focus:outline-none focus:border-sky-500">
+                <div class="flex gap-2">
+                    <input type="text" id="cloudRoomInput" value=""
+                        class="flex-1 bg-slate-900 border border-crypto-border rounded-lg px-3 py-1.5 text-white font-mono text-xs focus:outline-none focus:border-sky-500">
+                    <button onclick="copyRoomIdToClipboard()" class="px-3 py-1.5 rounded-lg bg-sky-950 hover:bg-sky-900 text-sky-300 border border-sky-500/40 text-[11px] font-bold whitespace-nowrap">
+                        📋 複製名稱
+                    </button>
+                </div>
                 <span class="text-[10px] text-slate-400 block mt-1">💡 只要在手機與電腦輸入完全相同的房間名稱，兩端持倉即可即時互通。</span>
             </div>
 
             <div class="p-2.5 bg-slate-950 rounded-xl border border-sky-500/30 space-y-2">
                 <span class="text-[11px] font-bold text-sky-300 block">📱 跨端同步方向控制 (解決被覆蓋問題)：</span>
                 <div class="grid grid-cols-2 gap-2">
-                    <button onclick="pullFromCloudForce()" class="py-2 px-2 rounded-lg bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs flex items-center justify-center gap-1">
+                    <button onclick="pullFromCloudForce()" class="py-2 px-2 rounded-lg bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs flex items-center justify-center gap-1 active:scale-95 transition">
                         <span>📥</span> 從雲端拉取覆蓋本機
                     </button>
-                    <button onclick="pushToCloudForce()" class="py-2 px-2 rounded-lg bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs flex items-center justify-center gap-1">
+                    <button onclick="pushToCloudForce()" class="py-2 px-2 rounded-lg bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs flex items-center justify-center gap-1 active:scale-95 transition">
                         <span>⚡</span> 將本機強制覆蓋雲端
                     </button>
                 </div>
-                <span class="text-[10px] text-slate-400 block">說明：手機操作後點「本機覆蓋雲端」；電腦端打開點「從雲端拉取」，即可精準對齊數據！</span>
+                <span class="text-[10px] text-slate-400 block" id="cloudOpFeedback">💡 提示：電腦操作完點「本機強制覆蓋雲端」；手機端打開點「從雲端拉取」，即可精準對齊！</span>
             </div>
 
             <div class="flex gap-2 pt-1">
@@ -704,12 +709,21 @@
     </div>
 
     <!-- 自訂 Toast 提示泡泡 (代替原生 alert) -->
-    <div id="toastNotification" class="fixed bottom-5 right-5 z-50 bg-slate-900 border border-amber-500/50 text-white px-3.5 py-2 rounded-xl shadow-2xl text-xs flex items-center gap-2 transform transition-all duration-300 translate-y-20 opacity-0 pointer-events-none">
+    <div id="toastNotification" class="fixed bottom-5 right-5 z-[70] bg-slate-900 border border-amber-500/50 text-white px-3.5 py-2 rounded-xl shadow-2xl text-xs flex items-center gap-2 transform transition-all duration-300 translate-y-20 opacity-0 pointer-events-none">
         <span id="toastIcon">💡</span>
         <span id="toastMsg">通知內容</span>
     </div>
 
     <script>
+        function copyRoomIdToClipboard() {
+            const input = document.getElementById('cloudRoomInput');
+            if (!input) return;
+            input.select();
+            input.setSelectionRange(0, 99999);
+            document.execCommand('copy');
+            showToast(`已複製房間名稱：${input.value}，可直接貼到手機！`, '📋');
+        }
+        
         /* Toast 提示函式 */
         function showToast(msg, icon = '💡') {
             const toast = document.getElementById('toastNotification');
@@ -995,15 +1009,42 @@
                     blacklist: Array.from(adaptiveParams.blacklist)
                 }
             };
+            const feedback = document.getElementById('cloudOpFeedback');
+            if (feedback) feedback.innerHTML = `<span class="text-amber-400 font-bold">⏳ 正在上傳至雲端...</span>`;
+
             firestoreDb.collection('bybit_sync_rooms').doc(currentRoomId).set(payload)
                 .then(() => {
                     showToast("已成功將本機資料覆蓋至雲端！", "⚡");
+                    if (feedback) feedback.innerHTML = `<span class="text-emerald-400 font-bold">✅ 電腦數據已成功上傳！現在請至手機點擊「從雲端拉取覆蓋本機」。</span>`;
                     const syncEl = document.getElementById('cloudLastSyncTime');
                     if (syncEl) syncEl.innerText = new Date().toLocaleTimeString();
                 })
                 .catch(err => {
                     console.error("上傳雲端失敗:", err);
                     showToast("同步失敗: " + err.message, "❌");
+                    if (feedback) feedback.innerHTML = `<span class="text-rose-400 font-bold">❌ 上傳失敗: ${err.message}</span>`;
+                });
+        }
+
+        function pullFromCloudForce() {
+            if (!firestoreDb) return;
+            const feedback = document.getElementById('cloudOpFeedback');
+            if (feedback) feedback.innerHTML = `<span class="text-sky-400 font-bold">⏳ 正在從雲端拉取...</span>`;
+
+            firestoreDb.collection('bybit_sync_rooms').doc(currentRoomId).get()
+                .then(doc => {
+                    if (doc.exists) {
+                        applyCloudState(doc.data());
+                        showToast("已從雲端拉取最新資料並覆蓋本機！", "📥");
+                        if (feedback) feedback.innerHTML = `<span class="text-emerald-400 font-bold">✅ 已成功拉取雲端數據，兩端已完成同頻！</span>`;
+                    } else {
+                        showToast("雲端尚無此房間的存檔，請確認房間名稱是否一致", "⚠️");
+                        if (feedback) feedback.innerHTML = `<span class="text-amber-400 font-bold">⚠️ 雲端找不到此房間存檔，請確認手機與電腦輸入的名字完全一樣。</span>`;
+                    }
+                })
+                .catch(err => {
+                    showToast("拉取失敗: " + err.message, "❌");
+                    if (feedback) feedback.innerHTML = `<span class="text-rose-400 font-bold">❌ 拉取失敗: ${err.message}</span>`;
                 });
         }
 
@@ -1310,20 +1351,20 @@
 
             const now = Date.now();
             const closedPositions = [];
-            let stateChanged = false;
+            let priceChanged = false;
 
             simState.positions.forEach(pos => {
-                // 優先從全市場行情字典獲取最新價格（即使該幣種已在雷達黑名單中，持倉也能即時跳動）
+                // 優先從全市場行情字典獲取最新價格
                 const curPrice = allMarketPrices.get(pos.symbol) || pos.currentPrice;
                 if (!curPrice || curPrice <= 0) return;
 
                 if (pos.currentPrice !== curPrice) {
                     pos.currentPrice = curPrice;
-                    stateChanged = true;
+                    priceChanged = true;
                 }
                 if (curPrice > pos.highestPrice) {
                     pos.highestPrice = curPrice;
-                    stateChanged = true;
+                    priceChanged = true;
                 }
 
                 const pnlPcnt = ((curPrice - pos.entryPrice) / pos.entryPrice) * 100;
@@ -1347,7 +1388,7 @@
                     pos.realizedPnl += tp1Pnl;
                     simState.balance += tp1Pnl;
                     pos.stopLoss = pos.entryPrice * 1.002; // 保本價
-                    stateChanged = true;
+                    saveToStorage(true); // 止盈為關鍵事件，排程同步
 
                     pushAlertLog(pos.symbol, "🎯 TP1 達標鎖利", `平倉 35% 鎖定 +${adaptiveParams.tp1Pct}%，防守線已移至保本！`, curPrice, "bull");
                     playAlertSound("bull");
@@ -1364,7 +1405,7 @@
                     pos.realizedPnl += tp2Pnl;
                     simState.balance += tp2Pnl;
                     pos.isMoonBag = true;
-                    stateChanged = true;
+                    saveToStorage(true); // 止盈為關鍵事件，排程同步
 
                     pushAlertLog(pos.symbol, "💎 TP2 達標激活尾倉", `平倉 35%，剩餘 30% 尾倉啟動無限奔馳追蹤！`, curPrice, "bull");
                     playAlertSound("bull");
@@ -1392,8 +1433,9 @@
                 finalizeClosedTrade(item.pos, item.exitPrice, item.pnl, item.reason);
             });
 
-            if (stateChanged || closedPositions.length > 0) {
-                saveToStorage();
+            // 關鍵修改：常態跳價只存 LocalStorage，不傳入雲端，防範 resource-exhausted 報錯
+            if (priceChanged && closedPositions.length === 0) {
+                saveToStorage(false);
             }
 
             renderSimPositions();
