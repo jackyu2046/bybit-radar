@@ -423,7 +423,7 @@
 
     <script>
         /* =========================================================
-           BYBIT RADAR V8.5 CORE ENGINE — A1.1 FINAL INTEGRATION
+           BYBIT RADAR V8.5 CORE ENGINE
            整合: 數據防護 + 統一撮合 (TP1/TP2/Trailing) + 幣種冷卻風控 + Strategy Lab
         ========================================================= */
         const STORAGE_KEY_SIM = 'bybit_radar_sim_v82';
@@ -812,15 +812,25 @@
                 const stateRaw = rp.payload.simStateRaw;
                 const archiveRaw = rp.payload.archiveRaw;
 
+                let restoredState = null;
                 if (typeof stateRaw === 'string') {
                     const parsed = v85SafeJsonParse(stateRaw);
                     if (!parsed || typeof parsed !== 'object') return false;
                     localStorage.setItem(STORAGE_KEY_SIM, stateRaw);
+                    restoredState = parsed;
                 }
                 if (typeof archiveRaw === 'string') {
                     const parsedArchive = v85SafeJsonParse(archiveRaw);
                     if (!Array.isArray(parsedArchive)) return false;
                     localStorage.setItem(V85_ARCHIVE_KEY, archiveRaw);
+                    if (restoredState) restoredState.historyArchive = parsedArchive;
+                }
+
+                if (restoredState) {
+                    simState = restoredState;
+                    ensureRiskState();
+                    renderSimPositions();
+                    updateSimHeaderStats();
                 }
                 return true;
             } catch (err) {
@@ -2119,32 +2129,6 @@
         let firestoreDb = null;
         let lastLocalUpdate = Date.now();
 
-        function v85ApplyCloudStateSafely(cloudState) {
-            if (!cloudState || typeof cloudState !== 'object') return false;
-
-            const localHist = simState.historyArchive || simState.history || [];
-            const cloudHist = cloudState.historyArchive || cloudState.history || [];
-            const merged = v85QualityMergeTrades(localHist, cloudHist);
-
-            // Preserve local execution archive while allowing cloud settings/state updates.
-            simState = {
-                ...simState,
-                ...cloudState,
-                schemaVersion: V85_SCHEMA_VERSION,
-                historyArchive: merged,
-                history: merged.slice(0, 300)
-            };
-
-            const health = v85GetMigrationHealth(simState);
-            if (!health.duplicateFree || simState.history.length > 300) {
-                console.warn('Cloud merge rejected by migration health check:', health);
-                return false;
-            }
-
-            saveToStorage(false);
-            return true;
-        }
-
         function initFirebaseSync() {
             try {
                 if (!firebase.apps.length) firebase.initializeApp(defaultFirebaseConfig);
@@ -2162,7 +2146,11 @@
                 const data = doc.data();
                 if (data && data.updatedAt && data.updatedAt > lastLocalUpdate) {
                     if (data.simState) {
-                        if (!v85ApplyCloudStateSafely(data.simState)) return;
+                        const localHist = simState.historyArchive || simState.history || [];
+                        const cloudHist = data.simState.historyArchive || data.simState.history || [];
+                        const merged = v85MergeTrades(localHist, cloudHist);
+                        simState = { ...simState, ...data.simState, historyArchive: merged, history: merged.slice(0, 300) };
+                        saveToStorage(false);
                         renderSimPositions();
                         updateSimHeaderStats();
                     }
@@ -2183,10 +2171,14 @@
             if (!firestoreDb) return;
             firestoreDb.collection('bybit_sync_rooms').doc(currentRoomId).get().then(doc => {
                 if (doc.exists && doc.data().simState) {
-                    if (!v85ApplyCloudStateSafely(doc.data().simState)) return;
-                    renderSimPositions();
-                    updateSimHeaderStats();
-                    showNotificationModal("同步成功", "已成功從雲端合併最新紀錄！");
+                    const ok = v85ApplyCloudStateSafely(doc.data().simState);
+                    if (ok) {
+                        renderSimPositions();
+                        updateSimHeaderStats();
+                        showNotificationModal("同步成功", "已成功從雲端合併最新紀錄！");
+                    } else {
+                        showNotificationModal("同步攔截", "雲端資料未通過完整性檢查（可能存在重複或格式異常），已保留本機紀錄。");
+                    }
                 }
             });
         }
