@@ -773,7 +773,7 @@
             const legacyResearch = v85SafeJsonParse(legacyResearchRaw) || [];
 
             const allMergedExecution = v85QualityMergeTrades(idbExecutionRecords, legacyArchive, simState.history || []);
-            simState.historyArchive = allMergedExecution;
+            simState.historyArchive = allMergedExecution; // 解除 100 筆截斷限制，保留全量
             simState.history = allMergedExecution.slice(0, 30); // 記憶體與 LocalStorage 只放前 30 筆供即時儀表板快顯
 
             // 將所有未在 IndexedDB 的紀錄持久化寫入 IndexedDB
@@ -786,7 +786,7 @@
                 [...idbResearchRecords, ...legacyResearch, ...(simState.research?.archive || [])].forEach(s => {
                     if (s && s.id) researchMap.set(s.id, s);
                 });
-                simState.research.archive = Array.from(researchMap.values());
+                simState.research.archive = Array.from(researchMap.values()); // 解除 200 筆限制
                 for (const shd of simState.research.archive) {
                     await idbPutRecord(IDB_STORE_RESEARCH, shd);
                 }
@@ -1194,8 +1194,9 @@
         }
 
         function ensureResearchState(){
-            const d = { enabled: true, shadowNotional: 10, timeoutMinutes: 240, active: [], archive: [], seenSignals: {}, version: 'V8.6-IDB' };
+            const d = { enabled: true, shadowNotional: 10, timeoutMinutes: 60, active: [], archive: [], seenSignals: {}, version: 'V8.6-IDB' };
             simState.research = Object.assign(d, simState.research || {});
+            simState.research.timeoutMinutes = 60; // 縮短為 60 分鐘提高週轉率
             simState.research.active = Array.isArray(simState.research.active) ? simState.research.active : [];
             simState.research.archive = Array.isArray(simState.research.archive) ? simState.research.archive : [];
             simState.research.seenSignals = simState.research.seenSignals || {};
@@ -1246,20 +1247,26 @@
             };
         }
 
-        function researchKey(c){ return `${c.symbol}|${Math.floor(Date.now()/900000)}|${Math.floor(a22n(c.score)/5)*5}|${classifyDirection(c)}`; }
+        function researchKey(c){ return `${c.symbol}|${Math.floor(Date.now()/300000)}|${classifyDirection(c)}`; }
         
         function collectResearchSignals(list){
             const r = ensureResearchState();
             if (!r.enabled) return;
-            if (r.active.length >= 40) return; // 活躍影子單上限設為 40
+            if (r.active.length >= 35) return; // 活躍影子單上限設為 35 檔
+
+            const now = Date.now();
+            // 自動淘汰超過 10 分鐘的過期訊號快取，避免阻擋新進訊號
+            Object.keys(r.seenSignals).forEach(k => {
+                if (now - r.seenSignals[k] > 10 * 60 * 1000) delete r.seenSignals[k];
+            });
 
             list.forEach(c => {
-                if (r.active.length >= 40) return;
+                if (r.active.length >= 35) return;
                 const k = researchKey(c);
                 if (r.seenSignals[k]) return;
                 const e = a22n(c.lastPrice);
                 if (e <= 0) return;
-                const x = buildEntryContext(c), d = x.direction, sl = a22n(adaptiveParams.stopLossPct, 4.5), tp = a22n(adaptiveParams.tp2Pct, 10), now = Date.now();
+                const x = buildEntryContext(c), d = x.direction, sl = a22n(adaptiveParams.stopLossPct, 4.5), tp = a22n(adaptiveParams.tp2Pct, 10);
                 const s = {
                     id: 'shadow_' + now + '_' + Math.random().toString(36).slice(2, 7),
                     source: 'RESEARCH_SHADOW',
@@ -1277,7 +1284,7 @@
                     entryContext: x,
                     tp2: d === 'LONG' ? e * (1 + tp / 100) : e * (1 - tp / 100),
                     stopLoss: d === 'LONG' ? e * (1 - sl / 100) : e * (1 + sl / 100),
-                    timeoutAt: now + a22n(r.timeoutMinutes, 240) * 60000,
+                    timeoutAt: now + (60 * 60000), // 60 分鐘超時
                     mfePct: 0,
                     maePct: 0
                 };
@@ -1301,7 +1308,7 @@
             r.active = r.active.filter(x => x.id !== s.id);
             r.archive.unshift(s);
 
-            // 直接非同步儲存到 IndexedDB，永久留存，不設 150 筆上限
+            // 直接存入 IndexedDB，永久留存，不設 200 筆上限
             if (idbInstance) {
                 await idbPutRecord(IDB_STORE_RESEARCH, s);
             }
@@ -1311,6 +1318,7 @@
 
         function updateShadowTrades(){
             const r = ensureResearchState();
+            const now = Date.now();
             [...r.active].forEach(s => {
                 const p = a22n(allMarketPrices.get(s.symbol));
                 if (p <= 0) return;
@@ -1318,7 +1326,7 @@
                 const m = (s.direction === 'LONG' ? (p - s.entryPrice) : (s.entryPrice - p)) / s.entryPrice * 100;
                 s.mfePct = Math.max(s.mfePct || 0, m);
                 s.maePct = Math.min(s.maePct || 0, m);
-                if (Date.now() >= s.timeoutAt) return closeShadowTrade(s, p, 'TIMEOUT');
+                if (now >= s.timeoutAt) return closeShadowTrade(s, p, 'TIMEOUT');
                 if (s.direction === 'LONG' ? (p <= s.stopLoss || p >= s.tp2) : (p >= s.stopLoss || p <= s.tp2)) {
                     return closeShadowTrade(s, p, p === s.stopLoss ? 'SL' : 'TP2');
                 }
