@@ -472,26 +472,6 @@
       </div>
     </div>
 
-
-    <div id="calibrationDashboardModal" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-[60] hidden p-4 flex items-center justify-center">
-      <div class="bg-crypto-card border border-crypto-border rounded-xl p-5 max-w-6xl w-full max-h-[92vh] overflow-y-auto text-xs space-y-4">
-        <div class="flex items-center justify-between border-b border-crypto-border pb-3">
-          <div><h3 class="text-base font-bold text-white">🧠 V8.6-A2.1 Edge Discovery & Calibration</h3>
-          <p class="text-slate-400 mt-1">Research → Shadow → Archive → Unified Dataset → Calibration。系統不會自動修改實盤參數。</p></div>
-          <button onclick="closeCalibrationDashboard()" class="text-slate-400 hover:text-white text-lg">✕</button>
-        </div>
-        <div id="calibrationSummary" class="grid grid-cols-2 md:grid-cols-6 gap-3"></div>
-        <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
-          <div class="bg-slate-900/60 border border-crypto-border rounded-lg p-4"><h4 class="font-bold text-white mb-3">📊 Score Bucket</h4><div id="calibrationBuckets"></div></div>
-          <div class="bg-slate-900/60 border border-crypto-border rounded-lg p-4"><h4 class="font-bold text-white mb-3">🌐 Regime Edge</h4><div id="calibrationRegimes"></div></div>
-          <div class="bg-slate-900/60 border border-crypto-border rounded-lg p-4"><h4 class="font-bold text-white mb-3">🧩 Strategy Edge</h4><div id="calibrationStrategies"></div></div>
-          <div class="bg-slate-900/60 border border-crypto-border rounded-lg p-4"><h4 class="font-bold text-white mb-3">🎯 Recommendation / NO EDGE Guard</h4><div id="calibrationRecommendation"></div></div>
-        </div>
-        <div class="bg-slate-900/60 border border-crypto-border rounded-lg p-4"><h4 class="font-bold text-white mb-2">⚠️ Dataset Quality</h4><div id="calibrationQuality"></div></div>
-        <div class="flex justify-end gap-2"><button onclick="exportCalibrationReport()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-lg">Export JSON</button><button onclick="closeCalibrationDashboard()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg">關閉</button></div>
-      </div>
-    </div>
-
     <!-- 自訂訊息彈窗 -->
     <div id="notificationModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
         <div class="bg-crypto-card border border-crypto-border rounded-xl p-5 max-w-sm w-full space-y-3 text-xs font-sans">
@@ -507,7 +487,7 @@
 
     <script>
         /* =========================================================
-           BYBIT RADAR V8.6-A2.1 FINAL — RESEARCH PIPELINE + CALIBRATION INTEGRITY
+           BYBIT RADAR V8.6-A2.2 — DATA SEGMENTATION & EDGE ATTRIBUTION
            整合: 資料防護 + 統一撮合 (TP1/TP2/Trailing) + 幣種智商庫 + Strategy Lab
         ========================================================= */
         const STORAGE_KEY_SIM = 'bybit_radar_sim_v82';
@@ -545,16 +525,7 @@
             history: [],
             historyArchive: [],
             riskState: null,
-            research: {
-                enabled: true,
-                sampling: { high: 1.0, medium: 1.0, low: 0.50, reject: 0.20 },
-                shadowNotional: 10.0,
-                timeoutMinutes: 240,
-                active: [],
-                archive: [],
-                seenSignals: {},
-                version: 'V8.6-A2.1'
-            }
+            research: { enabled:true, shadowNotional:10, timeoutMinutes:240, active:[], archive:[], seenSignals:{}, version:'V8.6-A2.2' }
         };
 
         let adaptiveParams = {
@@ -1012,7 +983,7 @@
 
             let bonus = 0;
             let label = 'NEUTRAL';
-            if (h.length >= 20) {
+            if (h.length >= 2) {
                 if (expectancy > 0.5 && winRate >= 0.6) {
                     bonus = 10;
                     label = 'HIGH_EDGE';
@@ -1417,122 +1388,29 @@
             }
         }
 
-
-        /* =========================================================
-           V8.6-A2.1 FINAL
-           Research Pipeline + Shadow Lifecycle + Calibration Integrity
-           Read-only analytics. Research trades never affect balance/risk/positions.
-        ========================================================= */
-        function ensureResearchState(){
-            if (!simState || typeof simState !== 'object') return null;
-            const d={enabled:true,sampling:{high:1,medium:1,low:.5,reject:.2},shadowNotional:10,timeoutMinutes:240,active:[],archive:[],seenSignals:{},version:'V8.6-A2.1'};
-            simState.research=Object.assign(d,simState.research||{});
-            simState.research.sampling=Object.assign(d.sampling,simState.research.sampling||{});
-            simState.research.active=Array.isArray(simState.research.active)?simState.research.active:[];
-            simState.research.archive=Array.isArray(simState.research.archive)?simState.research.archive:[];
-            simState.research.seenSignals=simState.research.seenSignals&&typeof simState.research.seenSignals==='object'?simState.research.seenSignals:{};
-            return simState.research;
-        }
-        function researchBucket(score){return score>=70?'high':score>=55?'medium':score>=40?'low':'reject';}
-        function researchDirection(coin){return (Number(coin.momentum1h)||0)>=0?'LONG':'SHORT';}
-        function researchKey(coin){return `${coin.symbol}|${researchDirection(coin)}|${Math.floor((Number(coin.score)||0)/5)*5}|${Math.floor(Date.now()/60000/15)}`;}
-        function collectResearchSignals(list){
-            const r=ensureResearchState(); if(!r?.enabled||!Array.isArray(list)) return;
-            const now=Date.now();
-            list.forEach(coin=>{
-                const bucket=researchBucket(Number(coin.score)||0), rate=Number(r.sampling[bucket]??0);
-                if(Math.random()>rate) return;
-                const key=researchKey(coin); if(r.seenSignals[key]) return;
-                const entry=Number(coin.lastPrice)||0; if(entry<=0) return;
-                const dir=researchDirection(coin), slPct=Number(adaptiveParams.stopLossPct)||4.5, tp1Pct=Number(adaptiveParams.tp1Pct)||4.2, tp2Pct=Number(adaptiveParams.tp2Pct)||10;
-                const s={
-                    id:'shadow_'+now+'_'+Math.random().toString(36).slice(2,8), lifecycle:'ACTIVE', source:'RESEARCH_SHADOW',
-                    openedAt:now, symbol:coin.symbol, direction:dir, entryPrice:entry, currentPrice:entry,
-                    score:Number(coin.score)||0, grade:coin.grade||'C', strategy:'MARKET_SIGNAL', regime:currentMarketRegime||'UNKNOWN',
-                    notional:Number(r.shadowNotional)||10, bucket,
-                    tp1:dir==='LONG'?entry*(1+tp1Pct/100):entry*(1-tp1Pct/100),
-                    tp2:dir==='LONG'?entry*(1+tp2Pct/100):entry*(1-tp2Pct/100),
-                    stopLoss:dir==='LONG'?entry*(1-slPct/100):entry*(1+slPct/100),
-                    timeoutAt:now+(Number(r.timeoutMinutes)||240)*60000,
-                    mfePct:0,maePct:0,
-                    features:{momentum1h:coin.momentum1h,rvol:coin.rvol,oiVelocity:coin.oiVelocity,oiAcceleration:coin.oiAcceleration,spreadPct:coin.spreadPct,fundingRate:coin.fundingRate,turnover24h:coin.turnover24h,price24hPcnt:coin.price24hPcnt}
-                };
-                r.active.push(s); r.seenSignals[key]=now;
-            });
-            Object.keys(r.seenSignals).forEach(k=>{if(now-r.seenSignals[k]>24*3600000) delete r.seenSignals[k];});
-        }
-        function closeShadowTrade(s, price, reason){
-            const raw=(s.direction==='LONG'?(price-s.entryPrice):(s.entryPrice-price))/s.entryPrice;
-            s.currentPrice=price; s.closedAt=Date.now(); s.closeReason=reason; s.exitPrice=price;
-            s.grossPnl=raw*s.notional; s.fees=0; s.netPnl=s.grossPnl; s.pnl=s.netPnl; s.lifecycle='CLOSED'; s.status='CLOSED';
-            const r=ensureResearchState(); r.active=r.active.filter(x=>x.id!==s.id); r.archive.unshift(s); if(r.archive.length>5000) r.archive.length=5000;
-        }
-        function updateShadowTrades(){
-            const r=ensureResearchState(); if(!r?.active?.length) return;
-            const now=Date.now();
-            [...r.active].forEach(s=>{
-                const price=Number(allMarketPrices.get(s.symbol)); if(!(price>0)) return;
-                s.currentPrice=price;
-                const move=(s.direction==='LONG'?(price-s.entryPrice):(s.entryPrice-price))/s.entryPrice*100;
-                s.mfePct=Math.max(Number(s.mfePct)||0,move); s.maePct=Math.min(Number(s.maePct)||0,move);
-                if(now>=s.timeoutAt) return closeShadowTrade(s,price,'RESEARCH_TIMEOUT');
-                if(s.direction==='LONG'){
-                    if(price<=s.stopLoss)return closeShadowTrade(s,price,'SL');
-                    if(price>=s.tp2)return closeShadowTrade(s,price,'TP2');
-                }else{
-                    if(price>=s.stopLoss)return closeShadowTrade(s,price,'SL');
-                    if(price<=s.tp2)return closeShadowTrade(s,price,'TP2');
-                }
-            });
-        }
-        function calibrationNumber(v,d=0){const n=Number(v);return Number.isFinite(n)?n:d;}
-        function normalizeCalibrationTrade(t){
-            return {...t,_pnl:calibrationNumber(t.netPnl,calibrationNumber(t.pnl,t.realizedNetPnl||0)),
-                _score:calibrationNumber(t.score,t.signalScore||0),_regime:String(t.regimeAtEntry||t.regime||t.marketRegime||'UNKNOWN'),
-                _strategy:String(t.strategy||t.strategyName||t.signalType||t.setup||'UNCLASSIFIED')};
-        }
-        function buildCalibrationDataset(){
-            ensureResearchState(); const out=[],seen=new Set();
-            const add=(arr,src)=>(Array.isArray(arr)?arr:[]).forEach(t=>{
-                if(!t||t.lifecycle==='ACTIVE'||t.status==='OPEN')return;
-                const n=normalizeCalibrationTrade(t),k=src+'|'+(t.id||`${t.symbol}|${t.closedAt||t.closeTime||t.timestamp||''}|${n._pnl}`);
-                if(!seen.has(k)){seen.add(k);n._source=src;out.push(n);}
-            });
-            add(simState.historyArchive,'EXECUTION_ARCHIVE'); add(simState.history,'EXECUTION_HISTORY'); add(simState.research.archive,'RESEARCH_ARCHIVE');
-            return out;
-        }
-        function calcEdgeStats(a){
-            const n=a.length,w=a.filter(x=>x._pnl>0),l=a.filter(x=>x._pnl<0),gp=w.reduce((s,x)=>s+x._pnl,0),gl=Math.abs(l.reduce((s,x)=>s+x._pnl,0)),net=a.reduce((s,x)=>s+x._pnl,0),pf=gl>0?gp/gl:(gp>0?Infinity:0);
-            return {samples:n,wins:w.length,losses:l.length,winRate:n?w.length/n:0,grossProfit:gp,grossLoss:gl,net,expectancy:n?net/n:0,pf,edge:n>=50&&pf>1.05&&net/n>0};
-        }
-        function bucket(score){return score>=90?'90–100':score>=80?'80–89':score>=70?'70–79':score>=60?'60–69':score>=50?'50–59':'<50';}
-        function groupEdge(data,fn){const m=new Map();data.forEach(x=>{const k=fn(x);if(!m.has(k))m.set(k,[]);m.get(k).push(x)});return [...m.entries()].map(([key,a])=>({key,stats:calcEdgeStats(a)})).sort((a,b)=>b.stats.expectancy-a.stats.expectancy)}
-        function discoverScoreThreshold(data){
-            const candidates=[50,55,60,65,70,75,80,85,90].map(th=>{const s=calcEdgeStats(data.filter(x=>x._score>=th));return {threshold:th,stats:s};});
-            const verified=candidates.filter(x=>x.stats.edge).sort((a,b)=>(b.stats.expectancy*Math.log2(b.stats.samples+1))-(a.stats.expectancy*Math.log2(a.stats.samples+1)));
-            return {candidates,verified,best:verified[0]||null};
-        }
-        function buildCalibrationReport(){
-            const data=buildCalibrationDataset(),rec=discoverScoreThreshold(data);
-            const regimes=groupEdge(data,x=>x._regime),strategies=groupEdge(data,x=>x._strategy),buckets=groupEdge(data,x=>bucket(x._score));
-            const quality={samples:data.length,withScore:data.filter(x=>x._score>0).length,regimes:new Set(data.map(x=>x._regime).filter(x=>x!=='UNKNOWN')).size,strategies:new Set(data.map(x=>x._strategy).filter(x=>x!=='UNCLASSIFIED')).size};
-            return {version:'V8.6-A2.1 Final',generatedAt:new Date().toISOString(),summary:calcEdgeStats(data),buckets,regimes,strategies,recommendation:rec,quality};
-        }
-        function edgeRow(k,s){return `<div class="grid grid-cols-5 gap-2 py-2 border-b border-slate-800"><span class="text-white font-bold truncate">${k}</span><span>${s.samples}</span><span>${(s.winRate*100).toFixed(1)}%</span><span>PF ${s.pf===Infinity?'∞':s.pf.toFixed(2)}</span><span class="${s.edge?'text-emerald-400':'text-slate-400'}">${s.expectancy>=0?'+':''}${s.expectancy.toFixed(3)}</span></div>`}
-        function openCalibrationDashboard(){
-            const m=document.getElementById('calibrationDashboardModal');if(!m)return;const r=buildCalibrationReport(),s=r.summary,b=r.recommendation.best;
-            const cards=[['Samples',s.samples],['WR',(s.winRate*100).toFixed(1)+'%'],['PF',s.pf===Infinity?'∞':s.pf.toFixed(2)],['Expectancy',(s.expectancy>=0?'+':'')+s.expectancy.toFixed(3)],['Net','$'+s.net.toFixed(2)],['Edge',b?'VERIFIED':'NO EDGE']];
-            document.getElementById('calibrationSummary').innerHTML=cards.map(x=>`<div class="bg-slate-900/70 border border-crypto-border rounded-lg p-3"><div class="text-slate-400">${x[0]}</div><div class="text-lg font-bold ${x[1]==='NO EDGE'?'text-rose-400':'text-white'}">${x[1]}</div></div>`).join('');
-            document.getElementById('calibrationBuckets').innerHTML=r.buckets.map(x=>edgeRow(x.key,x.stats)).join('')||'No closed data';
-            document.getElementById('calibrationRegimes').innerHTML=r.regimes.map(x=>edgeRow(x.key,x.stats)).join('')||'No regime metadata';
-            document.getElementById('calibrationStrategies').innerHTML=r.strategies.map(x=>edgeRow(x.key,x.stats)).join('')||'No strategy metadata';
-            document.getElementById('calibrationRecommendation').innerHTML=b?`<div class="text-emerald-400 font-bold">VERIFIED EDGE: Score ≥ ${b.threshold}</div><div class="text-slate-300 mt-2">Samples ${b.stats.samples} · PF ${b.stats.pf.toFixed(2)} · Expectancy +${b.stats.expectancy.toFixed(3)}</div><div class="text-amber-300 mt-2">仍需 Walk-forward 驗證，不會自動修改策略。</div>`:`<div class="text-rose-400 font-bold">🚫 NO VERIFIED EDGE</div><div class="text-slate-400 mt-2">要求：Samples ≥ 50、PF > 1.05、Expectancy > 0。未達標時禁止推薦 Score Threshold。</div>`;
-            const q=r.quality,w=[];if(q.samples<50)w.push('樣本不足 50。');if(q.withScore<q.samples*.8)w.push('Score metadata 缺失較多。');if(q.regimes<3)w.push('Regime 覆蓋不足。');if(q.strategies<2)w.push('Strategy metadata 覆蓋不足。');
-            document.getElementById('calibrationQuality').innerHTML=`Samples: <b>${q.samples}</b> · With Score: <b>${q.withScore}</b> · Regimes: <b>${q.regimes}</b> · Strategies: <b>${q.strategies}</b><div class="text-amber-300 mt-2">${w.map(x=>'• '+x).join('<br>')||'• Dataset quality baseline passed.'}</div>`;
-            m.classList.remove('hidden');
-        }
-        function closeCalibrationDashboard(){document.getElementById('calibrationDashboardModal')?.classList.add('hidden')}
-        function exportCalibrationReport(){const b=new Blob([JSON.stringify(buildCalibrationReport(),null,2)],{type:'application/json'}),u=URL.createObjectURL(b),a=document.createElement('a');a.href=u;a.download='bybit-radar-v862-a21-calibration-'+Date.now()+'.json';a.click();URL.revokeObjectURL(u)}
+        /* V8.6-A2.2 DATA SEGMENTATION & EDGE ATTRIBUTION */
+        function ensureResearchState(){const d={enabled:true,shadowNotional:10,timeoutMinutes:240,active:[],archive:[],seenSignals:{},version:'V8.6-A2.2'};simState.research=Object.assign(d,simState.research||{});simState.research.active=Array.isArray(simState.research.active)?simState.research.active:[];simState.research.archive=Array.isArray(simState.research.archive)?simState.research.archive:[];simState.research.seenSignals=simState.research.seenSignals||{};return simState.research}
+        function a22n(v,d=0){const n=Number(v);return Number.isFinite(n)?n:d}
+        function a22Bucket(v,c){for(const x of c)if(v>=x[1]&&v<x[2])return x[0];return c[c.length-1][0]}
+        function classifyDirection(c){return a22n(c.momentum1h)>=0?'LONG':'SHORT'}
+        function classifyVolatility(c){const m=Math.abs(a22n(c.momentum1h)),p=Math.abs(a22n(c.price24hPcnt));return(m>=3||p>=8)?'HIGH_VOL':(m>=1||p>=3)?'MED_VOL':'LOW_VOL'}
+        function classifyLiquidity(c){const t=a22n(c.turnover24h),s=a22n(c.spreadPct,.1);return t>=1e7&&s<=.03?'HIGH_LIQ':t>=1e6&&s<=.08?'MED_LIQ':'LOW_LIQ'}
+        function classifyStrategy(c){const m=Math.abs(a22n(c.momentum1h)),r=a22n(c.rvol),oi=a22n(c.oiVelocity),a=a22n(c.oiAcceleration);if(m>=1.5&&r>=1.5&&oi>=.5&&a>=0)return'MOMENTUM_BREAKOUT';if(m>=1&&r>=1&&oi>=.2)return'TREND_CONTINUATION';if(m<1&&r>=.8&&Math.abs(oi)>=.2)return'MEAN_REVERSION';return'MARKET_SIGNAL'}
+        function classifyRegime(){const r=String(currentMarketRegime||'UNKNOWN').toUpperCase();return['RISK_ON','RISK_OFF','TRENDING','CHOPPY'].includes(r)?r:'UNKNOWN'}
+        function buildEntryContext(c){const f={momentum1h:a22n(c.momentum1h),rvol:a22n(c.rvol),oiVelocity:a22n(c.oiVelocity),oiAcceleration:a22n(c.oiAcceleration),spreadPct:a22n(c.spreadPct),fundingRate:a22n(c.fundingRate),turnover24h:a22n(c.turnover24h),price24hPcnt:a22n(c.price24hPcnt)};return{schema:'A2.2',capturedAt:Date.now(),score:a22n(c.score),grade:c.grade||'C',direction:classifyDirection(c),regime:classifyRegime(),strategy:classifyStrategy(c),volatility:classifyVolatility(c),liquidity:classifyLiquidity(c),scoreBucket:a22Bucket(a22n(c.score),[['<50',-Infinity,50],['50-59',50,60],['60-69',60,70],['70-79',70,80],['80-89',80,90],['90-100',90,Infinity]]),momentumBucket:a22Bucket(Math.abs(f.momentum1h),[['LOW',0,1],['MED',1,3],['HIGH',3,Infinity]]),rvolBucket:a22Bucket(f.rvol,[['LOW',-Infinity,1],['NORMAL',1,1.5],['HIGH',1.5,3],['EXTREME',3,Infinity]]),oiBucket:a22Bucket(f.oiVelocity,[['NEGATIVE',-Infinity,0],['POSITIVE',0,.5],['STRONG',.5,Infinity]]),spreadBucket:a22Bucket(f.spreadPct,[['TIGHT',-Infinity,.03],['NORMAL',.03,.08],['WIDE',.08,Infinity]]),features:f}}
+        function researchKey(c){return `${c.symbol}|${Math.floor(Date.now()/900000)}|${Math.floor(a22n(c.score)/5)*5}|${classifyDirection(c)}`}
+        function collectResearchSignals(list){const r=ensureResearchState();if(!r.enabled)return;list.forEach(c=>{const k=researchKey(c);if(r.seenSignals[k])return;const e=a22n(c.lastPrice);if(e<=0)return;const x=buildEntryContext(c),d=x.direction,sl=a22n(adaptiveParams.stopLossPct,4.5),tp=a22n(adaptiveParams.tp2Pct,10),now=Date.now(),s={id:'shadow_'+now+'_'+Math.random().toString(36).slice(2,7),source:'RESEARCH_SHADOW',lifecycle:'ACTIVE',openedAt:now,symbol:c.symbol,direction:d,entryPrice:e,currentPrice:e,notional:a22n(r.shadowNotional,10),score:x.score,grade:x.grade,strategy:x.strategy,regime:x.regime,entryContext:x,tp2:d==='LONG'?e*(1+tp/100):e*(1-tp/100),stopLoss:d==='LONG'?e*(1-sl/100):e*(1+sl/100),timeoutAt:now+a22n(r.timeoutMinutes,240)*60000,mfePct:0,maePct:0};r.active.push(s);r.seenSignals[k]=now});Object.keys(r.seenSignals).forEach(k=>{if(Date.now()-r.seenSignals[k]>86400000)delete r.seenSignals[k]})}
+        function closeShadowTrade(s,p,reason){const pct=(s.direction==='LONG'?(p-s.entryPrice):(s.entryPrice-p))/s.entryPrice;s.exitPrice=p;s.currentPrice=p;s.closeReason=reason;s.closedAt=Date.now();s.grossPnl=pct*s.notional;s.fees=0;s.netPnl=s.grossPnl;s.pnl=s.netPnl;s.lifecycle='CLOSED';const r=ensureResearchState();r.active=r.active.filter(x=>x.id!==s.id);r.archive.unshift(s);if(r.archive.length>5000)r.archive.length=5000}
+        function updateShadowTrades(){const r=ensureResearchState();[...r.active].forEach(s=>{const p=a22n(allMarketPrices.get(s.symbol));if(p<=0)return;s.currentPrice=p;const m=(s.direction==='LONG'?(p-s.entryPrice):(s.entryPrice-p))/s.entryPrice*100;s.mfePct=Math.max(s.mfePct||0,m);s.maePct=Math.min(s.maePct||0,m);if(Date.now()>=s.timeoutAt)return closeShadowTrade(s,p,'TIMEOUT');if(s.direction==='LONG'?(p<=s.stopLoss||p>=s.tp2):(p>=s.stopLoss||p<=s.tp2))return closeShadowTrade(s,p,p===s.stopLoss?'SL':'TP2')})}
+        function a22Normalize(t){const c=t.entryContext||{};return{...t,_pnl:a22n(t.netPnl,a22n(t.pnl)),_score:a22n(t.score,t.signalScore||c.score),_direction:t.direction||c.direction||'UNKNOWN',_regime:t.regimeAtEntry||t.regime||c.regime||'UNKNOWN',_strategy:t.strategy||t.strategyName||c.strategy||'UNCLASSIFIED',_volatility:c.volatility||'UNKNOWN',_liquidity:c.liquidity||'UNKNOWN',_rvolBucket:c.rvolBucket||'UNKNOWN',_oiBucket:c.oiBucket||'UNKNOWN',_spreadBucket:c.spreadBucket||'UNKNOWN'}}
+        function buildA22Dataset(){ensureResearchState();const o=[],seen=new Set(),add=(a,src)=>(Array.isArray(a)?a:[]).forEach(t=>{if(!t||t.lifecycle==='ACTIVE'||t.status==='OPEN')return;const n=a22Normalize(t),k=src+'|'+(t.id||`${t.symbol}|${t.closedAt||t.closeTime||''}|${n._pnl}`);if(!seen.has(k)){seen.add(k);n._source=src;o.push(n)}});add(simState.historyArchive,'EXECUTION_ARCHIVE');add(simState.history,'EXECUTION_HISTORY');add(simState.research.archive,'RESEARCH_ARCHIVE');return o}
+        function edgeStats(a){const n=a.length,w=a.filter(x=>x._pnl>0),l=a.filter(x=>x._pnl<0),gp=w.reduce((s,x)=>s+x._pnl,0),gl=Math.abs(l.reduce((s,x)=>s+x._pnl,0)),net=a.reduce((s,x)=>s+x._pnl,0),pf=gl?gp/gl:(gp?Infinity:0),ex=n?net/n:0;return{samples:n,winRate:n?w.length/n:0,net,expectancy:ex,pf,edge:n>=50&&pf>1.05&&ex>0}}
+        function groupEdge(data,f){const m={};data.forEach(x=>{const k=x[f]||'UNKNOWN';(m[k]||(m[k]=[])).push(x)});return Object.entries(m).map(([key,a])=>({key,stats:edgeStats(a)})).sort((a,b)=>b.stats.expectancy-a.stats.expectancy)}
+        function intersectionEdge(data,fields,min=30){const m={};data.forEach(x=>{const k=fields.map(f=>x[f]||'UNKNOWN').join(' × ');(m[k]||(m[k]=[])).push(x)});return Object.entries(m).map(([key,a])=>({key,stats:edgeStats(a)})).filter(x=>x.stats.samples>=min).sort((a,b)=>b.stats.expectancy-a.stats.expectancy)}
+        function buildA22Report(){const d=buildA22Dataset(),dims={direction:groupEdge(d,'_direction'),regime:groupEdge(d,'_regime'),strategy:groupEdge(d,'_strategy'),volatility:groupEdge(d,'_volatility'),liquidity:groupEdge(d,'_liquidity'),rvol:groupEdge(d,'_rvolBucket'),oi:groupEdge(d,'_oiBucket'),spread:groupEdge(d,'_spreadBucket')},intersections=intersectionEdge(d,['_strategy','_regime','_direction']),verified=intersections.filter(x=>x.stats.edge),q={samples:d.length,score:d.filter(x=>x._score>0).length,regime:d.filter(x=>x._regime!=='UNKNOWN').length,strategy:d.filter(x=>x._strategy!=='UNCLASSIFIED').length,context:d.filter(x=>x.entryContext?.schema==='A2.2').length};return{version:'V8.6-A2.2',generatedAt:new Date().toISOString(),summary:edgeStats(d),dimensions:dims,intersections,verified,quality:q}}
+        function exportA22Report(){const b=new Blob([JSON.stringify(buildA22Report(),null,2)],{type:'application/json'}),u=URL.createObjectURL(b),a=document.createElement('a');a.href=u;a.download='bybit-radar-v862-a22-edge-attribution-'+Date.now()+'.json';a.click();URL.revokeObjectURL(u)}
+        function openA22EdgeLab(){const r=buildA22Report(),w=window.open('','_blank');if(!w)return;const rows=a=>a.map(x=>`<tr><td>${x.key}</td><td>${x.stats.samples}</td><td>${(x.stats.winRate*100).toFixed(1)}%</td><td>${x.stats.pf===Infinity?'∞':x.stats.pf.toFixed(2)}</td><td>${x.stats.expectancy.toFixed(3)}</td><td>${x.stats.edge?'VERIFIED':'RESEARCH'}</td></tr>`).join('');w.document.write(`<html><head><title>V8.6-A2.2 Edge Attribution</title><style>body{font-family:Arial;background:#0b1020;color:#e5e7eb;padding:20px}table{width:100%;border-collapse:collapse;margin:8px 0 24px}td,th{padding:8px;border-bottom:1px solid #334155;text-align:left}h2{color:#a5b4fc}</style></head><body><h1>🧠 V8.6-A2.2 Edge Attribution</h1><h2>${r.verified.length?'VERIFIED CONTEXTUAL EDGE FOUND':'NO VERIFIED CONTEXTUAL EDGE'}</h2><p>Samples ${r.summary.samples} · WR ${(r.summary.winRate*100).toFixed(1)}% · PF ${r.summary.pf.toFixed(2)} · Expectancy ${r.summary.expectancy.toFixed(3)}</p>${Object.entries(r.dimensions).map(([k,v])=>`<h2>${k}</h2><table><tr><th>Segment</th><th>N</th><th>WR</th><th>PF</th><th>Exp</th><th>Status</th></tr>${rows(v)}</table>`).join('')}<h2>Strategy × Regime × Direction</h2><table><tr><th>Context</th><th>N</th><th>WR</th><th>PF</th><th>Exp</th><th>Status</th></tr>${rows(r.intersections)}</table><div class="fixed bottom-4 right-4 z-50 flex gap-2"><button onclick="openA22EdgeLab()" class="px-4 py-3 bg-indigo-600 text-white rounded-full shadow-lg font-bold text-xs">🧠 A2.2 Edge Lab</button><button onclick="exportA22Report()" class="px-4 py-3 bg-slate-800 text-white rounded-full shadow-lg font-bold text-xs">Export Edge JSON</button></div>
+</body></html>`);w.document.close()}
 
         function processTickersV85(list) {
             const newTickers = [];
@@ -2676,6 +2554,5 @@
         });
     </script>
     <button id="performanceAuditLauncher" onclick="openPerformanceAudit()" title="Performance Audit" class="fixed bottom-4 right-4 z-40 px-4 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-full shadow-lg font-bold text-xs">📊 Performance Audit</button>
-    <button id="calibrationDashboardLauncher" onclick="openCalibrationDashboard()" title="Score Calibration & Edge Discovery" class="fixed bottom-4 right-72 z-40 px-4 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-full shadow-lg font-bold text-xs">🧠 Edge Lab</button>
 </body>
 </html>
