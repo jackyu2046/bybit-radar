@@ -473,22 +473,25 @@
     </div>
 
 
-    <!-- V8.6-A1.1 Research / Shadow Dashboard -->
-    <div id="researchDashboardModal" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 hidden p-4 flex items-center justify-center">
-      <div class="bg-crypto-card border border-crypto-border rounded-xl p-5 max-w-6xl w-full max-h-[90vh] overflow-y-auto space-y-4 text-xs">
+    <!-- V8.6-A2 Score Calibration & Edge Discovery -->
+    <div id="calibrationDashboardModal" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-[60] hidden p-4 flex items-center justify-center">
+      <div class="bg-crypto-card border border-crypto-border rounded-xl p-5 max-w-6xl w-full max-h-[92vh] overflow-y-auto text-xs space-y-4">
         <div class="flex items-center justify-between border-b border-crypto-border pb-3">
-          <div><h3 class="text-base font-bold text-white">🔬 V8.6-A1.1 Research Dataset & Shadow Lifecycle</h3><p class="text-slate-400 mt-1">研究樣本與執行交易完全分離；Shadow Trade 不影響餘額、風控或真實持倉。</p></div>
-          <button onclick="closeResearchDashboard()" class="text-slate-400 hover:text-white text-lg">✕</button>
+          <div><h3 class="text-base font-bold text-white">🧠 V8.6-A2 Score Calibration & Edge Discovery</h3>
+          <p class="text-slate-400 mt-1">從歷史交易 / Research Dataset 尋找可驗證的 Score、Regime、Strategy Edge。只提供建議，不會自動修改交易參數。</p></div>
+          <button onclick="closeCalibrationDashboard()" class="text-slate-400 hover:text-white text-lg">✕</button>
         </div>
-        <div id="researchSummary" class="grid grid-cols-2 md:grid-cols-6 gap-3"></div>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div class="bg-slate-900/60 border border-crypto-border rounded-lg p-4"><h4 class="font-bold text-white mb-2">Score / Sample Distribution</h4><div id="researchDistribution" class="space-y-2"></div></div>
-          <div class="bg-slate-900/60 border border-crypto-border rounded-lg p-4"><h4 class="font-bold text-white mb-2">Research Performance</h4><div id="researchPerformance" class="space-y-2"></div></div>
+        <div id="calibrationSummary" class="grid grid-cols-2 md:grid-cols-6 gap-3"></div>
+        <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
+          <div class="bg-slate-900/60 border border-crypto-border rounded-lg p-4"><h4 class="font-bold text-white mb-3">📊 Score Bucket Calibration</h4><div id="calibrationBuckets"></div></div>
+          <div class="bg-slate-900/60 border border-crypto-border rounded-lg p-4"><h4 class="font-bold text-white mb-3">🌐 Market Regime Edge</h4><div id="calibrationRegimes"></div></div>
+          <div class="bg-slate-900/60 border border-crypto-border rounded-lg p-4"><h4 class="font-bold text-white mb-3">🧩 Strategy Edge</h4><div id="calibrationStrategies"></div></div>
+          <div class="bg-slate-900/60 border border-crypto-border rounded-lg p-4"><h4 class="font-bold text-white mb-3">🎯 Recommended Threshold</h4><div id="calibrationRecommendation" class="space-y-3"></div></div>
         </div>
-        <div class="bg-slate-900/60 border border-crypto-border rounded-lg p-4"><h4 class="font-bold text-white mb-2">Active Shadow Trades</h4><div id="researchActive" class="space-y-2"></div></div>
-        <div class="flex justify-between items-center gap-2 flex-wrap">
-          <label class="flex items-center gap-2 text-slate-300"><input id="researchEnabledToggle" type="checkbox" onchange="setResearchEnabled(this.checked)"> 啟用 Research / Shadow Track</label>
-          <div class="flex gap-2"><button onclick="exportResearchDataset()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-lg">匯出 Research JSON</button><button onclick="closeResearchDashboard()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg">關閉</button></div>
+        <div class="bg-slate-900/60 border border-crypto-border rounded-lg p-4"><h4 class="font-bold text-white mb-2">⚠️ Data Quality & Anti-Overfitting Guard</h4><div id="calibrationQuality" class="text-slate-300 leading-relaxed"></div></div>
+        <div class="flex justify-end gap-2 flex-wrap">
+          <button onclick="exportCalibrationReport()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-lg">匯出 Calibration JSON</button>
+          <button onclick="closeCalibrationDashboard()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg">關閉</button>
         </div>
       </div>
     </div>
@@ -508,7 +511,7 @@
 
     <script>
         /* =========================================================
-           BYBIT RADAR V8.6 CORE ENGINE — INTELLIGENCE & RISK OPTIMIZATION
+           BYBIT RADAR V8.6-A2 CORE ENGINE — SCORE CALIBRATION & EDGE DISCOVERY
            整合: 資料防護 + 統一撮合 (TP1/TP2/Trailing) + 幣種智商庫 + Strategy Lab
         ========================================================= */
         const STORAGE_KEY_SIM = 'bybit_radar_sim_v82';
@@ -545,17 +548,7 @@
             positions: [],
             history: [],
             historyArchive: [],
-            riskState: null,
-            research: {
-                enabled: true,
-                sampleRates: { high: 1.0, medium: 1.0, low: 0.50, reject: 0.20 },
-                maxActive: 120,
-                timeoutMinutes: 240,
-                shadowNotional: 25,
-                active: [],
-                archive: [],
-                seen: {}
-            }
+            riskState: null
         };
 
         let adaptiveParams = {
@@ -654,7 +647,6 @@
             const openedAt = v85Timestamp(trade?.openedAt ?? trade?.openTime, 0);
             const fills = Array.isArray(trade?.fills) ? trade.fills : [];
 
-            // 強化時間戳回溯解析：排除中文時間字串導致的 NaN 歸零問題
             let closedAtTs = v85Timestamp(trade?.closedAtTs ?? trade?.closedTimestamp, 0);
             if (!closedAtTs && fills.length > 0) {
                 closedAtTs = v85Timestamp(fills[fills.length - 1]?.timestamp, 0);
@@ -1420,167 +1412,128 @@
 
 
         /* =========================================================
-           V8.6-A1.1 RESEARCH DATASET & SHADOW LIFECYCLE ENGINE
-           Research Track is observational only: no balance deduction,
-           no Risk Gate side-effects, no position/exposure consumption.
+           V8.6-A2 — SCORE CALIBRATION & EDGE DISCOVERY ENGINE
+           Read-only analytics: does NOT auto-change strategyConfig,
+           adaptiveParams, riskState or execution settings.
         ========================================================= */
-        function ensureResearchState() {
-            simState.research = simState.research || {};
-            const r = simState.research;
-            r.enabled = r.enabled !== false;
-            r.sampleRates = Object.assign({ high:1.0, medium:1.0, low:0.50, reject:0.20 }, r.sampleRates || {});
-            r.maxActive = Math.max(10, Number(r.maxActive) || 120);
-            r.timeoutMinutes = Math.max(5, Number(r.timeoutMinutes) || 240);
-            r.shadowNotional = Math.max(1, Number(r.shadowNotional) || 25);
-            r.active = Array.isArray(r.active) ? r.active : [];
-            r.archive = Array.isArray(r.archive) ? r.archive : [];
-            r.seen = r.seen && typeof r.seen === 'object' ? r.seen : {};
-            return r;
+        function calibrationNumber(v, fallback=0){ const n=Number(v); return Number.isFinite(n)?n:fallback; }
+        function normalizeCalibrationTrade(t){
+            const pnl = calibrationNumber(t.netPnl, calibrationNumber(t.pnl, calibrationNumber(t.realizedPnl,0)));
+            const score = calibrationNumber(t.score, calibrationNumber(t.signalScore, calibrationNumber(t.entryIntelligence?.score,0)));
+            const regime = t.regimeAtEntry || t.marketRegime || t.regime || 'UNKNOWN';
+            const strategy = t.strategy || t.strategyName || t.signalType || t.setup || 'UNCLASSIFIED';
+            const mode = t.executionMode || t.mode || 'SIMULATED';
+            return {...t, _pnl:pnl, _score:score, _regime:String(regime), _strategy:String(strategy), _mode:String(mode)};
         }
-        function researchBucket(score) {
-            score = Number(score) || 0;
-            if (score >= 70) return 'high';
-            if (score >= 55) return 'medium';
-            if (score >= 40) return 'low';
-            return 'reject';
-        }
-        function shouldSampleResearchSignal(coin) {
-            const r = ensureResearchState();
-            const rate = Number(r.sampleRates[researchBucket(coin.score)]);
-            return Math.random() < Math.max(0, Math.min(1, Number.isFinite(rate) ? rate : 0));
-        }
-        function researchSignalFingerprint(coin) {
-            const band = Math.floor((Number(coin.lastPrice)||0) * 100000) / 100000;
-            return `${coin.symbol}|${Math.floor(Date.now()/60000)}|${researchBucket(coin.score)}|${band}`;
-        }
-        function researchDirection(coin) {
-            return Number(coin.momentum1h) >= 0 ? 'LONG' : 'SHORT';
-        }
-        function createShadowTrade(coin) {
-            const r = ensureResearchState();
-            if (!r.enabled || !coin || r.active.length >= r.maxActive) return false;
-            if (!shouldSampleResearchSignal(coin)) return false;
-            const fp = researchSignalFingerprint(coin);
-            if (r.seen[fp]) return false;
-            r.seen[fp] = Date.now();
-            const entry = Number(coin.lastPrice) || 0;
-            if (entry <= 0) return false;
-            const dir = researchDirection(coin);
-            const notional = r.shadowNotional;
-            const qty = notional / entry;
-            const slPct = Number(adaptiveParams.stopLossPct)||4.5;
-            const tp1Pct = Number(adaptiveParams.tp1Pct)||4.2;
-            const tp2Pct = Number(adaptiveParams.tp2Pct)||10;
-            const id = `SHD_${Date.now()}_${coin.symbol}_${Math.random().toString(36).slice(2,6)}`;
-            const shadow = {
-                id, symbol:coin.symbol, executionMode:'SHADOW', lifecycle:'ACTIVE',
-                openedAt:Date.now(), openTime:Date.now(), closedAtTs:null,
-                direction:dir, entryPrice:entry, currentPrice:entry, markEntryPrice:entry,
-                qty, originalQty:qty, remainingQty:qty, notional,
-                stopLoss: dir==='LONG'?entry*(1-slPct/100):entry*(1+slPct/100),
-                tp1: dir==='LONG'?entry*(1+tp1Pct/100):entry*(1-tp1Pct/100),
-                tp2: dir==='LONG'?entry*(1+tp2Pct/100):entry*(1-tp2Pct/100),
-                tp1Reached:false, tp2Reached:false, isMoonBag:false,
-                highestPrice:entry, lowestPrice:entry, mfePct:0, maePct:0,
-                realizedPnl:0, realizedGrossPnl:0, totalFees:0, fills:[],
-                score:Number(coin.score)||0, grade:coin.grade||'N/A',
-                researchBucket:researchBucket(coin.score),
-                strategy:coin.strategy||'MARKET_SIGNAL',
-                regimeAtEntry:currentMarketRegime,
-                signalMetadata:{
-                    momentum1h:Number(coin.momentum1h)||0,rvol:Number(coin.rvol)||0,
-                    oiVelocity:Number(coin.oiVelocity)||0,oiAcceleration:Number(coin.oiAcceleration)||0,
-                    spreadPct:Number(coin.spreadPct)||0,fundingRate:Number(coin.fundingRate)||0,
-                    turnover24h:Number(coin.turnover24h)||0,price24hPcnt:Number(coin.price24hPcnt)||0
-                },
-                closeReason:null
-            };
-            r.active.push(shadow);
-            return true;
-        }
-        function shadowPnlAt(shadow, price) {
-            const q = Number(shadow.remainingQty)||0;
-            const entry = Number(shadow.entryPrice)||0;
-            if (shadow.direction === 'SHORT') return (entry-price)*q;
-            return (price-entry)*q;
-        }
-        function updateShadowMfeMae(s, price) {
-            const entry=Number(s.entryPrice)||price;
-            const pct = s.direction==='SHORT' ? ((entry-price)/entry)*100 : ((price-entry)/entry)*100;
-            s.highestPrice=Math.max(Number(s.highestPrice)||entry,price);
-            s.lowestPrice=Math.min(Number(s.lowestPrice)||entry,price);
-            s.mfePct=Math.max(Number(s.mfePct)||0,pct);
-            s.maePct=Math.min(Number(s.maePct)||0,pct);
-        }
-        function shadowHit(s, price, target) {
-            return s.direction==='SHORT' ? price<=target : price>=target;
-        }
-        function shadowStopHit(s, price) {
-            return s.direction==='SHORT' ? price>=s.stopLoss : price<=s.stopLoss;
-        }
-        function shadowFill(s, qty, price, reason) {
-            qty=Math.min(Number(qty)||0,Number(s.remainingQty)||0);
-            if(qty<=0) return;
-            const pnl=s.direction==='SHORT'?(s.entryPrice-price)*qty:(price-s.entryPrice)*qty;
-            s.remainingQty=Math.max(0,s.remainingQty-qty);
-            s.realizedGrossPnl=(Number(s.realizedGrossPnl)||0)+pnl;
-            s.realizedPnl=(Number(s.realizedPnl)||0)+pnl;
-            s.fills.push({timestamp:Date.now(),fillQty:qty,fillPrice:price,netPnl:pnl,reason});
-        }
-        function finalizeShadowTrade(s, reason) {
-            const r=ensureResearchState();
-            if(!s || s.lifecycle==='CLOSED') return;
-            if((Number(s.remainingQty)||0)>0) shadowFill(s,s.remainingQty,Number(s.currentPrice)||Number(s.entryPrice),reason);
-            s.lifecycle='CLOSED'; s.closeReason=reason; s.closedAtTs=Date.now();
-            s.durationMin=Math.max(0,Math.round((s.closedAtTs-s.openedAt)/60000));
-            s.pnl=Number(s.realizedPnl)||0;
-            r.active=r.active.filter(x=>x.id!==s.id);
-            r.archive.push(s);
-            if(r.archive.length>10000) r.archive=r.archive.slice(-10000);
-        }
-        function updateShadowTrades() {
-            const r=ensureResearchState();
-            if(!r.enabled || !r.active.length) return;
-            const now=Date.now(), timeout=r.timeoutMinutes*60000;
-            [...r.active].forEach(s=>{
-                const price=Number(allMarketPrices.get(s.symbol))||Number(s.currentPrice)||Number(s.entryPrice);
-                s.currentPrice=price; updateShadowMfeMae(s,price);
-                if(shadowStopHit(s,price)){ finalizeShadowTrade(s,'RESEARCH_SL'); return; }
-                if(!s.tp1Reached && shadowHit(s,price,s.tp1)){ s.tp1Reached=true; shadowFill(s,s.originalQty*0.35,price,'RESEARCH_TP1'); }
-                if(s.tp1Reached && !s.tp2Reached && shadowHit(s,price,s.tp2)){ s.tp2Reached=true; shadowFill(s,s.originalQty*0.35,price,'RESEARCH_TP2'); }
-                if(now-s.openedAt>=timeout){ finalizeShadowTrade(s,'RESEARCH_TIMEOUT'); }
+        function buildCalibrationDataset(){
+            const closed = [];
+            const seen = new Set();
+            const add = (arr, source) => (Array.isArray(arr)?arr:[]).forEach(x=>{
+                if(!x || x.lifecycle==='ACTIVE' || x.status==='OPEN') return;
+                const n=normalizeCalibrationTrade(x);
+                const key=x.id || `${n.symbol}|${x.closedAtTs||x.closeTime||x.timestamp||''}|${n._pnl}`;
+                if(seen.has(source+'|'+key)) return;
+                seen.add(source+'|'+key); n._source=source; closed.push(n);
             });
+            add(simState.historyArchive,'EXECUTION_ARCHIVE');
+            add(simState.history,'EXECUTION_HISTORY');
+            if(simState.research){
+                add(simState.research.archive,'RESEARCH_ARCHIVE');
+                add(simState.research.history,'RESEARCH_HISTORY');
+            }
+            return closed.filter(x=>Number.isFinite(x._pnl));
         }
-        function collectResearchSignals(tickers) {
-            const r=ensureResearchState(); if(!r.enabled) return;
-            const activeSymbols=new Set(r.active.map(x=>x.symbol));
-            tickers.filter(c=>!activeSymbols.has(c.symbol)).forEach(createShadowTrade);
+        function calcEdgeStats(arr){
+            const n=arr.length, wins=arr.filter(x=>x._pnl>0), losses=arr.filter(x=>x._pnl<0);
+            const grossProfit=wins.reduce((s,x)=>s+x._pnl,0);
+            const grossLoss=Math.abs(losses.reduce((s,x)=>s+x._pnl,0));
+            const net=arr.reduce((s,x)=>s+x._pnl,0);
+            const expectancy=n?net/n:0;
+            const wr=n?wins.length/n:0;
+            const pf=grossLoss>0?grossProfit/grossLoss:(grossProfit>0?Infinity:0);
+            const avgWin=wins.length?grossProfit/wins.length:0;
+            const avgLoss=losses.length?grossLoss/losses.length:0;
+            const payoff=avgLoss>0?avgWin/avgLoss:0;
+            const edge = expectancy>0 && pf>1 && n>=20;
+            return {samples:n,wins:wins.length,losses:losses.length,winRate:wr,grossProfit,grossLoss,net,expectancy,pf,avgWin,avgLoss,payoff,edge};
         }
-        function researchStats() {
-            const r=ensureResearchState(), a=r.archive||[], wins=a.filter(x=>(Number(x.pnl)||0)>0), losses=a.filter(x=>(Number(x.pnl)||0)<0);
-            const gp=wins.reduce((s,x)=>s+(Number(x.pnl)||0),0), gl=Math.abs(losses.reduce((s,x)=>s+(Number(x.pnl)||0),0));
-            const buckets={high:0,medium:0,low:0,reject:0};
-            a.forEach(x=>buckets[x.researchBucket||researchBucket(x.score)]++);
-            return {active:r.active.length,closed:a.length,winRate:a.length?wins.length/a.length:0,net:a.reduce((s,x)=>s+(Number(x.pnl)||0),0),pf:gl?gp/gl:(gp?Infinity:0),buckets};
+        function scoreBucketLabel(score){
+            if(score>=90)return'90–100';
+            if(score>=80)return'80–89';
+            if(score>=70)return'70–79';
+            if(score>=60)return'60–69';
+            if(score>=50)return'50–59';
+            return'<50';
         }
-        function openResearchDashboard() {
-            const m=document.getElementById('researchDashboardModal'); if(!m)return;
-            const r=ensureResearchState(), s=researchStats();
-            document.getElementById('researchEnabledToggle').checked=!!r.enabled;
-            const cards=[['Active',s.active],['Closed',s.closed],['Win Rate',(s.winRate*100).toFixed(1)+'%'],['Net PnL','$'+s.net.toFixed(2)],['PF',s.pf===Infinity?'∞':s.pf.toFixed(2)],['Timeout',r.timeoutMinutes+'m']];
-            document.getElementById('researchSummary').innerHTML=cards.map(x=>`<div class="bg-slate-900/70 border border-crypto-border rounded-lg p-3"><div class="text-slate-400">${x[0]}</div><div class="text-lg font-bold text-white">${x[1]}</div></div>`).join('');
-            document.getElementById('researchDistribution').innerHTML=Object.entries(s.buckets).map(([k,v])=>`<div class="flex justify-between border-b border-slate-800 pb-2"><span class="uppercase text-slate-300">${k}</span><span class="text-white font-bold">${v}</span></div>`).join('');
-            const perf=[['Sampling','High 100% · Medium 100% · Low 50% · Reject 20%'],['Execution Isolation','Shadow does not touch balance / risk / positions'],['Lifecycle','Entry → TP1 → TP2 / SL / Timeout → Archive']];
-            document.getElementById('researchPerformance').innerHTML=perf.map(x=>`<div class="flex justify-between gap-3 border-b border-slate-800 pb-2"><span class="text-slate-400">${x[0]}</span><span class="text-white text-right">${x[1]}</span></div>`).join('');
-            document.getElementById('researchActive').innerHTML=(r.active||[]).slice(0,30).map(x=>`<div class="flex justify-between gap-2 border-b border-slate-800 pb-2"><span class="text-white font-bold">${x.symbol}</span><span class="text-slate-400">${x.researchBucket.toUpperCase()} · ${x.direction} · Score ${x.score}</span><span class="${shadowPnlAt(x,x.currentPrice)>=0?'text-emerald-400':'text-rose-400'}">$${shadowPnlAt(x,x.currentPrice).toFixed(2)}</span></div>`).join('')||'<div class="text-slate-500">暫無 Active Shadow Trades</div>';
-            m.classList.remove('hidden');
+        function groupEdge(data, keyFn){
+            const m=new Map();
+            data.forEach(x=>{const k=keyFn(x); if(!m.has(k))m.set(k,[]);m.get(k).push(x);});
+            return [...m.entries()].map(([key,items])=>({key,stats:calcEdgeStats(items)})).sort((a,b)=>b.stats.expectancy-a.stats.expectancy);
         }
-        function closeResearchDashboard(){document.getElementById('researchDashboardModal')?.classList.add('hidden');}
-        function setResearchEnabled(v){ensureResearchState().enabled=!!v;saveToStorage(false);}
-        function exportResearchDataset(){
-            const r=ensureResearchState(), payload={version:'V8.6-A1.1',exportedAt:new Date().toISOString(),research:r,stats:researchStats()};
-            const b=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),u=URL.createObjectURL(b),a=document.createElement('a');
-            a.href=u;a.download='bybit-radar-v8611-research-'+Date.now()+'.json';a.click();URL.revokeObjectURL(u);
+        function discoverScoreThreshold(data){
+            const candidates=[50,55,60,65,70,75,80,85,90];
+            const all=calcEdgeStats(data);
+            const valid=candidates.map(th=>{
+                const subset=data.filter(x=>x._score>=th);
+                const s=calcEdgeStats(subset);
+                // conservative utility: requires enough samples and penalizes tiny datasets
+                const utility=(s.samples>=20 && Number.isFinite(s.pf)?s.expectancy*Math.log2(s.samples+1)*Math.min(s.pf,3): -Infinity);
+                return {threshold:th,stats:s,utility};
+            }).filter(x=>x.stats.samples>0);
+            const best=valid.reduce((a,b)=>b.utility>a.utility?b:a, valid[0]||null);
+            return {all,candidates:valid,best};
+        }
+        function calibrationQuality(data, recommendation){
+            const n=data.length, scores=data.filter(x=>x._score>0).length;
+            const regimes=new Set(data.map(x=>x._regime).filter(x=>x!=='UNKNOWN')).size;
+            const strategies=new Set(data.map(x=>x._strategy).filter(x=>x!=='UNCLASSIFIED')).size;
+            const warnings=[];
+            if(n<30) warnings.push('樣本少於 30：只適合探索，不應調整實盤門檻。');
+            else if(n<100) warnings.push('樣本 30–99：可以做初步校準，但需要更多不同市場環境驗證。');
+            else warnings.push('樣本 ≥100：開始具備較高研究價值，但仍應進行 Walk-forward 驗證。');
+            if(scores/n<0.8) warnings.push('部分交易缺少 Score Metadata，Score Calibration 可信度會下降。');
+            if(regimes<3) warnings.push('Market Regime 覆蓋不足，避免把單一市場環境的結果泛化。');
+            if(strategies<2) warnings.push('Strategy Metadata 分類不足，暫時不能可靠比較策略 Edge。');
+            if(recommendation?.best?.stats?.samples<20) warnings.push('最佳門檻樣本不足 20，禁止自動採用。');
+            return {n,scores,regimes,strategies,warnings};
+        }
+        function buildCalibrationReport(){
+            const data=buildCalibrationDataset();
+            const buckets=groupEdge(data,x=>scoreBucketLabel(x._score));
+            const regimes=groupEdge(data,x=>x._regime);
+            const strategies=groupEdge(data,x=>x._strategy);
+            const recommendation=discoverScoreThreshold(data);
+            const quality=calibrationQuality(data,recommendation);
+            return {version:'V8.6-A2',generatedAt:new Date().toISOString(),summary:calcEdgeStats(data),buckets,regimes,strategies,recommendation,quality};
+        }
+        function fmtPf(v){return v===Infinity?'∞':Number.isFinite(v)?v.toFixed(2):'—';}
+        function edgeRow(label,s){
+            const edgeClass=s.edge?'text-emerald-400':'text-slate-300';
+            return `<div class="grid grid-cols-5 gap-2 py-2 border-b border-slate-800 last:border-0"><span class="text-white font-bold truncate">${label}</span><span>${s.samples} samples</span><span>${(s.winRate*100).toFixed(1)}% WR</span><span>PF ${fmtPf(s.pf)}</span><span class="${edgeClass}">${s.expectancy>=0?'+':''}${s.expectancy.toFixed(3)} E/trade</span></div>`;
+        }
+        function openCalibrationDashboard(){
+            const modal=document.getElementById('calibrationDashboardModal'); if(!modal)return;
+            const r=buildCalibrationReport(), s=r.summary, best=r.recommendation.best;
+            const cards=[['Samples',s.samples],['Win Rate',(s.winRate*100).toFixed(1)+'%'],['PF',fmtPf(s.pf)],['Expectancy',(s.expectancy>=0?'+':'')+s.expectancy.toFixed(3)],['Net PnL','$'+s.net.toFixed(2)],['Best Threshold',best?best.threshold+'+':'—']];
+            document.getElementById('calibrationSummary').innerHTML=cards.map(x=>`<div class="bg-slate-900/70 border border-crypto-border rounded-lg p-3"><div class="text-slate-400">${x[0]}</div><div class="text-lg font-bold text-white">${x[1]}</div></div>`).join('');
+            document.getElementById('calibrationBuckets').innerHTML=r.buckets.map(x=>edgeRow(x.key,x.stats)).join('')||'<div class="text-slate-500">沒有足夠已平倉資料</div>';
+            document.getElementById('calibrationRegimes').innerHTML=r.regimes.map(x=>edgeRow(x.key,x.stats)).join('')||'<div class="text-slate-500">缺少 Regime Metadata</div>';
+            document.getElementById('calibrationStrategies').innerHTML=r.strategies.map(x=>edgeRow(x.key,x.stats)).join('')||'<div class="text-slate-500">缺少 Strategy Metadata</div>';
+            const rec=best;
+            document.getElementById('calibrationRecommendation').innerHTML=rec?`
+                <div class="text-slate-300">研究建議門檻：<span class="text-white font-bold">Score ≥ ${rec.threshold}</span></div>
+                <div class="grid grid-cols-2 gap-2 text-slate-400"><span>Samples: <b class="text-white">${rec.stats.samples}</b></span><span>WR: <b class="text-white">${(rec.stats.winRate*100).toFixed(1)}%</b></span><span>PF: <b class="text-white">${fmtPf(rec.stats.pf)}</b></span><span>Expectancy: <b class="${rec.stats.expectancy>=0?'text-emerald-400':'text-rose-400'}">${rec.stats.expectancy>=0?'+':''}${rec.stats.expectancy.toFixed(3)}</b></span></div>
+                <div class="text-amber-300">不會自動修改 minScore。建議先做 Out-of-sample / Walk-forward 驗證。</div>`
+                :'<div class="text-slate-500">樣本不足，暫不推薦門檻。</div>';
+            document.getElementById('calibrationQuality').innerHTML=`<div class="grid grid-cols-2 md:grid-cols-4 gap-2 mb-3"><span>Closed: <b class="text-white">${r.quality.n}</b></span><span>With Score: <b class="text-white">${r.quality.scores}</b></span><span>Regimes: <b class="text-white">${r.quality.regimes}</b></span><span>Strategies: <b class="text-white">${r.quality.strategies}</b></span></div>`+r.quality.warnings.map(w=>`<div class="text-amber-300">• ${w}</div>`).join('');
+            modal.classList.remove('hidden');
+        }
+        function closeCalibrationDashboard(){document.getElementById('calibrationDashboardModal')?.classList.add('hidden');}
+        function exportCalibrationReport(){
+            const r=buildCalibrationReport();
+            const blob=new Blob([JSON.stringify(r,null,2)],{type:'application/json'});
+            const url=URL.createObjectURL(blob),a=document.createElement('a');
+            a.href=url;a.download='bybit-radar-v862-score-calibration-'+Date.now()+'.json';a.click();URL.revokeObjectURL(url);
         }
 
 
@@ -1630,10 +1583,8 @@
             });
 
             rawTickers = newTickers;
-            collectResearchSignals(newTickers);
             renderMarketTable(newTickers);
             updateSimPositions();
-            updateShadowTrades();
             updateSimHeaderStats();
 
             if (simState.autoTrade && currentMarketRegime !== 'RISK_OFF') {
@@ -2717,7 +2668,6 @@
             loadFromStorage();
             initFirebaseSync();
             ensureRiskState();
-            ensureResearchState();
             updateSimHeaderStats();
             renderSimPositions();
             fetchMarketData();
@@ -2725,6 +2675,6 @@
         });
     </script>
     <button id="performanceAuditLauncher" onclick="openPerformanceAudit()" title="Performance Audit" class="fixed bottom-4 right-4 z-40 px-4 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-full shadow-lg font-bold text-xs">📊 Performance Audit</button>
-    <button id="researchDashboardLauncher" onclick="openResearchDashboard()" title="Research / Shadow Engine" class="fixed bottom-4 right-44 z-40 px-4 py-3 bg-violet-600 hover:bg-violet-500 text-white rounded-full shadow-lg font-bold text-xs">🔬 Research Lab</button>
+    <button id="calibrationDashboardLauncher" onclick="openCalibrationDashboard()" title="Score Calibration & Edge Discovery" class="fixed bottom-4 right-72 z-40 px-4 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-full shadow-lg font-bold text-xs">🧠 Edge Lab</button>
 </body>
 </html>
