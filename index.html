@@ -933,11 +933,11 @@
         let adaptiveParams = {
             minScore: 80,
             stopLossPct: 4.5,
-            tp1Pct: 4.0,
+            tp1Pct: 4.2,
             tp2Pct: 10.0,
             trailingPct: 6.5,
             minTurnover: 6000000,
-            blacklist: new Set(["FFUSDT"])
+            blacklist: new Set(["NIULAIUSDT"])
         };
 
         let lastRecommendedGeminiParams = null;
@@ -957,7 +957,7 @@
                                    || localStorage.getItem('bybit_radar_adaptive_v1');
                 if (adaptiveSaved) {
                     const parsed = JSON.parse(adaptiveSaved);
-                    // 自動修正：若黑名單誤入了 STORJ 或 UAI 等核心獲利標的，自動予以解除
+                    // 自動修正：確保 STORJ 與 UAI 等核心獲利標的不被誤鎖
                     const savedBlacklist = new Set(parsed.blacklist || []);
                     savedBlacklist.delete("STORJUSDT");
                     savedBlacklist.delete("UAIUSDT");
@@ -965,7 +965,9 @@
                     adaptiveParams = {
                         ...adaptiveParams,
                         ...parsed,
-                        minScore: (parsed.minScore && parsed.minScore <= 82) ? parsed.minScore : 80,
+                        minScore: (parsed.minScore && parsed.minScore >= 80) ? parsed.minScore : 80,
+                        stopLossPct: 4.5,
+                        tp1Pct: (parsed.tp1Pct && parsed.tp1Pct >= 4.0) ? parsed.tp1Pct : 4.2,
                         trailingPct: (parsed.trailingPct && parsed.trailingPct >= 6.0) ? parsed.trailingPct : 6.5,
                         blacklist: savedBlacklist
                     };
