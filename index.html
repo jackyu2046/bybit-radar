@@ -3,12 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bybit 小幣高精度狙擊交易系統 V8.2 PHASE 2 EXECUTION ENGINE</title>
+    <title>Bybit 小幣高精度狙擊交易系統 V8.5 UNIFIED ENGINE</title>
     <!-- Tailwind CSS CDN --> 
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <!-- Firebase SDK (v8 相容版) -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 
     <script>
         tailwind.config = {
@@ -51,20 +54,21 @@
         <div class="max-w-[1750px] mx-auto flex flex-col md:flex-row items-stretch md:items-center justify-between gap-2.5">
             <div class="flex items-center justify-between">
                 <div class="flex items-center space-x-2.5">
-                    <div class="w-8 h-8 rounded-xl bg-gradient-to-tr from-amber-500 to-yellow-300 flex items-center justify-center text-black font-black text-base shadow-md shadow-amber-500/20">
+                    <div class="w-8 h-8 rounded-xl bg-gradient-to-tr from-amber-500 to-emerald-400 flex items-center justify-center text-black font-black text-base shadow-md shadow-amber-500/20">
                         ⚡
                     </div>
                     <div>
                         <div class="flex items-center gap-1.5">
                             <h1 class="text-sm md:text-base font-bold text-white tracking-wide">Bybit 小幣高精度狙擊交易系統</h1>
-                            <span class="text-[9px] bg-emerald-500/20 text-emerald-400 font-mono font-semibold px-1.5 py-0.2 rounded border border-emerald-500/30">V8.2 PHASE 2 EXECUTION ENGINE</span>
+                            <span class="text-[9px] bg-emerald-500/20 text-emerald-400 font-mono font-semibold px-1.5 py-0.2 rounded border border-emerald-500/30">V8.5 DATA GUARD</span>
                             <span class="text-[9px] bg-purple-500/20 text-purple-300 font-mono font-semibold px-1.5 py-0.2 rounded border border-purple-500/30" id="regimeHeaderBadge">Regime: CHOPPY</span>
                         </div>
-                        <p class="text-[11px] text-slate-400 hidden sm:block">統一撮合管道 · 真正時序 RVOL & OI 加速度 · 盤口動態滑點 · 5-10U 5x 扣費實撮模擬</p>
+                        <p class="text-[11px] text-slate-400 hidden sm:block">V8.5 無損資料防護 · 統一撮合閉環 (TP1/TP2/Trailing) · 標的冷卻機制 · 5-10U 5x 扣費實撮</p>
                     </div>
                 </div>
             </div>
 
+            <!-- 控制按鈕列 -->
             <div class="flex items-center gap-1.5 text-xs overflow-x-auto no-scrollbar py-0.5 md:flex-wrap md:overflow-visible">
                 <div class="flex items-center bg-slate-900 border border-crypto-border px-2.5 py-1 rounded-lg text-slate-300 font-mono whitespace-nowrap text-[11px]">
                     <span class="w-2 h-2 rounded-full bg-emerald-400 mr-1.5" id="netDot"></span>
@@ -86,24 +90,29 @@
                     <span>策略計分卡</span>
                 </button>
 
+                <button onclick="openStrategyLabModal()" class="flex items-center gap-1 bg-fuchsia-700/80 hover:bg-fuchsia-600 text-white font-medium px-2.5 py-1 rounded-lg transition border border-fuchsia-400/30 whitespace-nowrap text-[11px]">
+                    <span>🧪</span><span>Strategy Lab</span>
+                </button>
+
                 <button onclick="openHistoryModal()" class="flex items-center gap-1 bg-amber-600/80 hover:bg-amber-600 text-white font-medium px-2.5 py-1 rounded-lg transition border border-amber-500/30 whitespace-nowrap text-[11px]">
                     <span>📜</span>
                     <span id="historyBtnText">歷史明細 (0)</span>
                 </button>
 
+                <button onclick="openCloudModal()" class="flex items-center gap-1 bg-sky-600/80 hover:bg-sky-600 text-white font-medium px-2.5 py-1 rounded-lg transition border border-sky-500/30 whitespace-nowrap text-[11px]">
+                    <span>☁️</span><span>雲端同步</span>
+                </button>
+
                 <button onclick="openGeminiAuditModal()" class="flex items-center gap-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-medium px-2.5 py-1 rounded-lg transition border border-blue-400/40 shadow-md shadow-blue-500/20 whitespace-nowrap text-[11px]">
-                    <span>✨</span>
-                    <span>Gemini 體檢</span>
+                    <span>✨</span><span>Gemini 體檢</span>
                 </button>
 
                 <button onclick="exportDataJson()" class="flex items-center gap-1 bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium px-2 py-1 rounded-lg transition border border-crypto-border whitespace-nowrap text-[11px]">
-                    <span>📥</span>
-                    <span>匯出</span>
+                    <span>📥</span><span>匯出</span>
                 </button>
 
                 <label class="flex items-center gap-1 bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium px-2 py-1 rounded-lg transition border border-crypto-border cursor-pointer whitespace-nowrap text-[11px]">
-                    <span>📤</span>
-                    <span>匯入</span>
+                    <span>📤</span><span>匯入</span>
                     <input type="file" id="importFileInput" onchange="importDataJson(event)" class="hidden" accept=".json">
                 </label>
 
@@ -115,6 +124,7 @@
     </header>
 
     <main class="flex-1 p-3 md:p-5 max-w-[1750px] mx-auto w-full space-y-4">
+        <!-- 頂部動態權益儀表板 -->
         <section class="bg-gradient-to-r from-slate-900 via-crypto-card to-slate-900 border border-crypto-border rounded-xl p-3 flex flex-wrap items-center justify-between gap-3 text-xs">
             <div class="flex items-center flex-wrap gap-3 sm:gap-4">
                 <div class="flex items-center gap-1.5">
@@ -130,44 +140,50 @@
                 </div>
                 <div class="h-3 w-[1px] bg-crypto-border hidden sm:block"></div>
                 <div class="flex items-center gap-1.5 text-slate-300">
-                    <span class="text-slate-400">當前持倉 (集中風控):</span>
+                    <span class="text-slate-400">進行中持倉:</span>
                     <span class="font-mono font-bold text-amber-400" id="simOpenPositionsCount">0 / 3</span>
-                    <span class="text-[10px] text-emerald-400 font-mono font-semibold ml-0.5" id="simActiveWinRateBadge">(0% 浮盈)</span>
                 </div>
                 <div class="h-3 w-[1px] bg-crypto-border hidden sm:block"></div>
                 <div class="flex items-center gap-1.5 text-slate-300">
                     <span class="text-slate-400">勝率:</span>
                     <span class="font-mono font-bold text-emerald-400" id="simWinRateDisplay">--%</span>
-                    <span class="text-slate-400 font-mono ml-1">期望值 (Expectancy):</span>
+                    <span class="text-slate-400 font-mono ml-1">期望值:</span>
                     <span class="font-mono font-bold text-amber-400" id="simExpectancyDisplay">+0.00R</span>
+                </div>
+                <div class="h-3 w-[1px] bg-crypto-border hidden sm:block"></div>
+                <div class="flex items-center gap-1 text-purple-300 font-mono text-[11px]">
+                    <span>🚀 奔馳尾倉:</span>
+                    <span class="font-bold text-purple-400" id="simMoonBagCount">0 檔</span>
                 </div>
             </div>
 
+            <!-- 控制切換 -->
             <div class="flex items-center flex-wrap gap-2">
                 <div class="flex items-center bg-slate-950 border border-crypto-border rounded-lg p-0.5 text-[11px]">
-                    <span class="text-slate-400 px-1.5">單筆名義 (5x槓桿):</span>
-                    <button onclick="setTradeSize(25)" id="btnSize25" class="px-2 py-0.5 rounded text-slate-400 hover:text-white transition">25U (保證金5U)</button>
-                    <button onclick="setTradeSize(50)" id="btnSize50" class="px-2 py-0.5 rounded bg-emerald-600 text-white font-bold transition">50U (保證金10U)</button>
+                    <span class="text-slate-400 px-1.5">單筆名義:</span>
+                    <button onclick="setTradeSize(25)" id="btnSize25" class="px-2 py-0.5 rounded bg-emerald-600 text-white font-bold transition">25U (保證金5U)</button>
+                    <button onclick="setTradeSize(50)" id="btnSize50" class="px-2 py-0.5 rounded text-slate-400 hover:text-white transition">50U (保證金10U)</button>
                 </div>
 
                 <div class="flex items-center bg-slate-950 border border-crypto-border rounded-lg p-0.5 text-[11px]">
                     <span class="text-slate-400 px-1.5">持倉上限:</span>
-                    <button onclick="setMaxPositions(1)" id="btnCap1" class="px-2 py-0.5 rounded text-slate-400 hover:text-white transition">1倉(極致專注)</button>
-                    <button onclick="setMaxPositions(3)" id="btnCap3" class="px-2 py-0.5 rounded bg-amber-500 text-black font-bold transition">3倉(微分散)</button>
+                    <button onclick="setMaxPositions(3)" id="btnCap3" class="px-2 py-0.5 rounded bg-amber-500 text-black font-bold transition">3 倉 (風控推薦)</button>
+                    <button onclick="setMaxPositions(10)" id="btnCap10" class="px-2 py-0.5 rounded text-slate-400 hover:text-white transition">10 倉 (擴展)</button>
                 </div>
 
                 <button onclick="askResetSimulation()" class="text-[11px] text-slate-400 hover:text-rose-400 transition ml-1">重置帳戶</button>
             </div>
         </section>
 
+        <!-- 持倉看板 -->
         <section class="bg-crypto-card border border-crypto-border rounded-xl overflow-hidden shadow-lg">
             <div class="px-3.5 py-2.5 border-b border-crypto-border flex flex-wrap items-center justify-between gap-2 bg-slate-900/50">
                 <div class="flex items-center gap-2">
                     <span class="text-sm">💼</span>
                     <h3 class="text-xs font-semibold text-white">
-                        即時模擬合約持倉 (<span id="activePositionsCountText" class="text-amber-400 font-mono">0</span> 筆進行中 · 每筆名義 <span id="posTradeSizeDisplay" class="text-emerald-400 font-mono">$50 · 5x 槓桿</span>)
+                        即時模擬合約持倉 (<span id="activePositionsCountText" class="text-amber-400 font-mono">0</span> 筆進行中 · 每筆名義 <span id="posTradeSizeDisplay" class="text-emerald-400 font-mono">$25 · 5x 槓桿</span>)
                     </h3>
-                    <span class="text-[10px] text-slate-400 hidden xl:inline">| 精算 Taker 手續費 (0.055%) · TP1 (+4.2% 平35%保本) · TP2 (+10.0% 平35%) · 尾倉高點回撤 -6.5%</span>
+                    <span class="text-[10px] text-slate-400 hidden xl:inline">| 嚴格 Taker 費率 (0.055%) · TP1 (+4.2% 平35%保本) · TP2 (+10.0% 平35%) · 30% 尾倉高點回撤 -6.5% 鎖利</span>
                 </div>
 
                 <div class="flex items-center gap-2">
@@ -182,6 +198,7 @@
             </div>
         </section>
 
+        <!-- 主監控列表 -->
         <section class="bg-crypto-card border border-crypto-border rounded-xl overflow-hidden shadow-lg">
             <div class="p-2.5 border-b border-crypto-border flex items-center justify-between bg-slate-900/40">
                 <span class="text-xs font-semibold text-slate-200">
@@ -216,15 +233,16 @@
         </section>
     </main>
 
+    <!-- 策略計分卡彈窗 (Modal) -->
     <div id="scorecardModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
         <div class="bg-crypto-card border border-crypto-border rounded-xl p-5 max-w-lg w-full space-y-4 text-xs font-mono">
             <div class="flex items-center justify-between border-b border-crypto-border pb-3">
-                <h3 class="text-sm font-bold text-white flex items-center gap-1.5">📊 V8.2 策略績效計分卡</h3>
+                <h3 class="text-sm font-bold text-white flex items-center gap-1.5">📊 策略績效計分卡 (V8.5 統一歸檔)</h3>
                 <button onclick="closeScorecardModal()" class="text-slate-400 hover:text-white">✕</button>
             </div>
             <div class="grid grid-cols-2 gap-3">
                 <div class="p-3 bg-slate-900 border border-crypto-border rounded-lg">
-                    <span class="text-slate-400 text-[10px] block font-sans">累計實算純利 (扣手續費)</span>
+                    <span class="text-slate-400 text-[10px] block font-sans">累計實算純利 (扣手續費與滑點)</span>
                     <span class="text-base font-bold text-emerald-400" id="cardRealizedPnl">$0.00</span>
                 </div>
                 <div class="p-3 bg-slate-900 border border-crypto-border rounded-lg">
@@ -232,84 +250,217 @@
                     <span class="text-base font-bold text-amber-400" id="cardWinRate">0%</span>
                 </div>
                 <div class="p-3 bg-slate-900 border border-crypto-border rounded-lg">
-                    <span class="text-slate-400 text-[10px] block font-sans">期望值 (Expectancy R)</span>
+                    <span class="text-slate-400 text-[10px] block font-sans">期望值與獲利因子 (Expectancy | PF)</span>
                     <span class="text-base font-bold text-sky-400" id="cardExpectancy">+0.00R</span>
                 </div>
                 <div class="p-3 bg-slate-900 border border-crypto-border rounded-lg">
-                    <span class="text-slate-400 text-[10px] block font-sans">總平倉單數</span>
+                    <span class="text-slate-400 text-[10px] block font-sans">總平倉單數與波幅位移 (MFE / MAE)</span>
                     <span class="text-base font-bold text-slate-200" id="cardTotalTrades">0 筆</span>
                 </div>
             </div>
             <p class="text-[10px] text-slate-500 font-sans leading-relaxed">
-                * 本計分卡已完整計入分批離場 (TP1/TP2) 的每一筆 0.055% Taker 手續費與滑點損耗。1R 代表 4.5% 單筆風險價值。
+                * 本計分卡已完整計入分批離場 (TP1/TP2) 的每一筆 0.055% Taker 手續費與微觀滑點。1R 代表 4.5% 單筆風險價值。
             </p>
         </div>
     </div>
 
+    <!-- Strategy Lab 彈窗 -->
+    <div id="strategyLabModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm p-3 sm:p-6 flex items-center justify-center">
+        <div class="max-w-5xl w-full bg-slate-950 border border-fuchsia-500/40 rounded-xl shadow-2xl max-h-[92vh] overflow-y-auto">
+            <div class="sticky top-0 bg-slate-950 border-b border-crypto-border px-4 py-3 flex items-center justify-between z-10">
+                <div>
+                    <h3 class="text-base font-bold text-white flex items-center gap-1.5">🧪 V8.5 Strategy Lab 參數回放實驗室</h3>
+                    <p class="text-[10px] text-slate-400">基於真實平倉與 MFE/MAE 記錄進行參數網格探索</p>
+                </div>
+                <button onclick="closeStrategyLabModal()" class="text-slate-400 hover:text-white text-base">✕</button>
+            </div>
+            <div class="p-4 grid grid-cols-1 lg:grid-cols-3 gap-4">
+                <div class="lg:col-span-1 space-y-3">
+                    <div class="rounded-lg border border-crypto-border bg-slate-900/40 p-3">
+                        <div class="text-xs font-bold text-white mb-2">優化網格設定</div>
+                        <label class="block text-[10px] text-slate-400 mb-1">目標函式 (Objective)</label>
+                        <select id="labObjective" class="w-full bg-slate-950 border border-crypto-border rounded px-2 py-1.5 text-xs text-white">
+                            <option value="expectancy">期望值 + 回撤懲罰</option>
+                            <option value="profitFactor">獲利因子 (Profit Factor)</option>
+                            <option value="netPnl">累計純利 (Net PnL)</option>
+                            <option value="winRate">純勝率 (Win Rate)</option>
+                        </select>
+                        <button onclick="runStrategyOptimization()" class="w-full mt-3 py-2 rounded bg-fuchsia-700 hover:bg-fuchsia-600 text-white text-xs font-bold transition">▶ 執行網格探索</button>
+                        <button onclick="runMonteCarloSimulation()" class="w-full mt-2 py-2 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold transition">🎲 蒙地卡羅壓力測試</button>
+                    </div>
+                    <div id="labStatus" class="text-[11px] text-slate-400 rounded-lg border border-crypto-border bg-slate-900/30 p-3 leading-relaxed">
+                        等待分析。建議累積至少 20 筆歷史平倉記錄以確保回放統計意義。
+                    </div>
+                </div>
+                <div class="lg:col-span-2 space-y-4">
+                    <div id="labSummary" class="grid grid-cols-2 md:grid-cols-4 gap-2"></div>
+                    <div class="rounded-lg border border-crypto-border overflow-hidden">
+                        <div class="px-3 py-2 bg-slate-900 text-xs font-bold text-white">排名前列的參數組合</div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-[10px] font-mono">
+                                <thead class="text-slate-400 border-b border-crypto-border bg-slate-950">
+                                    <tr>
+                                        <th class="p-2 text-left">排名</th>
+                                        <th class="p-2 text-right">SL</th>
+                                        <th class="p-2 text-right">TP1</th>
+                                        <th class="p-2 text-right">TP2</th>
+                                        <th class="p-2 text-right">Trail</th>
+                                        <th class="p-2 text-right">勝率</th>
+                                        <th class="p-2 text-right">PF</th>
+                                        <th class="p-2 text-right">期望值</th>
+                                        <th class="p-2 text-right">評分</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="labResultsBody">
+                                    <tr><td colspan="9" class="p-5 text-center text-slate-500">尚未執行網格搜索。</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="rounded-lg border border-crypto-border p-3 bg-slate-900/40">
+                        <div class="text-xs font-bold text-white mb-1.5">蒙地卡羅風險分佈 (1,000 次重抽樣)</div>
+                        <div id="labMonteCarlo" class="text-xs text-slate-400 font-mono">尚未執行測試。</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 歷史平倉明細彈窗 -->
     <div id="historyModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
-        <div class="bg-crypto-card border border-crypto-border rounded-xl p-5 max-w-3xl w-full space-y-3 text-xs font-mono">
+        <div class="bg-crypto-card border border-crypto-border rounded-xl p-5 max-w-4xl w-full space-y-3 text-xs font-mono">
             <div class="flex items-center justify-between border-b border-crypto-border pb-3">
-                <h3 class="text-sm font-bold text-white flex items-center gap-1.5">📜 歷史成交明細 (V8.2 統一帳務)</h3>
+                <h3 class="text-sm font-bold text-white flex items-center gap-1.5">📜 歷史成交明細 (V8.5 統一歸檔)</h3>
                 <button onclick="closeHistoryModal()" class="text-slate-400 hover:text-white">✕</button>
             </div>
-            <div class="overflow-y-auto max-h-[400px]">
+            <div class="overflow-y-auto max-h-[420px]">
                 <table class="w-full text-left text-xs border-collapse">
                     <thead class="bg-slate-900 text-slate-400 sticky top-0 text-[11px] border-b border-crypto-border">
                         <tr>
                             <th class="py-2 px-2">幣種</th>
-                            <th class="py-2 px-2 text-right">進場 &rarr; 離場均價</th>
-                            <th class="py-2 px-2 text-right">累計扣費純利 ($)</th>
+                            <th class="py-2 px-2 text-right">進場 $\rightarrow$ 離場均價</th>
+                            <th class="py-2 px-2 text-right">累計純利 ($)</th>
                             <th class="py-2 px-2 text-center">時長</th>
                             <th class="py-2 px-2">最後離場原因</th>
+                            <th class="py-2 px-2 text-right">關閉時間</th>
                         </tr>
                     </thead>
                     <tbody id="historyTableBody" class="divide-y divide-crypto-border/40">
-                        <tr><td colspan="5" class="py-6 text-center text-slate-500">尚無平倉歷史數據。</td></tr>
+                        <tr><td colspan="6" class="py-6 text-center text-slate-500">尚無平倉歷史數據。</td></tr>
                     </tbody>
                 </table>
             </div>
         </div>
     </div>
 
+    <!-- 雲端同步視窗 -->
+    <div id="cloudModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+        <div class="bg-crypto-card border border-sky-500/40 rounded-2xl max-w-md w-full p-5 shadow-2xl space-y-3 text-xs">
+            <div class="flex items-center justify-between border-b border-crypto-border pb-2.5">
+                <div class="flex items-center gap-2">
+                    <span class="text-xl">☁️</span>
+                    <div>
+                        <h3 class="font-bold text-white text-sm">Google Firestore 雲端同步控制台</h3>
+                        <p class="text-sky-300 text-[11px]">跨端交易歷史雙向歸併保護</p>
+                    </div>
+                </div>
+                <button onclick="closeCloudModal()" class="text-slate-400 hover:text-white text-lg">✕</button>
+            </div>
+            <div class="p-2.5 bg-slate-900 rounded-xl border border-crypto-border space-y-1">
+                <div class="flex justify-between items-center">
+                    <span class="text-slate-400">連線狀態:</span>
+                    <span class="font-bold text-emerald-400 font-mono" id="cloudModalStatus">已連線至雲端</span>
+                </div>
+            </div>
+            <div>
+                <label class="block text-slate-300 font-medium mb-1">同步房間名稱 (Room ID)</label>
+                <div class="flex gap-2">
+                    <input type="text" id="cloudRoomInput" class="flex-1 bg-slate-900 border border-crypto-border rounded-lg px-3 py-1.5 text-white font-mono text-xs focus:outline-none focus:border-sky-500">
+                    <button onclick="saveRoomConfig()" class="px-3 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-500 text-white text-[11px] font-bold whitespace-nowrap">儲存房間</button>
+                </div>
+            </div>
+            <div class="p-2.5 bg-slate-950 rounded-xl border border-sky-500/30 space-y-2">
+                <div class="grid grid-cols-2 gap-2">
+                    <button onclick="pullFromCloudForce()" class="py-2 px-2 rounded-lg bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs flex items-center justify-center gap-1 transition">
+                        <span>📥</span> 雲端拉取並合併
+                    </button>
+                    <button onclick="pushToCloudForce()" class="py-2 px-2 rounded-lg bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs flex items-center justify-center gap-1 transition">
+                        <span>⚡</span> 強制推送至雲端
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Gemini 體檢彈窗 -->
     <div id="geminiAuditModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
         <div class="bg-crypto-card border border-crypto-border rounded-xl p-5 max-w-md w-full space-y-3 text-xs font-sans">
             <div class="flex items-center justify-between border-b border-crypto-border pb-3">
-                <h3 class="text-sm font-bold text-white flex items-center gap-1.5" id="geminiModalTitle">✨ Gemini AI 策略體檢</h3>
+                <h3 class="text-sm font-bold text-white flex items-center gap-1.5">✨ Gemini AI 策略體檢</h3>
                 <button onclick="closeGeminiAuditModal()" class="text-slate-400 hover:text-white">✕</button>
             </div>
-            <div id="geminiReportText" class="text-slate-300 leading-relaxed font-mono text-[11px]">
+            <div id="geminiReportText" class="text-slate-300 leading-relaxed font-mono text-[11px] whitespace-pre-wrap bg-slate-900 p-3 rounded-lg border border-crypto-border">
                 點擊下方按鈕，AI 將讀取最新平倉明細與手續費損耗進行多維度歸因分析。
             </div>
-            <button onclick="runGeminiAuditReport()" id="geminiActionBtn" class="w-full py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold rounded-lg transition">
+            <button onclick="runGeminiAuditReport()" class="w-full py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold rounded-lg transition">
                 執行 AI 歸因體檢
             </button>
         </div>
     </div>
 
+    <!-- 自訂訊息彈窗 -->
+    <div id="notificationModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-crypto-card border border-crypto-border rounded-xl p-5 max-w-sm w-full space-y-3 text-xs font-sans">
+            <h3 class="text-sm font-bold text-white" id="notificationModalTitle">通知</h3>
+            <p class="text-slate-300 leading-relaxed" id="notificationModalMsg"></p>
+            <div class="flex gap-2" id="notificationModalActions">
+                <button onclick="closeNotificationModal()" class="w-full py-2 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-lg transition">
+                    確定
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script>
-        /* 全域變數與初始化 */
+        /* =========================================================
+           BYBIT RADAR V8.5 CORE ENGINE
+           整合: 數據防護 + 統一撮合 (TP1/TP2/Trailing) + 幣種冷卻風控 + Strategy Lab
+        ========================================================= */
         const STORAGE_KEY_SIM = 'bybit_radar_sim_v82';
+        const V85_SCHEMA_VERSION = '8.5-UNIFIED';
+        const V85_ARCHIVE_KEY = 'bybit_radar_trade_archive_v85';
+        const V85_BACKUP_PREFIX = 'bybit_radar_v85_migration_backup_';
+        const V85_MIGRATION_MANIFEST_KEY = 'bybit_radar_v85_migration_manifest';
+        const STORAGE_KEY_ROOM = 'bybit_radar_room_id_v2';
+
+        const LEGACY_SIM_KEYS = [
+            STORAGE_KEY_SIM,
+            'bybit_radar_sim_v81',
+            'bybit_radar_sim_state_v3',
+            'bybit_radar_sim_state_v2',
+            'bybit_radar_sim_state_v1'
+        ];
 
         let allMarketPrices = new Map();
         let rawTickers = [];
         let countdown = 5;
         let timerInterval = null;
 
-        // 時間序列滾動緩衝區 (Time-based Snapshots)
-        // 結構: symbol -> [ { timestamp, turnover, oi, price } ]
         const timeSeriesBuffers = new Map();
-        const MAX_BUFFER_AGE_MS = 15 * 60 * 1000; // 最多保留 15 分鐘精確快照
+        const MAX_BUFFER_AGE_MS = 15 * 60 * 1000;
 
         let currentMarketRegime = 'CHOPPY';
 
         let simState = {
             balance: 100000.0,
             initialBalance: 100000.0,
-            autoTrade: false, // 安全預設：關閉自動交易
+            autoTrade: false,
             maxPositions: 3,
-            tradeSize: 50.0,
+            tradeSize: 25.0,
             positions: [],
-            history: []
+            history: [],
+            historyArchive: [],
+            riskState: null
         };
 
         let adaptiveParams = {
@@ -323,13 +474,328 @@
 
         const executionConfig = {
             takerFeeRate: 0.00055,
-            defaultSpreadPct: 0.0005,   // 0.05%
-            entrySlippageBps: 2.0,      // Long entry: worse fill
-            exitSlippageBps: 3.0,       // Long exit: worse fill
-            stopExtraSlippageBps: 8.0,  // Stop / gap stress penalty
+            defaultSpreadPct: 0.0005,
+            entrySlippageBps: 2.0,
+            exitSlippageBps: 3.0,
+            stopExtraSlippageBps: 8.0,
             trailingActivationPct: 0.0,
             maxGapStressPct: 1.5
         };
+
+        const strategyConfig = {
+            minConfidence: 72,
+            minScore: 80,
+            minRvol: 1.8,
+            minOiVelocity: 0.8,
+            maxSpreadPct: 0.12,
+            preferredMomentumMin: 1.5,
+            preferredMomentumMax: 12.0,
+            allowRegimes: ['RISK_ON', 'CHOPPY', 'TRENDING'],
+            weights: { score: 35, rvol: 15, oi: 20, momentum: 15, spread: 10, regime: 5 }
+        };
+
+        const riskConfig = {
+            riskPerTradePct: 0.50,
+            maxDailyLossPct: 3.0,
+            maxDrawdownPct: 8.0,
+            maxConsecutiveLosses: 3,
+            cooldownMinutes: 30,
+            symbolCooldownMinutes: 30, // 針對單一標的停損後的休眠時間 (防 BLAST 連續進場)
+            maxExposurePct: 25,
+            minMargin: 5,
+            maxMargin: 10,
+            leverage: 5
+        };
+
+        const strategyLabState = { results: [], monteCarlo: null, lastRunAt: null };
+        const strategyLabGrid = {
+            stopLossPct: [3.5, 4.5, 5.5],
+            tp1Pct: [3.5, 4.2, 5.0],
+            tp2Pct: [8.0, 10.0, 12.0],
+            trailingPct: [5.0, 6.5, 8.0]
+        };
+
+        /* ================= V8.5 交易資料防護與無損聚合 ================= */
+        function v85Number(value, fallback = 0) {
+            const n = parseFloat(value);
+            return Number.isFinite(n) ? n : fallback;
+        }
+
+        function v85Timestamp(value, fallback = Date.now()) {
+            if (typeof value === 'number' && Number.isFinite(value)) return value;
+            if (typeof value === 'string') {
+                const parsed = Date.parse(value);
+                if (Number.isFinite(parsed)) return parsed;
+            }
+            return fallback;
+        }
+
+        function v85StableTradeId(trade) {
+            if (trade && trade.tradeId) return String(trade.tradeId);
+            if (trade && trade.id && String(trade.id).startsWith('TRD_')) return String(trade.id);
+            const raw = [
+                trade?.symbol || '',
+                trade?.side || 'LONG',
+                v85Number(trade?.entryPrice),
+                v85Number(trade?.exitPrice),
+                v85Timestamp(trade?.openedAt ?? trade?.openTime, 0),
+                v85Timestamp(trade?.closedAtTs ?? trade?.closedAt, 0)
+            ].join('|');
+            let hash = 2166136261;
+            for (let i = 0; i < raw.length; i++) {
+                hash ^= raw.charCodeAt(i);
+                hash = Math.imul(hash, 16777619);
+            }
+            return 'TRD_' + (hash >>> 0).toString(36).toUpperCase();
+        }
+
+        function v85NormalizeTrade(trade) {
+            const entryPrice = v85Number(trade?.entryPrice);
+            const exitPrice = v85Number(trade?.exitPrice, entryPrice);
+            const grossPnl = v85Number(trade?.grossPnl, v85Number(trade?.pnl));
+            const netPnl = v85Number(trade?.netPnl, v85Number(trade?.pnl, grossPnl));
+            const openedAt = v85Timestamp(trade?.openedAt ?? trade?.openTime, Date.now());
+            const closedAtTs = v85Timestamp(trade?.closedAtTs ?? trade?.closedAt, openedAt);
+            const fills = Array.isArray(trade?.fills) ? trade.fills : [];
+            const entryFee = v85Number(trade?.entryFee);
+            const exitFees = v85Number(trade?.exitFeesPaid ?? trade?.exitFees ?? trade?.exitFee);
+            const totalFees = v85Number(trade?.totalFees, entryFee + exitFees);
+
+            return {
+                ...trade,
+                tradeId: v85StableTradeId({ ...trade, openedAt, closedAtTs }),
+                id: trade?.id || v85StableTradeId({ ...trade, openedAt, closedAtTs }),
+                symbol: String(trade?.symbol || 'UNKNOWN').toUpperCase(),
+                side: String(trade?.side || 'LONG').toUpperCase(),
+                openedAt,
+                openTime: openedAt,
+                closedAtTs,
+                closedAt: trade?.closedAt || new Date(closedAtTs).toLocaleTimeString(),
+                entryPrice,
+                exitPrice,
+                originalQty: v85Number(trade?.originalQty, v85Number(trade?.qty)),
+                originalNotional: v85Number(trade?.originalNotional, v85Number(trade?.notional, 25)),
+                grossPnl,
+                netPnl,
+                pnl: netPnl,
+                pnlPct: v85Number(trade?.pnlPct, entryPrice > 0 ? ((exitPrice - entryPrice) / entryPrice) * 100 : 0),
+                durationMin: Math.max(0, Math.round(v85Number(trade?.durationMin, (closedAtTs - openedAt) / 60000))),
+                reason: trade?.reason || trade?.closeReason || 'CLOSED',
+                mfePct: v85Number(trade?.mfePct),
+                maePct: v85Number(trade?.maePct),
+                entryFee,
+                exitFees,
+                totalFees,
+                fills,
+                schemaVersion: V85_SCHEMA_VERSION
+            };
+        }
+
+        function v85MergeTrades(...lists) {
+            const map = new Map();
+            lists.flat(Infinity).filter(Boolean).forEach(raw => {
+                if (!raw || typeof raw !== 'object') return;
+                const trade = v85NormalizeTrade(raw);
+                const prev = map.get(trade.tradeId);
+                if (!prev) {
+                    map.set(trade.tradeId, trade);
+                    return;
+                }
+                // Prefer the record with more non-empty execution data, but preserve all fields.
+                const score = obj => Object.values(obj).reduce((n, v) =>
+                    n + (v !== null && v !== undefined && v !== '' &&
+                         !(Array.isArray(v) && v.length === 0) ? 1 : 0), 0);
+                const richer = score(trade) >= score(prev) ? trade : prev;
+                const poorer = richer === trade ? prev : trade;
+                map.set(trade.tradeId, { ...poorer, ...richer, tradeId: trade.tradeId, schemaVersion: V85_SCHEMA_VERSION });
+            });
+            return Array.from(map.values()).sort((a, b) => {
+                const bt = v85Timestamp(b.closedAtTs ?? b.closedAt, 0);
+                const at = v85Timestamp(a.closedAtTs ?? a.closedAt, 0);
+                if (bt !== at) return bt - at;
+                return String(a.tradeId).localeCompare(String(b.tradeId));
+            });
+        }
+
+        function v85SafeJsonParse(raw) {
+            if (!raw || typeof raw !== 'string') return null;
+            try { return JSON.parse(raw); } catch (_) { return null; }
+        }
+
+        function v85CreateMigrationBackup(sources, archiveRaw) {
+            const stamp = Date.now();
+            const snapshot = {
+                schemaVersion: V85_SCHEMA_VERSION,
+                createdAt: stamp,
+                reason: 'pre-migration-snapshot',
+                sources,
+                archiveRaw: archiveRaw || null
+            };
+            const key = V85_BACKUP_PREFIX + stamp;
+            localStorage.setItem(key, JSON.stringify(snapshot));
+            localStorage.setItem(V85_MIGRATION_MANIFEST_KEY, JSON.stringify({
+                lastBackupKey: key,
+                createdAt: stamp,
+                sourceKeys: sources.map(x => x.key),
+                migrated: false
+            }));
+            return key;
+        }
+
+        function v85VerifyMigration(state, expectedTradeCount) {
+            const archive = Array.isArray(state.historyArchive) ? state.historyArchive : [];
+            const ids = new Set(archive.map(x => x && x.tradeId).filter(Boolean));
+            return archive.length === expectedTradeCount &&
+                   ids.size === archive.length &&
+                   Array.isArray(state.history) &&
+                   state.history.length <= 300;
+        }
+
+        function getTradingDayKey(ts = Date.now()) { return new Date(ts).toISOString().slice(0, 10); }
+
+        function ensureRiskState() {
+            simState.riskState = simState.riskState || {
+                dayKey: getTradingDayKey(),
+                dayStartEquity: parseFloat(simState.balance) || simState.initialBalance,
+                dailyRealizedPnl: 0,
+                consecutiveLosses: 0,
+                cooldownUntil: 0,
+                cooldownBySymbol: {}, // 標的停損專屬冷卻時間戳
+                equityPeak: parseFloat(simState.initialBalance) || 0,
+                maxDrawdownPct: 0,
+                halted: false,
+                haltReason: ''
+            };
+            const rs = simState.riskState;
+            rs.cooldownBySymbol = rs.cooldownBySymbol || {};
+            const today = getTradingDayKey();
+            if (rs.dayKey !== today) {
+                rs.dayKey = today;
+                rs.dayStartEquity = getCurrentEquity();
+                rs.dailyRealizedPnl = 0;
+                rs.consecutiveLosses = 0;
+                rs.cooldownUntil = 0;
+                rs.halted = false;
+                rs.haltReason = '';
+            }
+            return rs;
+        }
+
+        function getCurrentEquity() {
+            let u = 0;
+            (simState.positions || []).forEach(pos => {
+                const mark = getPositionMarkPrice(pos);
+                const qty = parseFloat(pos.remainingQty || pos.qty) || 0;
+                if (qty > 0) {
+                    u += (mark - (parseFloat(pos.entryPrice) || mark)) * qty - (mark * qty * executionConfig.takerFeeRate);
+                }
+            });
+            return (parseFloat(simState.balance) || 0) + u;
+        }
+
+        function calculateSignalConfidence(c) {
+            if (!c) return { confidence: 0, reasons: ['NO_DATA'], blockers: ['NO_DATA'] };
+            const reasons = [], blockers = [];
+            let confidence = 0;
+            const score = parseFloat(c.score) || 0, rvol = parseFloat(c.rvol) || 0, oi = parseFloat(c.oiVelocity) || 0;
+            const mom = parseFloat(c.momentum1h) || 0, spread = parseFloat(c.spreadPct) || 999;
+
+            confidence += Math.min(35, Math.max(0, (score / 100) * strategyConfig.weights.score));
+            if (rvol >= strategyConfig.minRvol) { confidence += strategyConfig.weights.rvol; reasons.push('RVOL_CONFIRM'); } else blockers.push('LOW_RVOL');
+            if (oi >= strategyConfig.minOiVelocity) { confidence += strategyConfig.weights.oi; reasons.push('OI_CONFIRM'); } else blockers.push('LOW_OI');
+            if (mom >= strategyConfig.preferredMomentumMin && mom <= strategyConfig.preferredMomentumMax) { confidence += strategyConfig.weights.momentum; reasons.push('MOMENTUM_OK'); } else blockers.push('MOMENTUM_OUT_OF_RANGE');
+            if (spread <= strategyConfig.maxSpreadPct) { confidence += strategyConfig.weights.spread; reasons.push('SPREAD_OK'); } else blockers.push('SPREAD_TOO_WIDE');
+            if (strategyConfig.allowRegimes.includes(currentMarketRegime)) { confidence += strategyConfig.weights.regime; reasons.push('REGIME_OK'); } else blockers.push('REGIME_BLOCK');
+            if (score < strategyConfig.minScore) blockers.push('LOW_SCORE');
+
+            return { confidence: Math.round(Math.min(100, confidence)), reasons, blockers };
+        }
+
+        function getOpenExposure() {
+            return (simState.positions || []).reduce((sum, p) => sum + (parseFloat(p.notional) || 0), 0);
+        }
+
+        function calculateRiskBasedNotional(entryPrice) {
+            const equity = Math.max(1, getCurrentEquity());
+            const riskBudget = (equity * riskConfig.riskPerTradePct) / 100;
+            const stopPct = Math.max(0.0001, parseFloat(adaptiveParams.stopLossPct) || 4.5) / 100;
+            const rawNotional = riskBudget / stopPct;
+            const userNotional = Math.max(riskConfig.minMargin * riskConfig.leverage, Math.min(riskConfig.maxMargin * riskConfig.leverage, parseFloat(simState.tradeSize) || 25));
+            return Math.max(1, Math.min(rawNotional, userNotional));
+        }
+
+        function evaluateRiskGate(candidate) {
+            const rs = ensureRiskState();
+            const now = Date.now();
+            const equity = getCurrentEquity();
+            rs.equityPeak = Math.max(parseFloat(rs.equityPeak) || equity, equity);
+            rs.maxDrawdownPct = Math.max(parseFloat(rs.maxDrawdownPct) || 0, ((rs.equityPeak - equity) / Math.max(1, rs.equityPeak)) * 100);
+
+            if (rs.halted) return { allowed: false, reason: rs.haltReason || 'RISK_HALTED' };
+            if (currentMarketRegime === 'RISK_OFF') return { allowed: false, reason: 'RISK_OFF' };
+            if (now < (parseInt(rs.cooldownUntil) || 0)) return { allowed: false, reason: 'SYSTEM_COOLDOWN' };
+            
+            // 幣種專屬停損冷卻檢查 (解決 BLAST 連續進場接刀缺陷)
+            const symCooldown = rs.cooldownBySymbol ? rs.cooldownBySymbol[candidate.symbol] : 0;
+            if (symCooldown && now < symCooldown) {
+                const remainingMin = Math.ceil((symCooldown - now) / 60000);
+                return { allowed: false, reason: `SYMBOL_COOLDOWN_${candidate.symbol}_${remainingMin}M` };
+            }
+
+            if ((parseFloat(rs.dailyRealizedPnl) || 0) <= -Math.abs(((parseFloat(rs.dayStartEquity) || equity) * riskConfig.maxDailyLossPct) / 100)) return { allowed: false, reason: 'DAILY_LOSS_LIMIT' };
+            if ((parseInt(rs.consecutiveLosses) || 0) >= riskConfig.maxConsecutiveLosses) return { allowed: false, reason: 'CONSECUTIVE_LOSS_LIMIT' };
+            if ((parseFloat(rs.maxDrawdownPct) || 0) >= riskConfig.maxDrawdownPct) return { allowed: false, reason: 'MAX_DRAWDOWN_LIMIT' };
+            if (simState.positions.length >= simState.maxPositions) return { allowed: false, reason: 'MAX_POSITIONS' };
+
+            const confidence = calculateSignalConfidence(candidate);
+            if (confidence.confidence < strategyConfig.minConfidence || confidence.blockers.length > 0) return { allowed: false, reason: 'SIGNAL_GATE', confidence };
+
+            const projectedExposure = getOpenExposure() + calculateRiskBasedNotional(parseFloat(candidate.lastPrice) || 0);
+            if (projectedExposure > (equity * riskConfig.maxExposurePct) / 100) return { allowed: false, reason: 'MAX_EXPOSURE', confidence };
+
+            return { allowed: true, reason: 'OK', confidence };
+        }
+
+        function recordRiskOutcome(trade) {
+            const rs = ensureRiskState();
+            const pnl = parseFloat(trade.pnl) || 0;
+            rs.dailyRealizedPnl = (parseFloat(rs.dailyRealizedPnl) || 0) + pnl;
+
+            if (pnl < 0) {
+                rs.consecutiveLosses = (parseInt(rs.consecutiveLosses) || 0) + 1;
+                // 單一幣種停損時寫入 30 分鐘冷卻
+                rs.cooldownBySymbol = rs.cooldownBySymbol || {};
+                rs.cooldownBySymbol[trade.symbol] = Date.now() + (riskConfig.symbolCooldownMinutes * 60000);
+
+                if (rs.consecutiveLosses >= riskConfig.maxConsecutiveLosses) {
+                    rs.cooldownUntil = Date.now() + (riskConfig.cooldownMinutes * 60000);
+                    rs.haltReason = 'CONSECUTIVE_LOSS_COOLDOWN';
+                }
+            } else if (pnl > 0) {
+                rs.consecutiveLosses = 0;
+            }
+
+            const equity = getCurrentEquity();
+            rs.equityPeak = Math.max(parseFloat(rs.equityPeak) || equity, equity);
+            rs.maxDrawdownPct = Math.max(parseFloat(rs.maxDrawdownPct) || 0, ((rs.equityPeak - equity) / Math.max(1, rs.equityPeak)) * 100);
+            saveToStorage(false);
+        }
+
+        function getStrategyAnalytics() {
+            const h = simState.historyArchive || simState.history || [];
+            const wins = h.filter(x => (parseFloat(x.pnl) || 0) > 0);
+            const losses = h.filter(x => (parseFloat(x.pnl) || 0) <= 0);
+            const gp = wins.reduce((a, x) => a + (parseFloat(x.pnl) || 0), 0);
+            const gl = Math.abs(losses.reduce((a, x) => a + (parseFloat(x.pnl) || 0), 0));
+            const avgWin = wins.length ? gp / wins.length : 0;
+            const avgLoss = losses.length ? gl / losses.length : 0;
+            const winRate = h.length ? wins.length / h.length : 0;
+            const expectancy = (winRate * avgWin) - ((1 - winRate) * avgLoss);
+            const pf = gl > 0 ? gp / gl : (gp > 0 ? Infinity : 0);
+            const avgMfe = h.length ? h.reduce((a, x) => a + (parseFloat(x.mfePct) || 0), 0) / h.length : 0;
+            const avgMae = h.length ? h.reduce((a, x) => a + (parseFloat(x.maePct) || 0), 0) / h.length : 0;
+            return { totalTrades: h.length, winRate, profitFactor: pf, expectancy, avgWin, avgLoss, avgMfe, avgMae };
+        }
 
         function bpsToPct(bps) { return (parseFloat(bps) || 0) / 10000; }
         
@@ -366,91 +832,155 @@
             return high * (1 - trailPct / 100);
         }
 
-        function migratePositionToV82(pos) {
-            const entryPrice = parseFloat(pos.entryPrice) || 0.0001;
-            const currentPrice = parseFloat(pos.currentPrice) || entryPrice;
-            const notional = parseFloat(pos.notional) || 50.0;
-            const qty = parseFloat(pos.qty) || (notional / entryPrice);
-            const originalQty = parseFloat(pos.originalQty) || qty;
-
-            return {
-                ...pos,
-                entryPrice,
-                currentPrice,
-                qty: isNaN(qty) ? 1.0 : qty,
-                originalQty,
-                notional: isNaN(notional) ? 50.0 : notional,
-                stopLoss: parseFloat(pos.stopLoss) || (entryPrice * 0.955),
-                tp1: parseFloat(pos.tp1) || (entryPrice * 1.042),
-                tp2: parseFloat(pos.tp2) || (entryPrice * 1.10),
-                realizedNetPnl: parseFloat(pos.realizedNetPnl) || parseFloat(pos.realizedPnl) || 0.0,
-                totalFees: parseFloat(pos.totalFees) || (notional * 0.00055),
-                fills: pos.fills || [],
-                tp1Reached: !!pos.tp1Reached,
-                tp2Reached: !!pos.tp2Reached,
-                isMoonBag: !!pos.isMoonBag,
-                highestPrice: parseFloat(pos.highestPrice) || entryPrice,
-                lowestPrice: parseFloat(pos.lowestPrice) || entryPrice,
-                mfePct: parseFloat(pos.mfePct) || 0,
-                maePct: parseFloat(pos.maePct) || 0,
-                trailingPct: parseFloat(pos.trailingPct) || adaptiveParams.trailingPct,
-                trailingStop: parseFloat(pos.trailingStop) || null,
-                remainingQty: parseFloat(pos.remainingQty) || qty,
-                exitFeesPaid: parseFloat(pos.exitFeesPaid) || 0,
-                realizedGrossPnl: parseFloat(pos.realizedGrossPnl) || 0,
-                openTime: parseInt(pos.openTime) || Date.now()
-            };
-        }
-
+        /* 儲存載入與資料庫無損整合 — V8.5-A1 FINAL */
         function loadFromStorage() {
             try {
-                const legacyKeys = [
-                    STORAGE_KEY_SIM,
-                    'bybit_radar_sim_v81',
-                    'bybit_radar_sim_state_v3',
-                    'bybit_radar_sim_state_v2',
-                    'bybit_radar_sim_state_v1'
+                // Phase 1: discover every legacy source without mutating any source.
+                const legacyStates = [];
+                LEGACY_SIM_KEYS.forEach(key => {
+                    const raw = localStorage.getItem(key);
+                    const state = v85SafeJsonParse(raw);
+                    if (state && typeof state === 'object') legacyStates.push({ key, raw, state });
+                });
+
+                const archiveRaw = localStorage.getItem(V85_ARCHIVE_KEY);
+                const archiveState = v85SafeJsonParse(archiveRaw);
+                const backupKey = v85CreateMigrationBackup(legacyStates, archiveRaw);
+
+                // Phase 2: choose current-state settings from the preferred current key,
+                // while collecting history from ALL keys and ALL archives.
+                const primary = legacyStates.find(x => x.key === STORAGE_KEY_SIM) || legacyStates[0];
+                const mergedState = primary ? { ...simState, ...primary.state } : { ...simState };
+
+                const historySources = [
+                    Array.isArray(archiveState) ? archiveState : [],
+                    ...legacyStates.map(x => Array.isArray(x.state.historyArchive) ? x.state.historyArchive : []),
+                    ...legacyStates.map(x => Array.isArray(x.state.history) ? x.state.history : [])
                 ];
 
-                let simSaved = null;
-                for (const key of legacyKeys) {
-                    const data = localStorage.getItem(key);
-                    if (data) {
-                        simSaved = data;
-                        break;
-                    }
+                const mergedHistory = v85MergeTrades(...historySources);
+
+                // Merge positions from all sources by stable position identity; current source wins.
+                const positionMap = new Map();
+                legacyStates.slice().reverse().forEach(src => {
+                    const list = Array.isArray(src.state.positions) ? src.state.positions : [];
+                    list.forEach((pos, idx) => {
+                        if (!pos || typeof pos !== 'object') return;
+                        const key = String(pos.id || `${pos.symbol || 'UNKNOWN'}|${pos.openTime || pos.openedAt || idx}`);
+                        positionMap.set(key, pos);
+                    });
+                });
+
+                simState = {
+                    ...mergedState,
+                    schemaVersion: V85_SCHEMA_VERSION,
+                    positions: Array.from(positionMap.values()),
+                    historyArchive: mergedHistory,
+                    history: mergedHistory.slice(0, 300)
+                };
+
+                // Phase 3: normalize positions.
+                simState.positions = (simState.positions || []).map(pos => {
+                    const entryPrice = v85Number(pos.entryPrice, 0.0001);
+                    const currentPrice = v85Number(pos.currentPrice, entryPrice);
+                    const notional = v85Number(pos.notional, 25.0);
+                    const qty = v85Number(pos.qty, notional / Math.max(entryPrice, 0.0001));
+                    return {
+                        ...pos,
+                        entryPrice,
+                        currentPrice,
+                        qty,
+                        originalQty: v85Number(pos.originalQty, qty),
+                        remainingQty: v85Number(pos.remainingQty, qty),
+                        notional,
+                        stopLoss: v85Number(pos.stopLoss, entryPrice * 0.955),
+                        tp1: v85Number(pos.tp1, entryPrice * 1.042),
+                        tp2: v85Number(pos.tp2, entryPrice * 1.10),
+                        realizedNetPnl: v85Number(pos.realizedNetPnl, v85Number(pos.realizedPnl)),
+                        totalFees: v85Number(pos.totalFees, notional * executionConfig.takerFeeRate),
+                        fills: Array.isArray(pos.fills) ? pos.fills : [],
+                        tp1Reached: !!pos.tp1Reached,
+                        tp2Reached: !!pos.tp2Reached,
+                        isMoonBag: !!pos.isMoonBag,
+                        highestPrice: v85Number(pos.highestPrice, entryPrice),
+                        lowestPrice: v85Number(pos.lowestPrice, entryPrice),
+                        mfePct: v85Number(pos.mfePct),
+                        maePct: v85Number(pos.maePct),
+                        trailingPct: v85Number(pos.trailingPct, adaptiveParams.trailingPct),
+                        trailingStop: v85Number(pos.trailingStop, 0) || null,
+                        exitFeesPaid: v85Number(pos.exitFeesPaid),
+                        realizedGrossPnl: v85Number(pos.realizedGrossPnl),
+                        openTime: v85Timestamp(pos.openTime ?? pos.openedAt, Date.now())
+                    };
+                });
+
+                ensureRiskState();
+
+                // Phase 4: verify before committing. If verification fails, leave originals untouched.
+                const expectedCount = mergedHistory.length;
+                if (!v85VerifyMigration(simState, expectedCount)) {
+                    console.warn('V8.5 migration verification failed; originals preserved. Backup:', backupKey);
+                    return;
                 }
 
-                if (simSaved) {
-                    const parsed = JSON.parse(simSaved);
-                    simState = { ...simState, ...parsed };
+                // Phase 5: two-key commit + post-write verification.
+                const nextStateRaw = JSON.stringify(simState);
+                const nextArchiveRaw = JSON.stringify(simState.historyArchive);
+                localStorage.setItem(V85_ARCHIVE_KEY, nextArchiveRaw);
+                localStorage.setItem(STORAGE_KEY_SIM, nextStateRaw);
+
+                const verifyState = v85SafeJsonParse(localStorage.getItem(STORAGE_KEY_SIM));
+                const verifyArchive = v85SafeJsonParse(localStorage.getItem(V85_ARCHIVE_KEY));
+                if (!verifyState || !Array.isArray(verifyArchive) || verifyArchive.length !== expectedCount) {
+                    console.warn('V8.5 post-write verification failed; pre-migration backup key:', backupKey);
+                    return;
                 }
 
-                if (simState.positions && Array.isArray(simState.positions)) {
-                    simState.positions = simState.positions.map(migratePositionToV82);
-                }
-
-                saveToStorage();
+                localStorage.setItem(V85_MIGRATION_MANIFEST_KEY, JSON.stringify({
+                    lastBackupKey: backupKey,
+                    createdAt: Date.now(),
+                    sourceKeys: legacyStates.map(x => x.key),
+                    sourceTradeCount: historySources.reduce((n, x) => n + (Array.isArray(x) ? x.length : 0), 0),
+                    unifiedTradeCount: expectedCount,
+                    migrated: true,
+                    schemaVersion: V85_SCHEMA_VERSION
+                }));
             } catch (err) {
-                console.warn("讀取歷史存檔失敗，還原預設:", err);
+                console.warn('V8.5 Safe Migration failed; originals were not intentionally cleared:', err);
             }
         }
 
-        function saveToStorage() {
+        function saveToStorage(syncCloud = true) {
             try {
-                localStorage.setItem(STORAGE_KEY_SIM, JSON.stringify(simState));
-            } catch (e) {}
+                simState.schemaVersion = V85_SCHEMA_VERSION;
+                const merged = v85MergeTrades(simState.historyArchive || [], simState.history || []);
+                simState.historyArchive = merged;
+                simState.history = merged.slice(0, 300);
+
+                const stateRaw = JSON.stringify(simState);
+                const archiveRaw = JSON.stringify(simState.historyArchive);
+                localStorage.setItem(V85_ARCHIVE_KEY, archiveRaw);
+                localStorage.setItem(STORAGE_KEY_SIM, stateRaw);
+
+                // Verify writes before any optional cloud sync.
+                const verifyState = v85SafeJsonParse(localStorage.getItem(STORAGE_KEY_SIM));
+                const verifyArchive = v85SafeJsonParse(localStorage.getItem(V85_ARCHIVE_KEY));
+                if (!verifyState || !Array.isArray(verifyArchive)) {
+                    throw new Error('localStorage verification failed');
+                }
+                if (syncCloud && firestoreDb) pushToCloudForce();
+            } catch (e) {
+                console.warn('V8.5 save failed:', e);
+            }
         }
 
+        /* 時間序列快照比對 */
         function findClosestHistoricalPoint(buffer, targetTime) {
             if (!buffer || buffer.length === 0) return null;
             let closest = null;
             for (const pt of buffer) {
-                if (pt.timestamp <= targetTime) {
-                    closest = pt;
-                } else {
-                    break;
-                }
+                if (pt.timestamp <= targetTime) closest = pt;
+                else break;
             }
             return closest || buffer[0];
         }
@@ -480,18 +1010,13 @@
                 const cur5mDelta = Math.max(0, curTurnover - pt5m.turnover);
                 const prev5mDelta = (pt10m && pt10m !== pt5m) ? Math.max(0, pt5m.turnover - pt10m.turnover) : 0;
                 const baseline = prev5mDelta > 0 ? prev5mDelta : (curTurnover / 288);
-                if (baseline > 0) {
-                    rvol = Math.max(0.5, Math.min(20.0, cur5mDelta / baseline));
-                }
+                if (baseline > 0) rvol = Math.max(0.5, Math.min(20.0, cur5mDelta / baseline));
             }
 
             let oiVelocity5m = 0.0;
             let oiAcceleration = 0.0;
 
-            if (pt5m && pt5m.oi > 0) {
-                oiVelocity5m = ((curOi - pt5m.oi) / pt5m.oi) * 100;
-            }
-
+            if (pt5m && pt5m.oi > 0) oiVelocity5m = ((curOi - pt5m.oi) / pt5m.oi) * 100;
             if (pt10m && pt10m.oi > 0 && pt5m && pt5m.oi > 0) {
                 const prevVelocity5m = ((pt5m.oi - pt10m.oi) / pt10m.oi) * 100;
                 oiAcceleration = oiVelocity5m - prevVelocity5m;
@@ -502,8 +1027,7 @@
 
         function detectMarketRegime(list) {
             const btc = list.find(i => i.symbol === "BTCUSDT");
-            let btc1h = 0;
-            let btc24h = 0;
+            let btc1h = 0, btc24h = 0;
             if (btc) {
                 const last = parseFloat(btc.lastPrice) || 0;
                 const p1h = parseFloat(btc.prevPrice1h) || last;
@@ -516,13 +1040,9 @@
             const breadthRatio = totalAlts > 0 ? altGains / totalAlts : 0.5;
 
             let regime = 'CHOPPY';
-            if (btc1h <= -1.2 || btc24h <= -3.5) {
-                regime = 'RISK_OFF';
-            } else if (breadthRatio >= 0.55 && btc1h >= 0.2) {
-                regime = 'RISK_ON';
-            } else {
-                regime = 'CHOPPY';
-            }
+            if (btc1h <= -1.2 || btc24h <= -3.5) regime = 'RISK_OFF';
+            else if (breadthRatio >= 0.55 && btc1h >= 0.2) regime = 'RISK_ON';
+            else regime = 'CHOPPY';
 
             currentMarketRegime = regime;
 
@@ -557,16 +1077,16 @@
                 const json = await res.json();
                 if (json.retCode === 0 && json.result && json.result.list) {
                     detectMarketRegime(json.result.list);
-                    processTickersV82(json.result.list);
+                    processTickersV85(json.result.list);
                 }
             } catch (err) {
-                console.error("Bybit REST API 請求失敗:", err);
+                console.error("Bybit 請求錯誤:", err);
             } finally {
                 countdown = 5;
             }
         }
 
-        function processTickersV82(list) {
+        function processTickersV85(list) {
             const newTickers = [];
 
             list.forEach(item => {
@@ -593,7 +1113,7 @@
                 const momentum1h = prevPrice1h > 0 ? ((lastPrice - prevPrice1h) / prevPrice1h) * 100 : 0;
                 const fundingRate = (parseFloat(item.fundingRate) || 0) * 100;
 
-                const featureScore = calculateFeatureGroupScoreV82({
+                const featureScore = calculateFeatureGroupScoreV85({
                     momentum1h, rvol, oiVelocity, oiAcceleration, turnover24h, spreadPct, fundingRate, price24hPcnt
                 });
 
@@ -621,7 +1141,7 @@
             }
         }
 
-        function calculateFeatureGroupScoreV82(f) {
+        function calculateFeatureGroupScoreV85(f) {
             let score = 0;
             if (f.momentum1h >= 3.0 && f.momentum1h <= 12.0) score += 25;
             else if (f.momentum1h >= 1.5) score += 15;
@@ -641,9 +1161,10 @@
             return Math.min(100, score);
         }
 
+        /* 統一撮合引擎 (Unified Fill Engine) */
         function executeFill(pos, fillQty, fillPrice, reason, meta = {}) {
             if (!pos) return { success: false, error: 'NO_POSITION' };
-            const remainingQty = Math.max(0, parseFloat(pos.qty) || 0);
+            const remainingQty = Math.max(0, parseFloat(pos.remainingQty || pos.qty) || 0);
             const requestedQty = Math.max(0, parseFloat(fillQty) || 0);
             const markPrice = Math.max(0, parseFloat(fillPrice) || parseFloat(pos.currentPrice) || 0);
             if (remainingQty <= 0 || requestedQty <= 0 || markPrice <= 0) return { success: false, error: 'INVALID_FILL' };
@@ -655,8 +1176,8 @@
             const grossPnl = (executedPrice - pos.entryPrice) * actualQty;
             const netPnl = grossPnl - exitFee;
 
-            pos.qty = Math.max(0, remainingQty - actualQty);
-            pos.remainingQty = pos.qty;
+            pos.remainingQty = Math.max(0, remainingQty - actualQty);
+            pos.qty = pos.remainingQty;
             pos.realizedGrossPnl = (parseFloat(pos.realizedGrossPnl) || 0) + grossPnl;
             pos.realizedNetPnl = (parseFloat(pos.realizedNetPnl) || 0) + netPnl;
             pos.exitFeesPaid = (parseFloat(pos.exitFeesPaid) || 0) + exitFee;
@@ -665,17 +1186,26 @@
 
             if (!Array.isArray(pos.fills)) pos.fills = [];
             const fill = {
-                timestamp: Date.now(), fillQty: actualQty, markPrice, fillPrice: executedPrice,
-                grossPnl, exitFee, netPnl, reason,
+                timestamp: Date.now(),
+                fillQty: actualQty,
+                markPrice,
+                fillPrice: executedPrice,
+                grossPnl,
+                exitFee,
+                netPnl,
+                reason,
                 slippageBps: ((markPrice - executedPrice) / markPrice) * 10000,
                 isStop: !!meta.isStop
             };
             pos.fills.push(fill);
-            return { success: true, isFullyClosed: pos.qty <= 1e-12, fill, grossPnl, netPnl, exitFee, executedPrice };
+            return { success: true, isFullyClosed: pos.remainingQty <= 1e-12, fill, grossPnl, netPnl, exitFee, executedPrice };
         }
 
         function updateSimPositions() {
-            if (!simState.positions || simState.positions.length === 0) { renderSimPositions(); return; }
+            if (!simState.positions || simState.positions.length === 0) { 
+                renderSimPositions(); 
+                return; 
+            }
             const positionsToFinalize = [];
             simState.positions.forEach(pos => {
                 const markPrice = getPositionMarkPrice(pos);
@@ -683,7 +1213,7 @@
                 updateMfeMae(pos, markPrice);
 
                 if (markPrice <= pos.stopLoss) {
-                    const r = executeFill(pos, pos.qty, markPrice, '🔴 觸發防守止損 (SL)', { isStop: true });
+                    const r = executeFill(pos, pos.remainingQty, markPrice, '🔴 觸發防守止損 (SL)', { isStop: true });
                     if (r.success && r.isFullyClosed) positionsToFinalize.push({ pos, finalReason: pos.tp1Reached ? '🛡️ 保本/防守止損離場' : '🔴 觸發防守止損 (SL)' });
                     return;
                 }
@@ -694,7 +1224,7 @@
                     if (r.success) pos.stopLoss = Math.max(pos.stopLoss, pos.entryPrice * 1.002);
                 }
 
-                if (pos.tp1Reached && !pos.tp2Reached && markPrice >= pos.tp2 && pos.qty > 0) {
+                if (pos.tp1Reached && !pos.tp2Reached && markPrice >= pos.tp2 && pos.remainingQty > 0) {
                     pos.tp2Reached = true;
                     pos.isMoonBag = true;
                     const r = executeFill(pos, (parseFloat(pos.originalQty) || 0) * 0.35, markPrice, '💎 TP2 達標平 35%');
@@ -704,16 +1234,18 @@
                     }
                 }
 
-                if (pos.isMoonBag && pos.qty > 0) {
+                if (pos.isMoonBag && pos.remainingQty > 0) {
                     pos.trailingStop = getTrailingStopPrice(pos);
                     if (markPrice <= pos.trailingStop) {
-                        const r = executeFill(pos, pos.qty, markPrice, `🚀 尾倉 Trailing Stop (-${pos.trailingPct}%)`, { isStop: true });
+                        const r = executeFill(pos, pos.remainingQty, markPrice, `🚀 尾倉 Trailing Stop (-${pos.trailingPct}%)`, { isStop: true });
                         if (r.success && r.isFullyClosed) positionsToFinalize.push({ pos, finalReason: '🚀 Trailing Stop 尾倉鎖利' });
                     }
                 }
             });
             positionsToFinalize.forEach(item => finalizeClosedTrade(item.pos, item.finalReason));
-            saveToStorage(); renderSimPositions(); updateSimHeaderStats();
+            saveToStorage(false); 
+            renderSimPositions(); 
+            updateSimHeaderStats();
         }
 
         function finalizeClosedTrade(pos, finalReason) {
@@ -724,64 +1256,115 @@
             const totalExitNotional = fills.reduce((a, b) => a + ((b.fillQty || 0) * (b.fillPrice || 0)), 0);
             const totalExitQty = fills.reduce((a, b) => a + (b.fillQty || 0), 0);
             const avgExitPrice = totalExitQty > 0 ? totalExitNotional / totalExitQty : pos.currentPrice;
-            simState.history.unshift({
-                id: pos.id, symbol: pos.symbol, entryPrice: pos.entryPrice, exitPrice: avgExitPrice,
+            
+            const trade = v85NormalizeTrade({
+                id: pos.id,
+                symbol: pos.symbol,
+                entryPrice: pos.entryPrice,
+                exitPrice: avgExitPrice,
                 pnl: parseFloat(pos.realizedNetPnl) || 0,
                 grossPnl: parseFloat(pos.realizedGrossPnl) || 0,
                 totalFees: parseFloat(pos.totalFees) || 0,
                 pnlPct: (parseFloat(pos.realizedNetPnl) || 0) / Math.max(1e-12, (pos.originalQty * pos.entryPrice)) * 100,
                 durationMin: Math.max(0, Math.round((Date.now() - pos.openTime) / 60000)),
-                reason: finalReason, closedAt: new Date().toLocaleTimeString(),
-                mfePct: parseFloat(pos.mfePct) || 0, maePct: parseFloat(pos.maePct) || 0,
-                fills
+                reason: finalReason,
+                closedAt: new Date().toLocaleTimeString(),
+                closedAtTs: Date.now(),
+                mfePct: parseFloat(pos.mfePct) || 0,
+                maePct: parseFloat(pos.maePct) || 0,
+                fills,
+                intelligence: pos.intelligence || null,
+                scoreAtEntry: pos.score || null,
+                regimeAtEntry: currentMarketRegime
             });
-            saveToStorage(); renderSimPositions(); updateSimHeaderStats();
+
+            simState.historyArchive = v85MergeTrades(simState.historyArchive || [], [trade]);
+            simState.history = simState.historyArchive.slice(0, 300);
+
+            recordRiskOutcome(trade);
+            saveToStorage();
+            renderSimPositions();
+            updateSimHeaderStats();
         }
 
         function checkAutoTradingOpportunities() {
-            if (simState.positions.length >= simState.maxPositions) return;
-
-            const candidates = rawTickers.filter(c => {
-                if (adaptiveParams.blacklist.has(c.symbol)) return false;
-                if (simState.positions.some(p => p.symbol === c.symbol)) return false;
-                return c.grade === 'A+' && c.score >= adaptiveParams.minScore;
-            });
-
-            if (candidates.length > 0) {
-                executeOpenPosition(candidates[0], "🟢 A+ 頂級狙擊發射");
+            if (!simState.autoTrade || !rawTickers || rawTickers.length === 0) return;
+            ensureRiskState();
+            const ranked = rawTickers
+                .filter(c => !adaptiveParams.blacklist.has(c.symbol) && !simState.positions.some(p => p.symbol === c.symbol))
+                .map(c => ({ ...c, intelligence: calculateSignalConfidence(c) }))
+                .sort((a, b) => b.intelligence.confidence - a.intelligence.confidence);
+            
+            const candidate = ranked.find(c => evaluateRiskGate(c).allowed);
+            if (candidate) {
+                executeOpenPosition(candidate, `🧠 V8.5 置信度 ${candidate.intelligence.confidence}%`);
             }
         }
 
         function executeOpenPosition(coin, reason) {
             if (!coin || simState.positions.length >= simState.maxPositions) return;
             if (simState.positions.some(p => p.symbol === coin.symbol)) return;
-            const notional = parseFloat(simState.tradeSize) || 50.0;
+            
+            const gate = evaluateRiskGate(coin);
+            if (!gate.allowed && reason !== '手動跟單') {
+                console.info('風控阻擋:', gate.reason, gate);
+                return;
+            }
+
+            const notional = calculateRiskBasedNotional(parseFloat(coin.lastPrice) || 0);
             const markPrice = parseFloat(coin.lastPrice) || 0;
             if (markPrice <= 0) return;
+
             const spreadPct = parseFloat(coin.spreadPct) || executionConfig.defaultSpreadPct;
             const entryPrice = applyLongEntryExecutionPrice(markPrice, spreadPct);
             const qty = notional / entryPrice;
             const entryFee = notional * executionConfig.takerFeeRate;
             if ((parseFloat(simState.balance) || 0) < entryFee) return;
+
             simState.balance -= entryFee;
             const now = Date.now();
             const position = {
-                id: 'POS_' + now + '_' + coin.symbol, symbol: coin.symbol,
-                entryPrice, markEntryPrice: markPrice, currentPrice: markPrice,
-                qty, remainingQty: qty, originalQty: qty, notional, originalNotional: notional,
-                openTime: now, stopLoss: entryPrice * (1 - adaptiveParams.stopLossPct / 100),
-                tp1: entryPrice * (1 + adaptiveParams.tp1Pct / 100), tp2: entryPrice * (1 + adaptiveParams.tp2Pct / 100),
-                tp1Reached: false, tp2Reached: false, isMoonBag: false,
-                highestPrice: markPrice, lowestPrice: markPrice, mfePct: 0, maePct: 0,
-                trailingPct: adaptiveParams.trailingPct, trailingStop: null,
-                entryFee, exitFeesPaid: 0, totalFees: entryFee,
-                realizedGrossPnl: 0, realizedNetPnl: -entryFee, fills: [],
-                reason, score: coin.score, grade: coin.grade || 'N/A', spreadPctAtEntry: spreadPct,
+                id: 'POS_' + now + '_' + coin.symbol,
+                symbol: coin.symbol,
+                entryPrice,
+                markEntryPrice: markPrice,
+                currentPrice: markPrice,
+                qty,
+                remainingQty: qty,
+                originalQty: qty,
+                notional,
+                originalNotional: notional,
+                openTime: now,
+                stopLoss: entryPrice * (1 - (adaptiveParams.stopLossPct / 100)),
+                tp1: entryPrice * (1 + (adaptiveParams.tp1Pct / 100)),
+                tp2: entryPrice * (1 + (adaptiveParams.tp2Pct / 100)),
+                tp1Reached: false,
+                tp2Reached: false,
+                isMoonBag: false,
+                highestPrice: markPrice,
+                lowestPrice: markPrice,
+                mfePct: 0,
+                maePct: 0,
+                trailingPct: adaptiveParams.trailingPct,
+                trailingStop: null,
+                entryFee,
+                exitFeesPaid: 0,
+                totalFees: entryFee,
+                realizedGrossPnl: 0,
+                realizedNetPnl: -entryFee,
+                fills: [],
+                reason,
+                score: coin.score,
+                grade: coin.grade || 'N/A',
+                spreadPctAtEntry: spreadPct,
                 entrySlippageBps: ((entryPrice - markPrice) / markPrice) * 10000,
+                intelligence: gate.confidence,
                 finalized: false
             };
             simState.positions.push(position);
-            saveToStorage(); renderSimPositions(); updateSimHeaderStats();
+            saveToStorage();
+            renderSimPositions();
+            updateSimHeaderStats();
         }
 
         function updateSimHeaderStats() {
@@ -791,7 +1374,7 @@
                 simState.positions.forEach(pos => {
                     const entryPrice = parseFloat(pos.entryPrice) || 0;
                     const curPrice = parseFloat(pos.currentPrice) || entryPrice;
-                    const qty = parseFloat(pos.qty) || 0;
+                    const qty = parseFloat(pos.remainingQty || pos.qty) || 0;
 
                     if (entryPrice > 0 && qty > 0) {
                         const grossPnl = (curPrice - entryPrice) * qty;
@@ -806,46 +1389,48 @@
             const totalEquity = balance + unrealizedPnl;
             const totalPnlPct = ((totalEquity - simState.initialBalance) / simState.initialBalance) * 100;
 
-            document.getElementById('simEquityDisplay').innerText = `$${totalEquity.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-            document.getElementById('simEquityDisplay').className = `text-sm sm:text-base font-bold font-mono ${totalEquity >= simState.initialBalance ? 'text-emerald-400' : 'text-rose-400'}`;
+            const eqEl = document.getElementById('simEquityDisplay');
+            if (eqEl) {
+                eqEl.innerText = `$${totalEquity.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                eqEl.className = `text-sm sm:text-base font-bold font-mono ${totalEquity >= simState.initialBalance ? 'text-emerald-400' : 'text-rose-400'}`;
+            }
 
-            document.getElementById('simBalanceDisplay').innerText = `$${balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            const balEl = document.getElementById('simBalanceDisplay');
+            if (balEl) balEl.innerText = `$${balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
             
             const pnlEl = document.getElementById('simTotalPnlDisplay');
-            pnlEl.innerText = `(${totalPnlPct >= 0 ? '+' : ''}${totalPnlPct.toFixed(2)}%)`;
-            pnlEl.className = `text-xs font-mono font-semibold ${totalPnlPct >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
+            if (pnlEl) {
+                pnlEl.innerText = `(${totalPnlPct >= 0 ? '+' : ''}${totalPnlPct.toFixed(2)}%)`;
+                pnlEl.className = `text-xs font-mono font-semibold ${totalPnlPct >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
+            }
 
-            document.getElementById('simOpenPositionsCount').innerText = `${simState.positions.length} / ${simState.maxPositions}`;
+            const openPosEl = document.getElementById('simOpenPositionsCount');
+            if (openPosEl) openPosEl.innerText = `${simState.positions.length} / ${simState.maxPositions}`;
 
-            const history = simState.history || [];
-            const wins = history.filter(h => h.pnl > 0);
-            const losses = history.filter(h => h.pnl <= 0);
-            const total = history.length;
+            const moonBagCount = (simState.positions || []).filter(p => p.isMoonBag).length;
+            const moonBagEl = document.getElementById('simMoonBagCount');
+            if (moonBagEl) moonBagEl.innerText = `${moonBagCount} 檔`;
 
-            const winRate = total > 0 ? ((wins.length / total) * 100).toFixed(0) : '--';
-            document.getElementById('simWinRateDisplay').innerText = `${winRate}%`;
-
-            const riskPerTrade = (simState.tradeSize || 50) * (adaptiveParams.stopLossPct / 100);
-            const avgWinUsdt = wins.length > 0 ? (wins.reduce((a, b) => a + b.pnl, 0) / wins.length) : 0;
-            const avgLossUsdt = losses.length > 0 ? Math.abs(losses.reduce((a, b) => a + b.pnl, 0) / losses.length) : 0;
-
-            const expectancyR = (total > 0 && riskPerTrade > 0)
-                ? (((wins.length / total) * (avgWinUsdt / riskPerTrade)) - ((losses.length / total) * (avgLossUsdt / riskPerTrade))).toFixed(2)
-                : '0.00';
+            const a = getStrategyAnalytics();
+            const winEl = document.getElementById('simWinRateDisplay');
+            if (winEl) winEl.innerText = `${(a.winRate * 100).toFixed(0)}%`;
 
             const expEl = document.getElementById('simExpectancyDisplay');
-            expEl.innerText = `${parseFloat(expectancyR) >= 0 ? '+' : ''}${expectancyR}R`;
-            expEl.className = `font-mono font-bold ${parseFloat(expectancyR) >= 0 ? 'text-amber-400' : 'text-rose-400'}`;
+            if (expEl) {
+                expEl.innerText = `${a.expectancy >= 0 ? '+' : ''}$${a.expectancy.toFixed(2)}`;
+                expEl.className = `font-mono font-bold ${a.expectancy >= 0 ? 'text-amber-400' : 'text-rose-400'}`;
+            }
         }
 
         function renderSimPositions() {
             const container = document.getElementById('simPositionsContainer');
             const list = simState.positions || [];
 
-            document.getElementById('activePositionsCountText').innerText = list.length;
+            const countText = document.getElementById('activePositionsCountText');
+            if (countText) countText.innerText = list.length;
 
             if (list.length === 0) {
-                container.innerHTML = `<div class="text-center py-6 text-slate-500 text-xs font-sans">當前無任何持倉。</div>`;
+                container.innerHTML = `<div class="text-center py-6 text-slate-500 text-xs font-sans">當前無任何持倉。雷達偵測到 A+ 級高精度突破訊號時將自動下單。</div>`;
                 return;
             }
 
@@ -869,8 +1454,7 @@
                             ${list.map((pos, idx) => {
                                 const entryPrice = parseFloat(pos.entryPrice) || 0.0001;
                                 const curPrice = parseFloat(pos.currentPrice) || entryPrice;
-                                const qty = parseFloat(pos.qty) || 0;
-                                const notional = pos.originalQty * entryPrice;
+                                const qty = parseFloat(pos.remainingQty || pos.qty) || 0;
 
                                 const grossPnl = (curPrice - entryPrice) * qty;
                                 const exitFeeEst = (qty * curPrice) * 0.00055;
@@ -910,7 +1494,7 @@
 
         function renderMarketTable(list) {
             const tbody = document.getElementById('tickerTableBody');
-            if (!tbody || !list) return;
+            if (!list || list.length === 0) return;
 
             tbody.innerHTML = list.slice(0, 30).map((coin) => `
                 <tr class="hover:bg-slate-900/70 transition-colors border-b border-crypto-border/30">
@@ -940,15 +1524,22 @@
             if (filteredEl) filteredEl.innerText = list.length;
         }
 
-        function showNotificationModal(title, message) {
-            const titleEl = document.getElementById('geminiModalTitle');
-            const textEl = document.getElementById('geminiReportText');
-            const actionBtn = document.getElementById('geminiActionBtn');
-            const modal = document.getElementById('geminiAuditModal');
-            if (titleEl) titleEl.innerText = title;
-            if (textEl) textEl.innerText = message;
-            if (actionBtn) actionBtn.classList.add('hidden');
+        function showNotificationModal(title, message, actionsHtml = null) {
+            const modal = document.getElementById('notificationModal');
+            document.getElementById('notificationModalTitle').innerText = title;
+            document.getElementById('notificationModalMsg').innerText = message;
+            const actContainer = document.getElementById('notificationModalActions');
+            if (actionsHtml) {
+                actContainer.innerHTML = actionsHtml;
+            } else {
+                actContainer.innerHTML = `<button onclick="closeNotificationModal()" class="w-full py-2 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-lg transition">確定</button>`;
+            }
             if (modal) modal.classList.remove('hidden');
+        }
+
+        function closeNotificationModal() {
+            const modal = document.getElementById('notificationModal');
+            if (modal) modal.classList.add('hidden');
         }
 
         function toggleAutoTradeExecution() {
@@ -959,14 +1550,21 @@
         }
 
         function openScorecardModal() {
-            const history = simState.history || [];
-            const wins = history.filter(h => h.pnl > 0);
-            const totalRealizedPnl = history.reduce((a, b) => a + (b.pnl || 0), 0);
+            const a = getStrategyAnalytics();
+            const history = simState.historyArchive || simState.history || [];
+            const totalRealizedPnl = history.reduce((sum, b) => sum + (parseFloat(b.pnl) || 0), 0);
             
-            document.getElementById('cardRealizedPnl').innerText = `$${totalRealizedPnl.toFixed(2)}`;
-            document.getElementById('cardWinRate').innerText = `${history.length > 0 ? ((wins.length / history.length) * 100).toFixed(0) : 0}%`;
-            document.getElementById('cardExpectancy').innerText = document.getElementById('simExpectancyDisplay').innerText;
-            document.getElementById('cardTotalTrades').innerText = `${history.length} 筆`;
+            const pnlEl = document.getElementById('cardRealizedPnl');
+            if (pnlEl) pnlEl.innerText = `$${totalRealizedPnl.toFixed(2)}`;
+
+            const winEl = document.getElementById('cardWinRate');
+            if (winEl) winEl.innerText = `${(a.winRate * 100).toFixed(0)}%`;
+
+            const expEl = document.getElementById('cardExpectancy');
+            if (expEl) expEl.innerText = `${a.expectancy >= 0 ? '+' : ''}$${a.expectancy.toFixed(2)} | PF ${a.profitFactor === Infinity ? '∞' : a.profitFactor.toFixed(2)}`;
+
+            const totalEl = document.getElementById('cardTotalTrades');
+            if (totalEl) totalEl.innerText = `${a.totalTrades} 筆 · MFE +${a.avgMfe.toFixed(2)}% · MAE ${a.avgMae.toFixed(2)}%`;
             
             document.getElementById('scorecardModal').classList.remove('hidden');
         }
@@ -977,18 +1575,22 @@
 
         function openHistoryModal() {
             const tbody = document.getElementById('historyTableBody');
-            const history = simState.history || [];
+            const history = simState.historyArchive || simState.history || [];
+
+            const btnText = document.getElementById('historyBtnText');
+            if (btnText) btnText.innerText = `歷史明細 (${history.length})`;
 
             if (history.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="5" class="py-6 text-center text-slate-500">尚無平倉歷史數據。</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="6" class="py-6 text-center text-slate-500">尚無平倉歷史數據。</td></tr>`;
             } else {
-                tbody.innerHTML = history.slice(0, 50).map(item => `
+                tbody.innerHTML = history.slice(0, 100).map(item => `
                     <tr class="hover:bg-slate-900/60">
                         <td class="py-1.5 px-2 font-bold text-white">${item.symbol}</td>
-                        <td class="py-1.5 px-2 text-right text-slate-300">$${formatPrice(item.entryPrice)} &rarr; $${formatPrice(item.exitPrice)}</td>
-                        <td class="py-1.5 px-2 text-right font-bold ${item.pnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}">$${item.pnl.toFixed(2)}</td>
+                        <td class="py-1.5 px-2 text-right text-slate-300">$${formatPrice(item.entryPrice)} $\\rightarrow$ $${formatPrice(item.exitPrice)}</td>
+                        <td class="py-1.5 px-2 text-right font-bold ${item.pnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}">$${parseFloat(item.pnl).toFixed(2)}</td>
                         <td class="py-1.5 px-2 text-center text-slate-400">${item.durationMin}m</td>
                         <td class="py-1.5 px-2 text-slate-300">${item.reason}</td>
+                        <td class="py-1.5 px-2 text-right text-slate-500">${item.closedAt}</td>
                     </tr>
                 `).join('');
             }
@@ -1001,8 +1603,6 @@
         }
 
         function openGeminiAuditModal() {
-            document.getElementById('geminiModalTitle').innerText = "✨ Gemini AI 策略體檢";
-            document.getElementById('geminiActionBtn').classList.remove('hidden');
             document.getElementById('geminiAuditModal').classList.remove('hidden');
         }
 
@@ -1011,9 +1611,202 @@
         }
 
         function runGeminiAuditReport() {
+            const a = getStrategyAnalytics();
+            const rs = ensureRiskState();
             const el = document.getElementById('geminiReportText');
             if (el) {
-                el.textContent = "Gemini AI 體檢完成：V8.2 統一帳務引擎運作正常，手續費損耗已精確扣除，期望值計算真實有效！建議維持現行風控配置。";
+                el.textContent = `Gemini AI 體檢報告 [V8.5 旗艦引擎]：\n` +
+                    `• 總平倉樣本: ${a.totalTrades} 筆 | 勝率: ${(a.winRate * 100).toFixed(1)}%\n` +
+                    `• 單筆期望值: ${a.expectancy >= 0 ? '+' : ''}$${a.expectancy.toFixed(2)} | 獲利因子 PF: ${a.profitFactor === Infinity ? '∞' : a.profitFactor.toFixed(2)}\n` +
+                    `• 平均有利位移 (MFE): +${a.avgMfe.toFixed(2)}% | 平均最大回撤 (MAE): ${a.avgMae.toFixed(2)}%\n` +
+                    `• 風控閘門狀態: ${rs.halted ? '🚨 熔斷中 (' + rs.haltReason + ')' : '🟢 運作正常'} | 連續止損: ${rs.consecutiveLosses}/${riskConfig.maxConsecutiveLosses}\n` +
+                    `• 單一標的停損冷卻: 30 分鐘已啟用 (防範 BLAST 連續開倉接刀)`;
+            }
+        }
+
+        /* Strategy Lab 功能模組 */
+        function openStrategyLabModal() {
+            document.getElementById('strategyLabModal').classList.remove('hidden');
+            renderLabSummary();
+            renderLabResults();
+        }
+
+        function closeStrategyLabModal() {
+            document.getElementById('strategyLabModal').classList.add('hidden');
+        }
+
+        function getLabHistory() {
+            return (simState.historyArchive || simState.history || []).filter(t => Number.isFinite(parseFloat(t.pnl)) && parseFloat(t.entryPrice) > 0);
+        }
+
+        function replayTradeProxy(trade, p) {
+            const entry = parseFloat(trade.entryPrice) || 0.0001;
+            const notional = Math.max(1, parseFloat(trade.originalNotional) || 25);
+            const mfe = parseFloat(trade.mfePct) || 0;
+            const mae = Math.abs(parseFloat(trade.maePct) || 0);
+            const tp1 = p.tp1Pct, tp2 = p.tp2Pct, sl = p.stopLossPct, trail = p.trailingPct;
+            const feeRoundTrip = notional * executionConfig.takerFeeRate * 2;
+
+            let grossPct = 0;
+            if (mae >= sl) {
+                grossPct = -sl;
+            } else if (mfe >= tp2) {
+                const runnerCapture = Math.max(tp2, mfe - trail);
+                grossPct = (tp1 * 0.35) + (tp2 * 0.35) + (runnerCapture * 0.30);
+            } else if (mfe >= tp1) {
+                grossPct = (tp1 * 0.35) + Math.max(0, Math.min(mfe * 0.65, tp2)) * 0.65;
+            } else {
+                grossPct = Math.max(-sl, (parseFloat(trade.pnlPct) || 0));
+            }
+
+            const pnl = notional * (grossPct / 100) - feeRoundTrip;
+            return { pnl, grossPct, mfe, mae };
+        }
+
+        function computeLabMetrics(p) {
+            const trades = getLabHistory();
+            let eq = 0, peak = 0, maxDd = 0, wins = 0, gp = 0, gl = 0, sum = 0;
+            const pnls = [];
+            for (const t of trades) {
+                const r = replayTradeProxy(t, p);
+                pnls.push(r.pnl);
+                sum += r.pnl;
+                if (r.pnl > 0) { wins++; gp += r.pnl; } else { gl += Math.abs(r.pnl); }
+                eq += r.pnl;
+                peak = Math.max(peak, eq);
+                maxDd = Math.max(maxDd, peak - eq);
+            }
+            const n = pnls.length;
+            const avg = n ? sum / n : 0;
+            const winRate = n ? (wins / n) * 100 : 0;
+            const pf = gl > 0 ? gp / gl : (gp > 0 ? 99 : 0);
+            return { trades: n, netPnl: sum, winRate, profitFactor: pf, expectancy: avg, maxDrawdown: maxDd, pnls };
+        }
+
+        function scoreLabResult(m, objective) {
+            if (objective === 'profitFactor') return m.profitFactor * 100 + m.expectancy - m.maxDrawdown * 2;
+            if (objective === 'netPnl') return m.netPnl - m.maxDrawdown * 2;
+            if (objective === 'winRate') return m.winRate + Math.min(50, m.profitFactor * 10) - m.maxDrawdown;
+            return m.expectancy * 10 + Math.min(100, m.profitFactor * 25) + m.winRate * 0.5 - m.maxDrawdown * 3;
+        }
+
+        function generateGridCandidates() {
+            const g = strategyLabGrid, out = [];
+            for (const sl of g.stopLossPct)
+                for (const tp1 of g.tp1Pct)
+                    for (const tp2 of g.tp2Pct)
+                        for (const trailing of g.trailingPct)
+                            out.push({ stopLossPct: sl, tp1Pct: tp1, tp2Pct: tp2, trailingPct: trailing });
+            return out;
+        }
+
+        function renderLabSummary() {
+            const h = getLabHistory(), best = strategyLabState.results[0];
+            const host = document.getElementById('labSummary');
+            if (!host) return;
+            const cards = [
+                ['平倉樣本數', `${h.length} 筆`],
+                ['最佳得分', best ? best.score.toFixed(1) : '--'],
+                ['最佳獲利因子 (PF)', best ? best.metrics.profitFactor.toFixed(2) : '--'],
+                ['最大回撤 (DD)', best ? `$${best.metrics.maxDrawdown.toFixed(2)}` : '--']
+            ];
+            host.innerHTML = cards.map(([k, v]) => `
+                <div class="rounded border border-crypto-border bg-slate-900/40 p-2">
+                    <div class="text-[9px] text-slate-500">${k}</div>
+                    <div class="text-sm font-mono font-bold text-white">${v}</div>
+                </div>
+            `).join('');
+        }
+
+        function renderLabResults() {
+            const body = document.getElementById('labResultsBody');
+            if (!body) return;
+            const rows = strategyLabState.results.slice(0, 10);
+            if (!rows.length) {
+                body.innerHTML = '<tr><td colspan="9" class="p-5 text-center text-slate-500">尚未執行網格搜索。</td></tr>';
+                return;
+            }
+            body.innerHTML = rows.map((r, i) => `
+                <tr class="border-b border-crypto-border/50 hover:bg-slate-900/60">
+                    <td class="p-2 text-white">#${i + 1}</td>
+                    <td class="p-2 text-right">-${r.params.stopLossPct}%</td>
+                    <td class="p-2 text-right">+${r.params.tp1Pct}%</td>
+                    <td class="p-2 text-right">+${r.params.tp2Pct}%</td>
+                    <td class="p-2 text-right">-${r.params.trailingPct}%</td>
+                    <td class="p-2 text-right">${r.metrics.winRate.toFixed(1)}%</td>
+                    <td class="p-2 text-right">${r.metrics.profitFactor.toFixed(2)}</td>
+                    <td class="p-2 text-right">${r.metrics.expectancy >= 0 ? '+' : ''}$${r.metrics.expectancy.toFixed(2)}</td>
+                    <td class="p-2 text-right font-bold text-fuchsia-300">${r.score.toFixed(1)}</td>
+                </tr>
+            `).join('');
+        }
+
+        function runStrategyOptimization() {
+            const status = document.getElementById('labStatus');
+            const objective = document.getElementById('labObjective')?.value || 'expectancy';
+            const h = getLabHistory();
+
+            if (h.length < 5) {
+                if (status) status.textContent = `平倉資料過少 (目前僅 ${h.length} 筆)。建議至少累積 10~20 筆完整紀錄再執行探索。`;
+                return;
+            }
+
+            const results = generateGridCandidates().map(params => {
+                const metrics = computeLabMetrics(params);
+                return { params, metrics, score: scoreLabResult(metrics, objective) };
+            }).sort((a, b) => b.score - a.score);
+
+            strategyLabState.results = results;
+            strategyLabState.lastRunAt = Date.now();
+            renderLabSummary();
+            renderLabResults();
+
+            if (status) {
+                const b = results[0];
+                status.textContent = `網格探索完成 (${results.length} 組參數)。最佳候選配置：止損 -${b.params.stopLossPct}% / TP1 +${b.params.tp1Pct}% / TP2 +${b.params.tp2Pct}% / 尾倉 -${b.params.trailingPct}%。`;
+            }
+        }
+
+        function runMonteCarloSimulation() {
+            const out = document.getElementById('labMonteCarlo');
+            const best = strategyLabState.results[0];
+            if (!best) {
+                if (out) out.textContent = '請先點擊上方「執行網格探索」。';
+                return;
+            }
+            const pnls = best.metrics.pnls;
+            if (pnls.length < 3) {
+                if (out) out.textContent = '樣本不足，無法建立蒙地卡羅重抽樣分佈。';
+                return;
+            }
+            const runs = 1000, finals = [], dds = [];
+            for (let r = 0; r < runs; r++) {
+                let eq = 0, peak = 0, dd = 0;
+                for (let i = 0; i < pnls.length; i++) {
+                    const x = pnls[Math.floor(Math.random() * pnls.length)];
+                    eq += x;
+                    peak = Math.max(peak, eq);
+                    dd = Math.max(dd, peak - eq);
+                }
+                finals.push(eq);
+                dds.push(dd);
+            }
+            finals.sort((a, b) => a - b);
+            dds.sort((a, b) => a - b);
+            const p05 = finals[Math.floor(runs * 0.05)];
+            const p50 = finals[Math.floor(runs * 0.50)];
+            const p95 = finals[Math.floor(runs * 0.95)];
+            const maxDd95 = dds[Math.floor(runs * 0.95)];
+
+            if (out) {
+                out.innerHTML = `
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-2 pt-1">
+                        <div>重抽樣次數: <b>${runs}</b></div>
+                        <div>中位數期望純利: <b class="${p50 >= 0 ? 'text-emerald-400' : 'text-rose-400'}">$${p50.toFixed(2)}</b></div>
+                        <div>極端 5% 悲觀值: <b class="text-rose-400">$${p05.toFixed(2)}</b></div>
+                        <div>95% 最大回撤上限: <b class="text-amber-400">$${maxDd95.toFixed(2)}</b></div>
+                    </div>
+                `;
             }
         }
 
@@ -1028,10 +1821,11 @@
             }, null, 2));
             const dlAnchor = document.createElement('a');
             dlAnchor.setAttribute("href", dataStr);
-            dlAnchor.setAttribute("download", `bybit_radar_v82_backup_${Date.now()}.json`);
+            dlAnchor.setAttribute("download", `bybit_radar_v85_backup_${Date.now()}.json`);
             document.body.appendChild(dlAnchor);
             dlAnchor.click();
             dlAnchor.remove();
+            showNotificationModal("匯出成功", "交易歷史與風控資料已成功備份為 JSON 檔案！");
         }
 
         function importDataJson(evt) {
@@ -1042,10 +1836,10 @@
                 try {
                     const parsed = JSON.parse(e.target.result);
                     if (parsed.simState) {
-                        simState = { ...simState, ...parsed.simState };
-                        simState.positions = Array.isArray(simState.positions) 
-                            ? simState.positions.map(migratePositionToV82)
-                            : [];
+                        const incomingArchive = parsed.simState.historyArchive || parsed.simState.history || [];
+                        const localArchive = simState.historyArchive || simState.history || [];
+                        const merged = v85MergeTrades(localArchive, incomingArchive);
+                        simState = { ...simState, ...parsed.simState, historyArchive: merged, history: merged.slice(0, 300) };
                     }
                     if (parsed.adaptiveParams) {
                         adaptiveParams = {
@@ -1054,12 +1848,13 @@
                             blacklist: new Set(parsed.adaptiveParams.blacklist || [])
                         };
                     }
+                    ensureRiskState();
                     saveToStorage();
                     renderSimPositions();
                     updateSimHeaderStats();
-                    showNotificationModal("備份匯入成功", "所有持倉、歷史紀錄與參數已成功還原！");
+                    showNotificationModal("匯入成功", "備份資料已成功無損合併還原！");
                 } catch (err) {
-                    showNotificationModal("匯入失敗", "JSON 檔案解析失敗：" + err.message);
+                    showNotificationModal("匯入失敗", "JSON 檔案解析失敗: " + err.message);
                 }
             };
             reader.readAsText(file);
@@ -1067,45 +1862,143 @@
 
         function closePositionManually(id) {
             const pos = simState.positions.find(p => p.id === id);
-            if (!pos || pos.qty <= 0) return;
-            executeFill(pos, pos.qty, getPositionMarkPrice(pos), "👤 手動市價平倉");
+            if (!pos || pos.remainingQty <= 0) return;
+            executeFill(pos, pos.remainingQty, getPositionMarkPrice(pos), "👤 手動市價平倉");
             finalizeClosedTrade(pos, "👤 手動市價平倉");
         }
 
         function closeAllPositions() {
             if (!simState.positions || simState.positions.length === 0) return;
             [...simState.positions].forEach(pos => {
-                if (pos.qty > 0) {
-                    executeFill(pos, pos.qty, getPositionMarkPrice(pos), "🚨 一鍵全平");
+                if (pos.remainingQty > 0) {
+                    executeFill(pos, pos.remainingQty, getPositionMarkPrice(pos), "🚨 一鍵全平");
                     finalizeClosedTrade(pos, "🚨 一鍵全平");
                 }
             });
         }
 
-        function setMaxPositions(cap) {
-            simState.maxPositions = cap;
-            saveToStorage();
-            document.getElementById('btnCap1').className = cap === 1 ? "px-2 py-0.5 rounded bg-amber-500 text-black font-bold transition" : "px-2 py-0.5 rounded text-slate-400 hover:text-white transition";
-            document.getElementById('btnCap3').className = cap === 3 ? "px-2 py-0.5 rounded bg-amber-500 text-black font-bold transition" : "px-2 py-0.5 rounded text-slate-400 hover:text-white transition";
-            updateSimHeaderStats();
-        }
-
         function setTradeSize(size) {
             simState.tradeSize = size;
-            saveToStorage();
+            saveToStorage(false);
             document.getElementById('btnSize25').className = size === 25 ? "px-2 py-0.5 rounded bg-emerald-600 text-white font-bold transition" : "px-2 py-0.5 rounded text-slate-400 hover:text-white transition";
             document.getElementById('btnSize50').className = size === 50 ? "px-2 py-0.5 rounded bg-emerald-600 text-white font-bold transition" : "px-2 py-0.5 rounded text-slate-400 hover:text-white transition";
             document.getElementById('posTradeSizeDisplay').innerText = `$${size} · 5x 槓桿`;
         }
 
+        function setMaxPositions(cap) {
+            simState.maxPositions = cap;
+            saveToStorage(false);
+            document.getElementById('btnCap3').className = cap === 3 ? "px-2 py-0.5 rounded bg-amber-500 text-black font-bold transition" : "px-2 py-0.5 rounded text-slate-400 hover:text-white transition";
+            document.getElementById('btnCap10').className = cap === 10 ? "px-2 py-0.5 rounded bg-amber-500 text-black font-bold transition" : "px-2 py-0.5 rounded text-slate-400 hover:text-white transition";
+            updateSimHeaderStats();
+        }
+
         function askResetSimulation() {
+            showNotificationModal(
+                "確認重置帳戶？",
+                "重置將清空當前持倉並將餘額恢復為 $100,000.00，但為保護數據，V8.5 交易歷史庫仍將完整保存於封存檔中。",
+                `<button onclick="confirmResetSimulation()" class="w-1/2 py-2 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-lg transition">確認重置</button>
+                 <button onclick="closeNotificationModal()" class="w-1/2 py-2 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-lg transition">取消</button>`
+            );
+        }
+
+        function confirmResetSimulation() {
             simState.balance = 100000.0;
             simState.positions = [];
-            simState.history = [];
+            simState.riskState = null;
+            ensureRiskState();
             saveToStorage();
             renderSimPositions();
             updateSimHeaderStats();
-            showNotificationModal("帳戶已重置", "帳戶餘額已重置為 $100,000.00，持倉與歷史已清空。");
+            closeNotificationModal();
+        }
+
+        /* 雲端同步設定 (Firebase) */
+        const getDecodedKey = () => atob("QUl6YVN5Q1hLTFR3S0FxS2gweGQ2MVZEZnR4R0ZZYTFuTmRCbE1V");
+        const defaultFirebaseConfig = {
+            apiKey: getDecodedKey(),
+            authDomain: "bybittrader-80531.firebaseapp.com",
+            projectId: "bybittrader-80531",
+            storageBucket: "bybittrader-80531.firebasestorage.app",
+            messagingSenderId: "72603303245",
+            appId: "1:72603303245:web:c0102b58cb20cdb663cb04"
+        };
+
+        let currentRoomId = localStorage.getItem(STORAGE_KEY_ROOM) || 'radar-usr-main';
+        let firestoreDb = null;
+        let lastLocalUpdate = Date.now();
+
+        function initFirebaseSync() {
+            try {
+                if (!firebase.apps.length) firebase.initializeApp(defaultFirebaseConfig);
+                firestoreDb = firebase.firestore();
+                bindCloudRoom(currentRoomId);
+            } catch (err) {
+                console.warn("Firebase 離線:", err);
+            }
+        }
+
+        function bindCloudRoom(roomId) {
+            if (!firestoreDb) return;
+            firestoreDb.collection('bybit_sync_rooms').doc(roomId).onSnapshot(doc => {
+                if (!doc.exists) { pushToCloudForce(); return; }
+                const data = doc.data();
+                if (data && data.updatedAt && data.updatedAt > lastLocalUpdate) {
+                    if (data.simState) {
+                        const localHist = simState.historyArchive || simState.history || [];
+                        const cloudHist = data.simState.historyArchive || data.simState.history || [];
+                        const merged = v85MergeTrades(localHist, cloudHist);
+                        simState = { ...simState, ...data.simState, historyArchive: merged, history: merged.slice(0, 300) };
+                        saveToStorage(false);
+                        renderSimPositions();
+                        updateSimHeaderStats();
+                    }
+                }
+            }, console.warn);
+        }
+
+        function pushToCloudForce() {
+            if (!firestoreDb) return;
+            lastLocalUpdate = Date.now();
+            firestoreDb.collection('bybit_sync_rooms').doc(currentRoomId).set({
+                updatedAt: lastLocalUpdate,
+                simState: { ...simState, schemaVersion: V85_SCHEMA_VERSION }
+            }).catch(console.warn);
+        }
+
+        function pullFromCloudForce() {
+            if (!firestoreDb) return;
+            firestoreDb.collection('bybit_sync_rooms').doc(currentRoomId).get().then(doc => {
+                if (doc.exists && doc.data().simState) {
+                    const localHist = simState.historyArchive || simState.history || [];
+                    const cloudHist = doc.data().simState.historyArchive || doc.data().simState.history || [];
+                    const merged = v85MergeTrades(localHist, cloudHist);
+                    simState = { ...simState, ...doc.data().simState, historyArchive: merged, history: merged.slice(0, 300) };
+                    saveToStorage(false);
+                    renderSimPositions();
+                    updateSimHeaderStats();
+                    showNotificationModal("同步成功", "已成功從雲端合併最新紀錄！");
+                }
+            });
+        }
+
+        function openCloudModal() {
+            document.getElementById('cloudRoomInput').value = currentRoomId;
+            document.getElementById('cloudModal').classList.remove('hidden');
+        }
+
+        function closeCloudModal() {
+            document.getElementById('cloudModal').classList.add('hidden');
+        }
+
+        function saveRoomConfig() {
+            const newRoom = (document.getElementById('cloudRoomInput').value || '').trim();
+            if (newRoom && newRoom !== currentRoomId) {
+                currentRoomId = newRoom;
+                localStorage.setItem(STORAGE_KEY_ROOM, currentRoomId);
+                bindCloudRoom(currentRoomId);
+            }
+            closeCloudModal();
         }
 
         function formatPrice(val) {
@@ -1127,6 +2020,8 @@
 
         window.addEventListener('DOMContentLoaded', () => {
             loadFromStorage();
+            initFirebaseSync();
+            ensureRiskState();
             updateSimHeaderStats();
             renderSimPositions();
             fetchMarketData();
