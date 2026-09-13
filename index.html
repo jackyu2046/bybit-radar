@@ -90,7 +90,13 @@
             <div class="flex items-center gap-1.5 text-xs overflow-x-auto no-scrollbar py-0.5 md:flex-wrap md:overflow-visible">
                 <div class="flex items-center bg-slate-900 border border-crypto-border px-2.5 py-1 rounded-lg text-slate-300 font-mono whitespace-nowrap text-[11px]">
                     <span class="w-2 h-2 rounded-full bg-emerald-400 mr-1.5" id="netDot"></span>
-                    <span id="updateTimer">下次刷新: 10s</span>
+                    <span id="updateTimer">下次刷新: 5s</span>
+                </div>
+
+                <!-- 即時 WebSocket 實盤毫秒級報價流燈號 -->
+                <div class="flex items-center bg-slate-900 border border-crypto-border px-2 py-1 rounded-lg text-slate-300 font-mono whitespace-nowrap text-[11px]" id="wsBadge" title="Bybit 官方公共 WebSocket 毫秒級插針監聽流">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse mr-1.5" id="wsDot"></span>
+                    <span id="wsStatusText">WS: 毫秒即時流</span>
                 </div>
 
                 <!-- 大盤風控即時監測燈號 -->
@@ -901,11 +907,17 @@
         let currentPosFilter = 'all';
         let currentHistoryFilter = 'all';
         let simPositionViewMode = 'table';
-        let countdown = 10;
+        let countdown = 5;
         let timerInterval = null;
         let alertCount = 0;
         let triggeredSymbolsHistory = new Set();
         let allMarketPrices = new Map();
+        let allMarkPrices = new Map();
+
+        // WebSocket 實盤毫秒級報價監聽變數
+        let bybitWs = null;
+        let wsSubscribedSymbols = new Set();
+        let wsReconnectTimeout = null;
 
         let simState = {
             balance: 100000.0,
@@ -919,13 +931,13 @@
         };
 
         let adaptiveParams = {
-            minScore: 82,
+            minScore: 80,
             stopLossPct: 4.5,
             tp1Pct: 4.0,
             tp2Pct: 10.0,
             trailingPct: 6.5,
             minTurnover: 6000000,
-            blacklist: new Set(["AKEUSDT", "NIULAIUSDT", "FFUSDT"])
+            blacklist: new Set(["FFUSDT"])
         };
 
         let lastRecommendedGeminiParams = null;
@@ -945,10 +957,17 @@
                                    || localStorage.getItem('bybit_radar_adaptive_v1');
                 if (adaptiveSaved) {
                     const parsed = JSON.parse(adaptiveSaved);
+                    // 自動修正：若黑名單誤入了 STORJ 或 UAI 等核心獲利標的，自動予以解除
+                    const savedBlacklist = new Set(parsed.blacklist || []);
+                    savedBlacklist.delete("STORJUSDT");
+                    savedBlacklist.delete("UAIUSDT");
+
                     adaptiveParams = {
                         ...adaptiveParams,
                         ...parsed,
-                        blacklist: new Set(parsed.blacklist || [])
+                        minScore: (parsed.minScore && parsed.minScore <= 82) ? parsed.minScore : 80,
+                        trailingPct: (parsed.trailingPct && parsed.trailingPct >= 6.0) ? parsed.trailingPct : 6.5,
+                        blacklist: savedBlacklist
                     };
                 }
 
@@ -1151,7 +1170,7 @@
                 console.error("Bybit 請求錯誤:", err);
                 if (netDot) netDot.className = "w-2 h-2 rounded-full bg-rose-500 mr-1.5";
             } finally {
-                countdown = 10;
+                countdown = 5;
             }
         }
 
@@ -1184,7 +1203,9 @@
                 if (!symbol.endsWith("USDT")) return;
 
                 const lastPrice = parseFloat(item.lastPrice) || 0;
+                const markPrice = parseFloat(item.markPrice) || lastPrice;
                 allMarketPrices.set(symbol, lastPrice);
+                allMarkPrices.set(symbol, markPrice);
 
                 if (EXCLUDED_SYMBOLS.includes(symbol)) return;
 
@@ -1224,6 +1245,7 @@
             renderHotCoins();
             updateSimPositions();
             updateFomoTrackers();
+            syncWebSocketSubscriptions();
 
             if (simState.autoTrade && !isBtcDumping) {
                 checkAutoTradingOpportunities();
@@ -1399,6 +1421,87 @@
             playAlertSound("bull");
             renderSimPositions();
             updateSimHeaderStats();
+            syncWebSocketSubscriptions();
+        }
+
+        /* 毫秒級單部位插針檢測 (WebSocket 與 REST 雙軌共用) */
+        function evaluateSinglePositionWick(pos, curLastPrice, curMarkPrice) {
+            const effectivePrice = curLastPrice || pos.currentPrice;
+            const testPrices = [effectivePrice];
+            if (curMarkPrice && curMarkPrice > 0) testPrices.push(curMarkPrice);
+
+            // 1. 硬止損插針防守 (Last Price 或 Mark Price 任一跌破即刻觸發，完全貼齊實盤)
+            const isSlTriggered = testPrices.some(p => p <= pos.stopLoss);
+            if (isSlTriggered) {
+                const exitPrice = pos.stopLoss;
+                const exitPnl = ((exitPrice - pos.entryPrice) / pos.entryPrice) * (pos.qty * pos.entryPrice);
+                return {
+                    action: 'close',
+                    exitPrice,
+                    pnl: exitPnl,
+                    reason: pos.tp1Reached ? "🛡️ 觸發保本/鎖利損離場" : "🔴 觸發防守止損 (SL)"
+                };
+            }
+
+            // 2. TP1 達標：平倉 35% 並推進保本損
+            const isTp1Triggered = testPrices.some(p => p >= pos.tp1);
+            if (!pos.tp1Reached && isTp1Triggered) {
+                pos.tp1Reached = true;
+                const closeQty = pos.originalQty * 0.35;
+                const tp1Pnl = ((pos.tp1 - pos.entryPrice) / pos.entryPrice) * (closeQty * pos.entryPrice);
+
+                pos.qty -= closeQty;
+                pos.remainingRatio -= 0.35;
+                pos.realizedPnl += tp1Pnl;
+                simState.balance += tp1Pnl;
+                pos.stopLoss = pos.entryPrice * 1.002;
+                saveToStorage(true);
+
+                pushAlertLog(pos.symbol, "🎯 TP1 達標鎖利", `平倉 35% 鎖定 +${adaptiveParams.tp1Pct}%，防守線已移至保本！`, pos.tp1, "bull");
+                playAlertSound("bull");
+            }
+
+            // 3. 階梯利潤防守：若利潤曾達到 +5.5%，將防守線主動上移至 +2.0% 鎖利
+            if (!pos.tp2Reached && pos.highestPrice >= pos.entryPrice * 1.055) {
+                const lockProfitPrice = pos.entryPrice * 1.02;
+                if (pos.stopLoss < lockProfitPrice) {
+                    pos.stopLoss = lockProfitPrice;
+                }
+            }
+
+            // 4. TP2 達標：再平倉 35%，剩餘 30% 啟動奔馳尾倉
+            const isTp2Triggered = testPrices.some(p => p >= pos.tp2);
+            if (pos.tp1Reached && !pos.tp2Reached && isTp2Triggered) {
+                pos.tp2Reached = true;
+                const closeQty = pos.originalQty * 0.35;
+                const tp2Pnl = ((pos.tp2 - pos.entryPrice) / pos.entryPrice) * (closeQty * pos.entryPrice);
+
+                pos.qty -= closeQty;
+                pos.remainingRatio = 0.30;
+                pos.realizedPnl += tp2Pnl;
+                simState.balance += tp2Pnl;
+                pos.isMoonBag = true;
+                saveToStorage(true);
+
+                pushAlertLog(pos.symbol, "💎 TP2 達標激活尾倉", `平倉 35%，剩餘 30% 尾倉啟動無限奔馳追蹤！`, pos.tp2, "bull");
+                playAlertSound("bull");
+            }
+
+            // 5. 奔馳尾倉高點回撤鎖利
+            if (pos.isMoonBag) {
+                const pullback = (pos.highestPrice - effectivePrice) / pos.highestPrice;
+                if (pullback >= (adaptiveParams.trailingPct / 100)) {
+                    const exitPnl = ((effectivePrice - pos.entryPrice) / pos.entryPrice) * (pos.qty * pos.entryPrice);
+                    return {
+                        action: 'close',
+                        exitPrice: effectivePrice,
+                        pnl: exitPnl,
+                        reason: `🚀 奔馳尾倉鎖利離場 (高點回撤 -${adaptiveParams.trailingPct}%)`
+                    };
+                }
+            }
+
+            return null;
         }
 
         function updateSimPositions() {
@@ -1413,6 +1516,7 @@
 
             simState.positions.forEach(pos => {
                 const curPrice = allMarketPrices.get(pos.symbol) || pos.currentPrice;
+                const curMark = allMarkPrices.get(pos.symbol) || curPrice;
                 if (!curPrice || curPrice <= 0) return;
 
                 if (pos.currentPrice !== curPrice) {
@@ -1424,69 +1528,16 @@
                     priceChanged = true;
                 }
 
-                const pnlPcnt = ((curPrice - pos.entryPrice) / pos.entryPrice) * 100;
-                const holdingMinutes = (now - pos.openTime) / 60000;
-
-                // 1. 硬止損防守
-                if (curPrice <= pos.stopLoss) {
-                    const exitPnl = ((pos.stopLoss - pos.entryPrice) / pos.entryPrice) * (pos.qty * pos.entryPrice);
-                    closedPositions.push({ pos, exitPrice: pos.stopLoss, pnl: exitPnl, reason: pos.tp1Reached ? "🛡️ 觸發保本/鎖利損離場" : "🔴 觸發防守止損 (SL)" });
+                // 執行多重插針防護評估
+                const wickResult = evaluateSinglePositionWick(pos, curPrice, curMark);
+                if (wickResult && wickResult.action === 'close') {
+                    closedPositions.push({ pos, exitPrice: wickResult.exitPrice, pnl: wickResult.pnl, reason: wickResult.reason });
                     return;
                 }
 
-                // 2. TP1 達標：平倉 35% 並推進保本損
-                if (!pos.tp1Reached && curPrice >= pos.tp1) {
-                    pos.tp1Reached = true;
-                    const closeQty = pos.originalQty * 0.35;
-                    const tp1Pnl = ((curPrice - pos.entryPrice) / pos.entryPrice) * (closeQty * pos.entryPrice);
-
-                    pos.qty -= closeQty;
-                    pos.remainingRatio -= 0.35;
-                    pos.realizedPnl += tp1Pnl;
-                    simState.balance += tp1Pnl;
-                    pos.stopLoss = pos.entryPrice * 1.002;
-                    saveToStorage(true);
-
-                    pushAlertLog(pos.symbol, "🎯 TP1 達標鎖利", `平倉 35% 鎖定 +${adaptiveParams.tp1Pct}%，防守線已移至保本！`, curPrice, "bull");
-                    playAlertSound("bull");
-                }
-
-                // 3. 階梯利潤防守：若利潤曾達到 +5.5%，將防守線主動上移至 +2.0% 鎖利
-                if (!pos.tp2Reached && pos.highestPrice >= pos.entryPrice * 1.055) {
-                    const lockProfitPrice = pos.entryPrice * 1.02;
-                    if (pos.stopLoss < lockProfitPrice) {
-                        pos.stopLoss = lockProfitPrice;
-                    }
-                }
-
-                // 4. TP2 達標：再平倉 35%，剩餘 30% 啟動奔馳尾倉
-                if (pos.tp1Reached && !pos.tp2Reached && curPrice >= pos.tp2) {
-                    pos.tp2Reached = true;
-                    const closeQty = pos.originalQty * 0.35;
-                    const tp2Pnl = ((curPrice - pos.entryPrice) / pos.entryPrice) * (closeQty * pos.entryPrice);
-
-                    pos.qty -= closeQty;
-                    pos.remainingRatio = 0.30;
-                    pos.realizedPnl += tp2Pnl;
-                    simState.balance += tp2Pnl;
-                    pos.isMoonBag = true;
-                    saveToStorage(true);
-
-                    pushAlertLog(pos.symbol, "💎 TP2 達標激活尾倉", `平倉 35%，剩餘 30% 尾倉啟動無限奔馳追蹤！`, curPrice, "bull");
-                    playAlertSound("bull");
-                }
-
-                // 5. 奔馳尾倉高點回撤鎖利
-                if (pos.isMoonBag) {
-                    const pullback = (pos.highestPrice - curPrice) / pos.highestPrice;
-                    if (pullback >= (adaptiveParams.trailingPct / 100)) {
-                        const exitPnl = ((curPrice - pos.entryPrice) / pos.entryPrice) * (pos.qty * pos.entryPrice);
-                        closedPositions.push({ pos, exitPrice: curPrice, pnl: exitPnl, reason: `🚀 奔馳尾倉鎖利離場 (高點回撤 -${adaptiveParams.trailingPct}%)` });
-                        return;
-                    }
-                }
-
-                // 6. 橫盤保護放寬至 300 分鐘 (5小時)
+                // 橫盤保護放寬至 300 分鐘 (5小時)
+                const pnlPcnt = ((curPrice - pos.entryPrice) / pos.entryPrice) * 100;
+                const holdingMinutes = (now - pos.openTime) / 60000;
                 if (!pos.tp1Reached && holdingMinutes >= 300 && pnlPcnt < 0 && pnlPcnt > -2.5) {
                     const exitPnl = ((curPrice - pos.entryPrice) / pos.entryPrice) * (pos.qty * pos.entryPrice);
                     closedPositions.push({ pos, exitPrice: curPrice, pnl: exitPnl, reason: "⏱️ 5小時無動能微虧換幣" });
@@ -1504,6 +1555,126 @@
 
             renderSimPositions();
             updateSimHeaderStats();
+        }
+
+        /* Bybit Public WebSocket 毫秒級即時流模組 */
+        function initBybitWebSocket() {
+            try {
+                if (bybitWs) {
+                    bybitWs.close();
+                }
+
+                bybitWs = new WebSocket("wss://stream.bybit.com/v5/public/linear");
+
+                bybitWs.onopen = () => {
+                    const wsDot = document.getElementById('wsDot');
+                    const wsText = document.getElementById('wsStatusText');
+                    if (wsDot) wsDot.className = "w-1.5 h-1.5 rounded-full bg-emerald-400 mr-1.5 animate-pulse";
+                    if (wsText) wsText.innerText = "WS: 毫秒即時流 (已連線)";
+                    wsSubscribedSymbols.clear();
+                    syncWebSocketSubscriptions();
+                };
+
+                bybitWs.onmessage = (event) => {
+                    try {
+                        const message = JSON.parse(event.data);
+                        if (message && message.topic && message.topic.startsWith("tickers.") && message.data) {
+                            const tick = message.data;
+                            const symbol = tick.symbol;
+                            if (!symbol) return;
+
+                            const lastPrice = parseFloat(tick.lastPrice);
+                            const markPrice = parseFloat(tick.markPrice);
+
+                            if (!isNaN(lastPrice) && lastPrice > 0) {
+                                allMarketPrices.set(symbol, lastPrice);
+                            }
+                            if (!isNaN(markPrice) && markPrice > 0) {
+                                allMarkPrices.set(symbol, markPrice);
+                            }
+
+                            // 檢視此幣是否在目前持倉中，若在則進行毫秒級插針裁決
+                            const pos = simState.positions.find(p => p.symbol === symbol);
+                            if (pos) {
+                                if (lastPrice > 0 && lastPrice !== pos.currentPrice) {
+                                    pos.currentPrice = lastPrice;
+                                    if (lastPrice > pos.highestPrice) {
+                                        pos.highestPrice = lastPrice;
+                                    }
+                                }
+
+                                const wickResult = evaluateSinglePositionWick(pos, lastPrice || pos.currentPrice, markPrice);
+                                if (wickResult && wickResult.action === 'close') {
+                                    finalizeClosedTrade(pos, wickResult.exitPrice, wickResult.pnl, wickResult.reason);
+                                    renderSimPositions();
+                                    updateSimHeaderStats();
+                                }
+                            }
+                        }
+                    } catch (e) {
+                        // 忽略格式解析抖動
+                    }
+                };
+
+                bybitWs.onerror = (err) => {
+                    console.warn("WebSocket 警告:", err);
+                    const wsDot = document.getElementById('wsDot');
+                    const wsText = document.getElementById('wsStatusText');
+                    if (wsDot) wsDot.className = "w-1.5 h-1.5 rounded-full bg-amber-400 mr-1.5";
+                    if (wsText) wsText.innerText = "WS: 重連中...";
+                };
+
+                bybitWs.onclose = () => {
+                    const wsDot = document.getElementById('wsDot');
+                    const wsText = document.getElementById('wsStatusText');
+                    if (wsDot) wsDot.className = "w-1.5 h-1.5 rounded-full bg-rose-500 mr-1.5";
+                    if (wsText) wsText.innerText = "WS: 離線重試";
+                    
+                    if (wsReconnectTimeout) clearTimeout(wsReconnectTimeout);
+                    wsReconnectTimeout = setTimeout(initBybitWebSocket, 3000);
+                };
+            } catch (err) {
+                console.warn("WebSocket 初始化失敗:", err);
+            }
+        }
+
+        /* 同步 WebSocket 訂閱：只訂閱手上正持有的 10~25 檔小幣，節省網路資源且精準捕捉插針 */
+        function syncWebSocketSubscriptions() {
+            if (!bybitWs || bybitWs.readyState !== WebSocket.OPEN) return;
+
+            const neededSymbols = new Set(simState.positions.map(p => p.symbol));
+
+            // 尋找需要新訂閱的標的
+            const toSubscribe = [];
+            neededSymbols.forEach(sym => {
+                if (!wsSubscribedSymbols.has(sym)) {
+                    toSubscribe.push(`tickers.${sym}`);
+                    wsSubscribedSymbols.add(sym);
+                }
+            });
+
+            if (toSubscribe.length > 0) {
+                bybitWs.send(JSON.stringify({
+                    op: "subscribe",
+                    args: toSubscribe
+                }));
+            }
+
+            // 尋找已平倉需要退訂的標的
+            const toUnsubscribe = [];
+            wsSubscribedSymbols.forEach(sym => {
+                if (!neededSymbols.has(sym)) {
+                    toUnsubscribe.push(`tickers.${sym}`);
+                    wsSubscribedSymbols.delete(sym);
+                }
+            });
+
+            if (toUnsubscribe.length > 0) {
+                bybitWs.send(JSON.stringify({
+                    op: "unsubscribe",
+                    args: toUnsubscribe
+                }));
+            }
         }
 
         function finalizeClosedTrade(pos, exitPrice, pnl, reason) {
@@ -1536,6 +1707,7 @@
 
             evaluateAdaptiveLearning(record);
             renderHistoryTable();
+            syncWebSocketSubscriptions();
         }
 
         function closePositionManually(id) {
@@ -1620,8 +1792,10 @@
             const hardLosses = recent.filter(t => t.pnlPct <= -2.5).length;
             const winRate = wins / recent.length;
 
+            // 黑名單加入保護：核心趨勢標的 (如 STORJ, UAI) 不因短期洗盤加入黑名單
+            const CORE_TREND_COINS = ["STORJUSDT", "UAIUSDT", "FLOCKUSDT"];
             const symbolHardLosses = simState.history.slice(0, 10).filter(t => t.symbol === latestTrade.symbol && t.pnlPct <= -2.5).length;
-            if (symbolHardLosses >= 2 && !adaptiveParams.blacklist.has(latestTrade.symbol)) {
+            if (symbolHardLosses >= 2 && !adaptiveParams.blacklist.has(latestTrade.symbol) && !CORE_TREND_COINS.includes(latestTrade.symbol)) {
                 adaptiveParams.blacklist.add(latestTrade.symbol);
                 pushAdaptiveLog(`🚨 劣質標的防護：${latestTrade.symbol} 短期連續止損 2 次，已加入動態冷卻黑名單。`);
             }
@@ -1630,7 +1804,7 @@
                 const prevScore = adaptiveParams.minScore;
                 const prevTurnover = adaptiveParams.minTurnover;
 
-                adaptiveParams.minScore = Math.min(80, adaptiveParams.minScore + 1);
+                adaptiveParams.minScore = Math.min(82, adaptiveParams.minScore + 1);
                 adaptiveParams.minTurnover = Math.min(6000000, adaptiveParams.minTurnover + 500000);
                 setAdaptiveBadge("防守修復模式", "bg-rose-950/60 text-rose-300 border-rose-500/40");
 
@@ -1639,7 +1813,7 @@
                 }
             } else if (winRate >= 0.55 && hardLosses <= 4) {
                 const prevScore = adaptiveParams.minScore;
-                adaptiveParams.minScore = Math.max(65, adaptiveParams.minScore - 1);
+                adaptiveParams.minScore = Math.max(76, adaptiveParams.minScore - 1);
                 setAdaptiveBadge("進取擴張模式", "bg-emerald-950/60 text-emerald-300 border-emerald-500/40");
 
                 if (adaptiveParams.minScore !== prevScore) {
@@ -2583,6 +2757,7 @@ ${JSON.stringify(activePositions.map(p => ({ symbol: p.symbol, entry: p.entryPri
             togglePositionView('table');
             fetchMarketData();
             initTimer();
+            initBybitWebSocket();
             renderHistoryTable();
             renderFomoTrackers();
         });
