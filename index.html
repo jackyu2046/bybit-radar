@@ -90,6 +90,10 @@
                     <span>策略計分卡</span>
                 </button>
 
+                <button onclick="openPerformanceAudit()" class="flex items-center gap-1 bg-gradient-to-r from-purple-700 to-indigo-700 hover:from-purple-600 hover:to-indigo-600 text-white font-medium px-2.5 py-1 rounded-lg transition border border-purple-400/40 shadow-md shadow-purple-500/20 whitespace-nowrap text-[11px]">
+                    <span>📈</span><span>績效審計</span>
+                </button>
+
                 <button onclick="openStrategyLabModal()" class="flex items-center gap-1 bg-fuchsia-700/80 hover:bg-fuchsia-600 text-white font-medium px-2.5 py-1 rounded-lg transition border border-fuchsia-400/30 whitespace-nowrap text-[11px]">
                     <span>🧪</span><span>Strategy Lab</span>
                 </button>
@@ -407,6 +411,38 @@
                 執行 AI 歸因體檢
             </button>
         </div>
+    </div>
+
+    <!-- V8.5-A2 Performance Audit 彈窗 -->
+    <div id="performanceAuditModal" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+      <div class="bg-crypto-card border border-crypto-border rounded-xl p-5 max-w-5xl w-full max-h-[90vh] overflow-y-auto space-y-4 text-xs font-sans">
+        <div class="flex items-center justify-between border-b border-crypto-border pb-3">
+          <div>
+            <h3 class="text-base font-bold text-white flex items-center gap-2"><span>📊</span> V8.5-A2 Performance Audit 績效與風險審計</h3>
+            <p class="text-slate-400 mt-1">基於 historyArchive 全量交易資料庫，精算期望值、MFE/MAE 與策略健康評級</p>
+          </div>
+          <button onclick="closePerformanceAudit()" class="text-slate-400 hover:text-white text-lg">✕</button>
+        </div>
+        <div id="performanceAuditSummary" class="grid grid-cols-2 md:grid-cols-4 gap-3 font-mono"></div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="bg-slate-900/60 border border-crypto-border rounded-lg p-4">
+            <h4 class="font-bold text-white mb-2 flex items-center gap-1.5"><span>🎯</span> 策略與出場原因分佈 (Strategy Breakdown)</h4>
+            <div id="performanceAuditBreakdown" class="space-y-2 font-mono max-h-56 overflow-y-auto pr-1"></div>
+          </div>
+          <div class="bg-slate-900/60 border border-crypto-border rounded-lg p-4">
+            <h4 class="font-bold text-white mb-2 flex items-center gap-1.5"><span>⚠️</span> 風險診斷與位移分佈 (Risk Diagnostics)</h4>
+            <div id="performanceAuditRisk" class="space-y-2 font-mono"></div>
+          </div>
+        </div>
+        <div class="bg-slate-900/60 border border-crypto-border rounded-lg p-4">
+          <h4 class="font-bold text-white mb-2 flex items-center gap-1.5"><span>🧠</span> 量化審計結論與調參指導</h4>
+          <div id="performanceAuditConclusion" class="text-slate-300 leading-relaxed font-sans text-xs"></div>
+        </div>
+        <div class="flex justify-end gap-2 pt-2">
+          <button onclick="exportPerformanceAudit()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-lg border border-crypto-border">📥 匯出審計 JSON</button>
+          <button onclick="closePerformanceAudit()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg">關閉</button>
+        </div>
+      </div>
     </div>
 
     <!-- 自訂訊息彈窗 -->
@@ -2195,6 +2231,7 @@
             localStorage.setItem(STORAGE_KEY_ROOM, currentRoomId);
         }
         let firestoreDb = null;
+        let cloudUnsubscribe = null;
         let lastLocalUpdate = Date.now();
 
         function initFirebaseSync() {
@@ -2208,26 +2245,29 @@
         }
 
         function bindCloudRoom(roomId) {
-            if (!firestoreDb) return;
-            firestoreDb.collection('bybit_sync_rooms').doc(roomId).onSnapshot(doc => {
+            if (!firestoreDb || !roomId) return;
+            if (typeof cloudUnsubscribe === 'function') {
+                try { cloudUnsubscribe(); } catch (_) {}
+                cloudUnsubscribe = null;
+            }
+
+            currentRoomId = roomId;
+            cloudUnsubscribe = firestoreDb.collection('bybit_sync_rooms').doc(roomId).onSnapshot(doc => {
                 if (!doc.exists) { pushToCloudForce(); return; }
                 const data = doc.data();
-                if (data && data.updatedAt && data.updatedAt > lastLocalUpdate) {
-                    if (data.simState) {
-                        const localHist = simState.historyArchive || simState.history || [];
-                        const cloudHist = data.simState.historyArchive || data.simState.history || [];
-                        const merged = v85MergeTrades(localHist, cloudHist);
-                        simState = { ...simState, ...data.simState, historyArchive: merged, history: merged.slice(0, 300) };
-                        saveToStorage(false);
-                        renderSimPositions();
-                        updateSimHeaderStats();
-                    }
+                if (!data || !data.updatedAt || data.updatedAt <= lastLocalUpdate || !data.simState) return;
+
+                const ok = v85ApplyCloudStateSafely(data.simState, 'realtime');
+                if (ok) {
+                    lastLocalUpdate = Math.max(lastLocalUpdate, Number(data.updatedAt) || Date.now());
+                    renderSimPositions();
+                    updateSimHeaderStats();
                 }
-            }, console.warn);
+            }, err => console.warn('Cloud snapshot error:', err));
         }
 
         function pushToCloudForce() {
-            if (!firestoreDb) return;
+            if (!firestoreDb || !currentRoomId) return;
             lastLocalUpdate = Date.now();
             firestoreDb.collection('bybit_sync_rooms').doc(currentRoomId).set({
                 updatedAt: lastLocalUpdate,
@@ -2270,6 +2310,125 @@
             closeCloudModal();
         }
 
+        /* ================= V8.5-A2 PERFORMANCE AUDIT ENGINE ================= */
+        function v85AuditNum(v, fallback = 0) { const n = Number(v); return Number.isFinite(n) ? n : fallback; }
+        function v85AuditTrades() {
+            const a = Array.isArray(simState.historyArchive) && simState.historyArchive.length 
+                ? simState.historyArchive 
+                : (Array.isArray(simState.history) ? simState.history : []);
+            return a.filter(t => t && typeof t === 'object');
+        }
+        function v85AuditPnl(t) { 
+            return v85AuditNum(t.netPnl, v85AuditNum(t.realizedNetPnl, v85AuditNum(t.pnl, v85AuditNum(t.realizedPnl, v85AuditNum(t.grossPnl, 0))))); 
+        }
+        function v85AuditFee(t) { 
+            return Math.max(0, v85AuditNum(t.totalFees, v85AuditNum(t.fees, 0))); 
+        }
+        function v85AuditKey(t) { 
+            if (typeof t.strategy === 'string') return t.strategy;
+            if (t.strategy && typeof t.strategy.name === 'string') return t.strategy.name;
+            if (t.strategyName) return String(t.strategyName);
+            if (t.signalType) return String(t.signalType);
+            if (t.reason) return String(t.reason);
+            if (t.grade) return `評級 ${t.grade}`;
+            return 'A+ 狙擊策略';
+        }
+        function calculatePerformanceAudit() {
+            const trades = v85AuditTrades(), pnls = trades.map(v85AuditPnl), wins = pnls.filter(x => x > 0), losses = pnls.filter(x => x < 0);
+            const gp = wins.reduce((a, b) => a + b, 0), gl = Math.abs(losses.reduce((a, b) => a + b, 0)), net = pnls.reduce((a, b) => a + b, 0);
+            const wr = trades.length ? wins.length / trades.length : 0, avgW = wins.length ? gp / wins.length : 0, avgL = losses.length ? gl / losses.length : 0;
+            const pf = gl > 0 ? gp / gl : (gp > 0 ? Infinity : 0), exp = trades.length ? net / trades.length : 0, fees = trades.reduce((a, t) => a + v85AuditFee(t), 0);
+            let eq = 0, peak = 0, dd = 0, cl = 0, maxCL = 0; 
+            pnls.forEach(p => {
+                eq += p; peak = Math.max(peak, eq); dd = Math.max(dd, peak - eq);
+                if (p < 0) { cl++; maxCL = Math.max(maxCL, cl); } else if (p > 0) cl = 0;
+            });
+            const byKey = {}; 
+            trades.forEach(t => {
+                const k = v85AuditKey(t), p = v85AuditPnl(t);
+                const x = byKey[k] || (byKey[k] = { trades: 0, wins: 0, pnl: 0, gp: 0, gl: 0 });
+                x.trades++; x.pnl += p;
+                if (p > 0) { x.wins++; x.gp += p; } else if (p < 0) x.gl += Math.abs(p);
+            });
+            Object.values(byKey).forEach(x => {
+                x.winRate = x.trades ? x.wins / x.trades : 0;
+                x.profitFactor = x.gl ? x.gp / x.gl : (x.gp ? Infinity : 0);
+                x.expectancy = x.trades ? x.pnl / x.trades : 0;
+            });
+            const mfe = trades.map(t => Number(t.mfePct)).filter(Number.isFinite), mae = trades.map(t => Math.abs(Number(t.maePct))).filter(Number.isFinite);
+            const avgMfe = mfe.length ? mfe.reduce((a, b) => a + b, 0) / mfe.length : null, avgMae = mae.length ? mae.reduce((a, b) => a + b, 0) / mae.length : null;
+            const health = Math.max(0, Math.min(100, 35 * Math.min(pf === Infinity ? 2 : pf, 2) / 2 + 25 * Math.min(Math.max(exp, 0) / Math.max(avgL || 1, 1), 1) + 20 * Math.min(wr / 0.7, 1) + 20 * (trades.length >= 30 ? 1 : trades.length / 30)));
+            return { generatedAt: new Date().toISOString(), tradeCount: trades.length, winCount: wins.length, lossCount: losses.length, winRate: wr, grossProfit: gp, grossLoss: gl, netPnl: net, totalFees: fees, profitFactor: pf, avgWin: avgW, avgLoss: avgL, expectancy: exp, maxDrawdown: dd, maxConsecutiveLosses: maxCL, avgMfe, avgMae, healthScore: health, byKey };
+        }
+        function v85FmtAudit(n, d = 2) { return n === Infinity ? '∞' : Number.isFinite(n) ? Number(n).toFixed(d) : '—'; }
+        function openPerformanceAudit() {
+            const m = document.getElementById('performanceAuditModal'); if (!m) return; 
+            const a = calculatePerformanceAudit();
+            const cards = [
+                ['平倉樣本數', a.tradeCount + ' 筆', ''],
+                ['勝率 (Win Rate)', v85FmtAudit(a.winRate * 100, 1) + '%', a.winRate >= 0.5 ? 'text-emerald-400' : 'text-amber-400'],
+                ['Profit Factor (PF)', v85FmtAudit(a.profitFactor), a.profitFactor >= 1.5 ? 'text-emerald-400' : 'text-slate-200'],
+                ['單筆期望值', (a.expectancy >= 0 ? '+$' : '-$') + v85FmtAudit(Math.abs(a.expectancy)), a.expectancy >= 0 ? 'text-emerald-400' : 'text-rose-400'],
+                ['累計純利 (Net PnL)', (a.netPnl >= 0 ? '+$' : '-$') + v85FmtAudit(Math.abs(a.netPnl)), a.netPnl >= 0 ? 'text-emerald-400' : 'text-rose-400'],
+                ['累計手續費損耗', '$' + v85FmtAudit(a.totalFees), 'text-amber-400'],
+                ['最大歷史回撤', '$' + v85FmtAudit(a.maxDrawdown), 'text-rose-400'],
+                ['策略健康評級', v85FmtAudit(a.healthScore, 0) + ' / 100', a.healthScore >= 60 ? 'text-emerald-400' : 'text-amber-400']
+            ];
+            document.getElementById('performanceAuditSummary').innerHTML = cards.map(x => `
+                <div class="bg-slate-900/70 border border-crypto-border rounded-lg p-3">
+                    <div class="text-slate-400 text-[10px] font-sans">${x[0]}</div>
+                    <div class="text-base font-bold font-mono mt-0.5 ${x[2]}">${x[1]}</div>
+                </div>
+            `).join('');
+
+            const breakdownEntries = Object.entries(a.byKey).sort((x, y) => y[1].pnl - x[1].pnl);
+            document.getElementById('performanceAuditBreakdown').innerHTML = breakdownEntries.length 
+                ? breakdownEntries.map(([k, x]) => `
+                    <div class="flex justify-between items-center gap-2 border-b border-slate-800 pb-1.5 text-[11px]">
+                        <span class="text-slate-200 truncate font-sans">${k}</span>
+                        <div class="flex items-center gap-3">
+                            <span class="text-slate-400">${x.trades}筆 · ${(x.winRate * 100).toFixed(0)}%勝率 · PF ${v85FmtAudit(x.profitFactor)}</span>
+                            <span class="font-bold ${x.pnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}">${x.pnl >= 0 ? '+$' : '-$'}${v85FmtAudit(Math.abs(x.pnl))}</span>
+                        </div>
+                    </div>
+                `).join('') 
+                : '<div class="text-slate-500 py-3 text-center font-sans">尚未有足夠平倉交易資料。</div>';
+
+            const risks = [
+                ['最大連續虧損', a.maxConsecutiveLosses + ' 筆'],
+                ['平均單筆盈利', '+$' + v85FmtAudit(a.avgWin)],
+                ['平均單筆虧損', '-$' + v85FmtAudit(a.avgLoss)],
+                ['平均有利位移 (MFE)', a.avgMfe === null ? '—' : '+' + v85FmtAudit(a.avgMfe) + '%'],
+                ['平均不利位移 (MAE)', a.avgMae === null ? '—' : '-' + v85FmtAudit(a.avgMae) + '%'],
+                ['統計樣本品質', a.tradeCount >= 100 ? '🟢 高（≥100筆）' : (a.tradeCount >= 30 ? '🟡 中（30–99筆）' : '🔴 低（<30筆，暫不建議調參）')]
+            ];
+            document.getElementById('performanceAuditRisk').innerHTML = risks.map(x => `
+                <div class="flex justify-between border-b border-slate-800 pb-1.5 text-[11px]">
+                    <span class="text-slate-400 font-sans">${x[0]}</span>
+                    <span class="text-white font-bold font-mono">${x[1]}</span>
+                </div>
+            `).join('');
+
+            document.getElementById('performanceAuditConclusion').textContent = !a.tradeCount 
+                ? '目前沒有足夠交易資料。請繼續於 Observation 模式下累積平倉紀錄。' 
+                : (a.tradeCount < 30 
+                    ? `目前僅累積 ${a.tradeCount} 筆樣本。可查看 KPI 指標，但在統計顯著性不足前，暫不建議提高保證金或槓桿。` 
+                    : (a.expectancy > 0 && a.profitFactor > 1 
+                        ? `目前資料顯示明確的正期望特徵（獲利因子 PF ${v85FmtAudit(a.profitFactor)}、單筆期望純利 $${v85FmtAudit(a.expectancy)}）。下一步建議收縮低效信號權重，維持嚴謹的停損與分批出場紀律。` 
+                        : '目前數據尚未展現穩定正期望。應優先減少低品質訊號進場、評估手續費磨損，並嚴格維持小額模擬。'));
+
+            m.classList.remove('hidden');
+        }
+        function closePerformanceAudit() { document.getElementById('performanceAuditModal')?.classList.add('hidden'); }
+        function exportPerformanceAudit() {
+            const b = new Blob([JSON.stringify(calculatePerformanceAudit(), null, 2)], { type: 'application/json' });
+            const u = URL.createObjectURL(b);
+            const a = document.createElement('a');
+            a.href = u; a.download = `bybit_radar_performance_audit_${Date.now()}.json`;
+            document.body.appendChild(a); a.click(); a.remove();
+            setTimeout(() => URL.revokeObjectURL(u), 1000);
+        }
+
         function formatPrice(val) {
             const num = parseFloat(val) || 0;
             if (num >= 100) return num.toFixed(2);
@@ -2297,5 +2456,9 @@
             initTimer();
         });
     </script>
+    <!-- 右下角懸浮績效審計快捷鈕 -->
+    <button id="performanceAuditLauncher" onclick="openPerformanceAudit()" title="Performance Audit" class="fixed bottom-4 right-4 z-40 px-3.5 py-2.5 bg-gradient-to-r from-purple-700 to-indigo-700 hover:from-purple-600 hover:to-indigo-600 text-white rounded-full shadow-2xl font-bold text-xs flex items-center gap-1.5 border border-purple-400/40 transition active:scale-95">
+        <span>📊</span><span>Performance Audit</span>
+    </button>
 </body>
 </html>
