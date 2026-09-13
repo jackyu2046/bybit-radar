@@ -312,6 +312,7 @@
         <section class="bg-crypto-card border border-crypto-border rounded-xl p-2.5 sm:p-3 flex flex-wrap gap-2.5 items-center justify-between">
             <div class="flex items-center flex-wrap gap-1.5">
                 <button onclick="setFilter('all')" id="filterBtn-all" class="px-2.5 py-1 rounded-lg text-xs font-medium bg-amber-500 text-black">全部合約</button>
+                <button onclick="setFilter('gmgn')" id="filterBtn-gmgn" class="px-2.5 py-1 rounded-lg text-xs font-medium bg-slate-900 hover:bg-slate-800 text-purple-300 border border-purple-500/30">🐣 GMGN 早期新小幣</button>
                 <button onclick="setFilter('oiSurge')" id="filterBtn-oiSurge" class="px-2.5 py-1 rounded-lg text-xs font-medium bg-slate-900 hover:bg-slate-800 text-slate-300 border border-crypto-border">💎 OI 暴增真突破 (Coinglass)</button>
                 <button onclick="setFilter('momentum1h')" id="filterBtn-momentum1h" class="px-2.5 py-1 rounded-lg text-xs font-medium bg-slate-900 hover:bg-slate-800 text-slate-300 border border-crypto-border">🚀 1h 初動爆發 (GMGN)</button>
                 <button onclick="setFilter('surge')" id="filterBtn-surge" class="px-2.5 py-1 rounded-lg text-xs font-medium bg-slate-900 hover:bg-slate-800 text-slate-300 border border-crypto-border">🔥 爆量狂飆</button>
@@ -326,14 +327,15 @@
                 </div>
 
                 <select id="minTurnoverSelect" onchange="applyFilters()" class="bg-slate-900 border border-crypto-border text-xs rounded-lg px-2 py-1 text-slate-300 focus:outline-none">
-                    <option value="0">成交額不限</option>
-                    <option value="1000000">&gt; $1.0M 成交額</option>
-                    <option value="2500000" selected>&gt; $2.5M (優質小幣)</option>
-                    <option value="5000000">&gt; $5.0M (高流動性)</option>
+                    <option value="0">成交額不限 (抓全部微小幣)</option>
+                    <option value="1000000" selected>&gt; $1.0M (早期微小新幣)</option>
+                    <option value="2500000">&gt; $2.5M (優質小幣)</option>
+                    <option value="6000000">&gt; $6.0M (高流動性防滑點)</option>
                 </select>
 
                 <select id="sortSelect" onchange="applyFilters()" class="bg-slate-900 border border-crypto-border text-xs rounded-lg px-2 py-1 text-slate-300 focus:outline-none">
                     <option value="anomalyScore" selected>排序: 綜合異常評分 ↓</option>
+                    <option value="momentum1h">排序: 1h 動量爆發 (GMGN) ↓</option>
                     <option value="turnover24h">排序: 24h 成交額 ↓</option>
                     <option value="price24hPcnt">排序: 24h 漲跌幅 ↓</option>
                     <option value="fundingRate">排序: 資金費率 (極負優先)</option>
@@ -1258,6 +1260,12 @@
             let score = 30;
             const reasons = [];
             let isOiSurge = false;
+
+            // GMGN 風格：針對早期微小幣（成交額 $1M~$5M）但 1h 爆發強烈的潛力標的主動加分
+            if (turnover >= 1000000 && turnover <= 5000000 && momentum1h >= 3.5) {
+                score += 20;
+                reasons.push("🐣 GMGN 早期微小幣爆發");
+            }
 
             if (oiValue > 15000000) {
                 score += 25;
@@ -2244,9 +2252,10 @@ ${JSON.stringify(activePositions.map(p => ({ symbol: p.symbol, entry: p.entryPri
             }
         }
 
+        /* 主市場表格篩選與渲染 */
         function setFilter(filter) {
             currentFilter = filter;
-            ['all', 'oiSurge', 'momentum1h', 'surge', 'squeeze', 'pullback'].forEach(f => {
+            ['all', 'gmgn', 'oiSurge', 'momentum1h', 'surge', 'squeeze', 'pullback'].forEach(f => {
                 const btn = document.getElementById(`filterBtn-${f}`);
                 if (btn) {
                     btn.className = f === filter ? "px-2.5 py-1 rounded-lg text-xs font-medium bg-amber-500 text-black" : "px-2.5 py-1 rounded-lg text-xs font-medium bg-slate-900 hover:bg-slate-800 text-slate-300 border border-crypto-border";
@@ -2264,11 +2273,20 @@ ${JSON.stringify(activePositions.map(p => ({ symbol: p.symbol, entry: p.entryPri
             if (keyword) list = list.filter(t => t.symbol.includes(keyword));
             if (minTurnover > 0) list = list.filter(t => t.turnover24h >= minTurnover);
 
-            if (currentFilter === 'oiSurge') list = list.filter(t => t.isOiSurge);
-            else if (currentFilter === 'momentum1h') list = list.filter(t => t.momentum1h >= 2.5);
-            else if (currentFilter === 'surge') list = list.filter(t => t.anomalyScore >= 68);
-            else if (currentFilter === 'squeeze') list = list.filter(t => t.fundingRate <= -0.05);
-            else if (currentFilter === 'pullback') list = list.filter(t => t.signalType === 'PULLBACK_BUY');
+            if (currentFilter === 'gmgn') {
+                // GMGN 早期小幣篩選：成交額介於 $1M ~ $6M 且 1 小時動能 >= 2.5% 的早期起爆幣
+                list = list.filter(t => t.turnover24h >= 1000000 && t.turnover24h <= 8000000 && t.momentum1h >= 2.0);
+            } else if (currentFilter === 'oiSurge') {
+                list = list.filter(t => t.isOiSurge);
+            } else if (currentFilter === 'momentum1h') {
+                list = list.filter(t => t.momentum1h >= 2.5);
+            } else if (currentFilter === 'surge') {
+                list = list.filter(t => t.anomalyScore >= 68);
+            } else if (currentFilter === 'squeeze') {
+                list = list.filter(t => t.fundingRate <= -0.05);
+            } else if (currentFilter === 'pullback') {
+                list = list.filter(t => t.signalType === 'PULLBACK_BUY');
+            }
 
             list.sort((a, b) => {
                 if (sortBy === 'fundingRate') return a.fundingRate - b.fundingRate;
