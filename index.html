@@ -472,6 +472,46 @@
       </div>
     </div>
 
+    <!-- V8.6-A1.1 Research / Shadow Dashboard -->
+    <div id="researchDashboardModal" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 hidden p-4 flex items-center justify-center">
+      <div class="bg-crypto-card border border-crypto-border rounded-xl p-5 max-w-6xl w-full max-h-[90vh] overflow-y-auto space-y-4 text-xs">
+        <div class="flex items-center justify-between border-b border-crypto-border pb-3">
+          <div><h3 class="text-base font-bold text-white">🔬 V8.6-A1.1 Research Dataset & Shadow Lifecycle</h3><p class="text-slate-400 mt-1">研究樣本與執行交易完全分離；Shadow Trade 不影響餘額、風控或真實持倉。</p></div>
+          <button onclick="closeResearchDashboard()" class="text-slate-400 hover:text-white text-lg">✕</button>
+        </div>
+        <div id="researchSummary" class="grid grid-cols-2 md:grid-cols-6 gap-3"></div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="bg-slate-900/60 border border-crypto-border rounded-lg p-4"><h4 class="font-bold text-white mb-2">Score / Sample Distribution</h4><div id="researchDistribution" class="space-y-2"></div></div>
+          <div class="bg-slate-900/60 border border-crypto-border rounded-lg p-4"><h4 class="font-bold text-white mb-2">Research Performance</h4><div id="researchPerformance" class="space-y-2"></div></div>
+        </div>
+        <div class="bg-slate-900/60 border border-crypto-border rounded-lg p-4"><h4 class="font-bold text-white mb-2">Active Shadow Trades</h4><div id="researchActive" class="space-y-2"></div></div>
+        <div class="flex justify-between items-center gap-2 flex-wrap">
+          <label class="flex items-center gap-2 text-slate-300"><input id="researchEnabledToggle" type="checkbox" onchange="setResearchEnabled(this.checked)"> 啟用 Research / Shadow Track</label>
+          <div class="flex gap-2"><button onclick="exportResearchDataset()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-lg">匯出 Research JSON</button><button onclick="closeResearchDashboard()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg">關閉</button></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- V8.6-A2.1 Calibration Dashboard Modal -->
+    <div id="calibrationDashboardModal" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-[60] hidden p-4 flex items-center justify-center">
+      <div class="bg-crypto-card border border-crypto-border rounded-xl p-5 max-w-6xl w-full max-h-[92vh] overflow-y-auto text-xs space-y-4">
+        <div class="flex items-center justify-between border-b border-crypto-border pb-3">
+          <div><h3 class="text-base font-bold text-white">🧠 V8.6-A2.1 Edge Discovery & Calibration</h3>
+          <p class="text-slate-400 mt-1">Research → Shadow → Archive → Unified Dataset → Calibration。系統不會自動修改實盤參數。</p></div>
+          <button onclick="closeCalibrationDashboard()" class="text-slate-400 hover:text-white text-lg">✕</button>
+        </div>
+        <div id="calibrationSummary" class="grid grid-cols-2 md:grid-cols-6 gap-3"></div>
+        <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
+          <div class="bg-slate-900/60 border border-crypto-border rounded-lg p-4"><h4 class="font-bold text-white mb-3">📊 Score Bucket</h4><div id="calibrationBuckets"></div></div>
+          <div class="bg-slate-900/60 border border-crypto-border rounded-lg p-4"><h4 class="font-bold text-white mb-3">🌐 Regime Edge</h4><div id="calibrationRegimes"></div></div>
+          <div class="bg-slate-900/60 border border-crypto-border rounded-lg p-4"><h4 class="font-bold text-white mb-3">🧩 Strategy Edge</h4><div id="calibrationStrategies"></div></div>
+          <div class="bg-slate-900/60 border border-crypto-border rounded-lg p-4"><h4 class="font-bold text-white mb-3">🎯 Recommendation / NO EDGE Guard</h4><div id="calibrationRecommendation"></div></div>
+        </div>
+        <div class="bg-slate-900/60 border border-crypto-border rounded-lg p-4"><h4 class="font-bold text-white mb-2">⚠️ Dataset Quality</h4><div id="calibrationQuality"></div></div>
+        <div class="flex justify-end gap-2"><button onclick="exportCalibrationReport()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-lg">Export JSON</button><button onclick="closeCalibrationDashboard()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg">關閉</button></div>
+      </div>
+    </div>
+
     <!-- 自訂訊息彈窗 -->
     <div id="notificationModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
         <div class="bg-crypto-card border border-crypto-border rounded-xl p-5 max-w-sm w-full space-y-3 text-xs font-sans">
@@ -496,11 +536,7 @@
         const V85_BACKUP_PREFIX = 'bybit_radar_v85_migration_backup_';
         const V85_MIGRATION_MANIFEST_KEY = 'bybit_radar_v85_migration_manifest';
         const STORAGE_KEY_ROOM = 'bybit_radar_room_id_v2';
-        // STORAGE FIX: historyArchive previously grew forever (only the 300-item
-        // `history` view was capped). Over weeks/months that alone would exceed
-        // localStorage quota regardless of the backup/recovery fix above. Keep the
-        // most recent N trades (still far more than enough for edge-attribution).
-        const V85_MAX_ARCHIVE = 2000;
+        const V85_MAX_ARCHIVE = 500;
 
         const LEGACY_SIM_KEYS = [
             STORAGE_KEY_SIM,
@@ -680,7 +716,7 @@
             try { return JSON.parse(raw); } catch (_) { return null; }
         }
 
-        function v85PruneMigrationBackups(keepCount = 5) {
+        function v85PruneMigrationBackups(keepCount = 1) {
             try {
                 const keys = Object.keys(localStorage)
                     .filter(k => k.startsWith(V85_BACKUP_PREFIX))
@@ -690,6 +726,25 @@
                 }
             } catch (err) {
                 console.warn('Migration backup prune failed:', err);
+            }
+        }
+
+        function v85EmergencyStorageCleanup() {
+            try {
+                Object.keys(localStorage).forEach(k => {
+                    if (k.includes('__staging') || k.startsWith(V85_RECOVERY_PREFIX) || k.startsWith(V85_BACKUP_PREFIX)) {
+                        localStorage.removeItem(k);
+                    }
+                });
+                if (Array.isArray(simState.historyArchive) && simState.historyArchive.length > 500) {
+                    simState.historyArchive = simState.historyArchive.slice(0, 500);
+                }
+                if (simState.research && Array.isArray(simState.research.archive) && simState.research.archive.length > 500) {
+                    simState.research.archive = simState.research.archive.slice(0, 500);
+                }
+                console.info('🧹 已成功執行 LocalStorage 緊急空間清理');
+            } catch (e) {
+                console.warn('緊急清理失敗:', e);
             }
         }
 
@@ -703,8 +758,12 @@
                 archiveRaw: archiveRaw || null
             };
             const key = V85_BACKUP_PREFIX + stamp;
-            localStorage.setItem(key, JSON.stringify(snapshot));
-            v85PruneMigrationBackups(2);
+            try {
+                localStorage.setItem(key, JSON.stringify(snapshot));
+            } catch (e) {
+                v85EmergencyStorageCleanup();
+            }
+            v85PruneMigrationBackups(1);
             localStorage.setItem(V85_MIGRATION_MANIFEST_KEY, JSON.stringify({
                 lastBackupKey: key,
                 createdAt: stamp,
@@ -794,7 +853,7 @@
             return (h >>> 0).toString(16);
         }
 
-        function v85PruneRecoveryPoints(keepCount = 3) {
+        function v85PruneRecoveryPoints(keepCount = 1) {
             try {
                 const keys = Object.keys(localStorage)
                     .filter(k => k.startsWith(V85_RECOVERY_PREFIX))
@@ -818,7 +877,7 @@
             };
             try {
                 localStorage.setItem(key, JSON.stringify(record));
-                v85PruneRecoveryPoints(2);
+                v85PruneRecoveryPoints(1);
             } catch (err) {
                 console.warn('Recovery snapshot skipped (quota limit):', err);
             }
@@ -828,49 +887,62 @@
         function v85AtomicWrite(state, createRecovery = false) {
             const txKey = STORAGE_KEY_SIM + '__staging';
             const archiveKey = V85_ARCHIVE_KEY + '__staging';
-            const stateRaw = JSON.stringify(state);
-            const archiveRaw = JSON.stringify(state.historyArchive || []);
 
-            // Stage
-            localStorage.setItem(txKey, stateRaw);
-            localStorage.setItem(archiveKey, archiveRaw);
-
-            const stagedState = v85SafeJsonParse(localStorage.getItem(txKey));
-            const stagedArchive = v85SafeJsonParse(localStorage.getItem(archiveKey));
-            if (!stagedState || !Array.isArray(stagedArchive) ||
-                v85Checksum(stateRaw) !== v85Checksum(JSON.stringify(stagedState)) ||
-                v85Checksum(archiveRaw) !== v85Checksum(JSON.stringify(stagedArchive))) {
-                throw new Error('staging verification failed');
+            if (Array.isArray(state.historyArchive) && state.historyArchive.length > 500) {
+                state.historyArchive = state.historyArchive.slice(0, 500);
+            }
+            if (state.research && Array.isArray(state.research.archive) && state.research.archive.length > 500) {
+                state.research.archive = state.research.archive.slice(0, 500);
             }
 
-            let recoveryKey = null;
-            if (createRecovery) {
-                recoveryKey = v85CreateRecoveryPoint('pre-commit', {
-                    simStateRaw: localStorage.getItem(STORAGE_KEY_SIM),
-                    archiveRaw: localStorage.getItem(V85_ARCHIVE_KEY)
-                });
-            }
+            let stateRaw = JSON.stringify(state);
+            let archiveRaw = JSON.stringify(state.historyArchive || []);
 
-            // Commit
-            localStorage.setItem(V85_ARCHIVE_KEY, archiveRaw);
-            localStorage.setItem(STORAGE_KEY_SIM, stateRaw);
-
-            // Verify commit
-            const committedState = v85SafeJsonParse(localStorage.getItem(STORAGE_KEY_SIM));
-            const committedArchive = v85SafeJsonParse(localStorage.getItem(V85_ARCHIVE_KEY));
-            if (!committedState || !Array.isArray(committedArchive) ||
-                committedArchive.length !== (state.historyArchive || []).length) {
-                if (recoveryKey) {
-                    const rp = v85SafeJsonParse(localStorage.getItem(recoveryKey));
-                    if (rp?.payload?.simStateRaw !== null) localStorage.setItem(STORAGE_KEY_SIM, rp.payload.simStateRaw);
-                    if (rp?.payload?.archiveRaw !== null) localStorage.setItem(V85_ARCHIVE_KEY, rp.payload.archiveRaw);
+            try {
+                // Stage
+                try {
+                    localStorage.setItem(txKey, stateRaw);
+                    localStorage.setItem(archiveKey, archiveRaw);
+                } catch (e) {
+                    if (e.name === 'QuotaExceededError' || e.code === 22) {
+                        v85EmergencyStorageCleanup();
+                        stateRaw = JSON.stringify(state);
+                        archiveRaw = JSON.stringify(state.historyArchive || []);
+                        localStorage.setItem(txKey, stateRaw);
+                        localStorage.setItem(archiveKey, archiveRaw);
+                    } else {
+                        throw e;
+                    }
                 }
-                throw new Error('commit verification failed; rollback attempted');
-            }
 
-            localStorage.removeItem(txKey);
-            localStorage.removeItem(archiveKey);
-            return recoveryKey;
+                let recoveryKey = null;
+                if (createRecovery) {
+                    recoveryKey = v85CreateRecoveryPoint('pre-commit', {
+                        simStateRaw: localStorage.getItem(STORAGE_KEY_SIM),
+                        archiveRaw: localStorage.getItem(V85_ARCHIVE_KEY)
+                    });
+                }
+
+                // Commit
+                try {
+                    localStorage.setItem(V85_ARCHIVE_KEY, archiveRaw);
+                    localStorage.setItem(STORAGE_KEY_SIM, stateRaw);
+                } catch (e) {
+                    if (e.name === 'QuotaExceededError' || e.code === 22) {
+                        v85EmergencyStorageCleanup();
+                        localStorage.setItem(V85_ARCHIVE_KEY, JSON.stringify(state.historyArchive || []));
+                        localStorage.setItem(STORAGE_KEY_SIM, JSON.stringify(state));
+                    } else {
+                        throw e;
+                    }
+                }
+
+                return recoveryKey;
+            } finally {
+                // 確保無論寫入成功或失敗，都不留存 Ghost Staging 垃圾
+                localStorage.removeItem(txKey);
+                localStorage.removeItem(archiveKey);
+            }
         }
 
         function v85RestoreLatestRecoveryPoint() {
@@ -1147,12 +1219,6 @@
         /* 儲存載入與資料庫無損整合 — V8.5-A1 FINAL */
         function loadFromStorage() {
             try {
-                // STORAGE FIX: this whole function used to run its full
-                // migration (which snapshots a fresh, multi-MB backup key
-                // AND a fresh recovery-point key) on every single page load,
-                // forever. That's what was exhausting localStorage and
-                // causing "QuotaExceededError" on every save. Once we've
-                // already migrated to the current schema, skip re-snapshotting.
                 const existingManifest = v85SafeJsonParse(localStorage.getItem(V85_MIGRATION_MANIFEST_KEY));
                 const alreadyMigrated = !!(existingManifest && existingManifest.migrated === true && existingManifest.schemaVersion === V85_SCHEMA_VERSION);
 
@@ -1667,9 +1733,6 @@
                 fills,
                 intelligence: pos.intelligence || null,
                 scoreAtEntry: pos.score || null,
-                // A2.2 FIX: propagate the labels captured at open time (fallback to
-                // legacy behaviour if an older in-memory position lacks them, e.g.
-                // right after loading an old save before this patch existed).
                 side: pos.side || 'LONG',
                 direction: pos.direction || 'LONG',
                 strategy: pos.strategy || null,
@@ -1722,14 +1785,11 @@
 
             simState.balance -= entryFee;
             const now = Date.now();
-            // A2.2 FIX: capture the same entry-context labels used for research shadow
-            // signals onto REAL positions too, so closed trades can actually be
-            // attributed by direction/strategy/regime/volatility/liquidity later.
             const entryContext = buildEntryContext(coin);
             const position = {
                 id: 'POS_' + now + '_' + coin.symbol,
                 symbol: coin.symbol,
-                side: 'LONG', // this engine only ever opens longs; kept explicit so it survives normalization
+                side: 'LONG',
                 direction: 'LONG',
                 strategy: entryContext.strategy,
                 regimeAtEntry: entryContext.regime,
@@ -2071,16 +2131,6 @@
 
         function closeHistoryModal() {
             document.getElementById('historyModal').classList.add('hidden');
-        }
-
-        function v85AuditKey(t) {
-            if (!t) return 'UNCLASSIFIED';
-            if (typeof t.reason === 'string' && t.reason.length > 0) return t.reason;
-            if (typeof t.closeReason === 'string' && t.closeReason.length > 0) return t.closeReason;
-            if (typeof t.strategy === 'string' && t.strategy.length > 0) return t.strategy;
-            if (typeof t.signalType === 'string' && t.signalType.length > 0) return t.signalType;
-            if (typeof t.grade === 'string' && t.grade.length > 0) return `GRADE_${t.grade}`;
-            return 'UNCLASSIFIED';
         }
 
         function openGeminiAuditModal() {
