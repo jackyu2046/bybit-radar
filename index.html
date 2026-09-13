@@ -472,6 +472,27 @@
       </div>
     </div>
 
+
+    <!-- V8.6-A1.1 Research / Shadow Dashboard -->
+    <div id="researchDashboardModal" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 hidden p-4 flex items-center justify-center">
+      <div class="bg-crypto-card border border-crypto-border rounded-xl p-5 max-w-6xl w-full max-h-[90vh] overflow-y-auto space-y-4 text-xs">
+        <div class="flex items-center justify-between border-b border-crypto-border pb-3">
+          <div><h3 class="text-base font-bold text-white">🔬 V8.6-A1.1 Research Dataset & Shadow Lifecycle</h3><p class="text-slate-400 mt-1">研究樣本與執行交易完全分離；Shadow Trade 不影響餘額、風控或真實持倉。</p></div>
+          <button onclick="closeResearchDashboard()" class="text-slate-400 hover:text-white text-lg">✕</button>
+        </div>
+        <div id="researchSummary" class="grid grid-cols-2 md:grid-cols-6 gap-3"></div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="bg-slate-900/60 border border-crypto-border rounded-lg p-4"><h4 class="font-bold text-white mb-2">Score / Sample Distribution</h4><div id="researchDistribution" class="space-y-2"></div></div>
+          <div class="bg-slate-900/60 border border-crypto-border rounded-lg p-4"><h4 class="font-bold text-white mb-2">Research Performance</h4><div id="researchPerformance" class="space-y-2"></div></div>
+        </div>
+        <div class="bg-slate-900/60 border border-crypto-border rounded-lg p-4"><h4 class="font-bold text-white mb-2">Active Shadow Trades</h4><div id="researchActive" class="space-y-2"></div></div>
+        <div class="flex justify-between items-center gap-2 flex-wrap">
+          <label class="flex items-center gap-2 text-slate-300"><input id="researchEnabledToggle" type="checkbox" onchange="setResearchEnabled(this.checked)"> 啟用 Research / Shadow Track</label>
+          <div class="flex gap-2"><button onclick="exportResearchDataset()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-lg">匯出 Research JSON</button><button onclick="closeResearchDashboard()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg">關閉</button></div>
+        </div>
+      </div>
+    </div>
+
     <!-- 自訂訊息彈窗 -->
     <div id="notificationModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
         <div class="bg-crypto-card border border-crypto-border rounded-xl p-5 max-w-sm w-full space-y-3 text-xs font-sans">
@@ -524,7 +545,17 @@
             positions: [],
             history: [],
             historyArchive: [],
-            riskState: null
+            riskState: null,
+            research: {
+                enabled: true,
+                sampleRates: { high: 1.0, medium: 1.0, low: 0.50, reject: 0.20 },
+                maxActive: 120,
+                timeoutMinutes: 240,
+                shadowNotional: 25,
+                active: [],
+                archive: [],
+                seen: {}
+            }
         };
 
         let adaptiveParams = {
@@ -623,6 +654,7 @@
             const openedAt = v85Timestamp(trade?.openedAt ?? trade?.openTime, 0);
             const fills = Array.isArray(trade?.fills) ? trade.fills : [];
 
+            // 強化時間戳回溯解析：排除中文時間字串導致的 NaN 歸零問題
             let closedAtTs = v85Timestamp(trade?.closedAtTs ?? trade?.closedTimestamp, 0);
             if (!closedAtTs && fills.length > 0) {
                 closedAtTs = v85Timestamp(fills[fills.length - 1]?.timestamp, 0);
@@ -1386,6 +1418,172 @@
             }
         }
 
+
+        /* =========================================================
+           V8.6-A1.1 RESEARCH DATASET & SHADOW LIFECYCLE ENGINE
+           Research Track is observational only: no balance deduction,
+           no Risk Gate side-effects, no position/exposure consumption.
+        ========================================================= */
+        function ensureResearchState() {
+            simState.research = simState.research || {};
+            const r = simState.research;
+            r.enabled = r.enabled !== false;
+            r.sampleRates = Object.assign({ high:1.0, medium:1.0, low:0.50, reject:0.20 }, r.sampleRates || {});
+            r.maxActive = Math.max(10, Number(r.maxActive) || 120);
+            r.timeoutMinutes = Math.max(5, Number(r.timeoutMinutes) || 240);
+            r.shadowNotional = Math.max(1, Number(r.shadowNotional) || 25);
+            r.active = Array.isArray(r.active) ? r.active : [];
+            r.archive = Array.isArray(r.archive) ? r.archive : [];
+            r.seen = r.seen && typeof r.seen === 'object' ? r.seen : {};
+            return r;
+        }
+        function researchBucket(score) {
+            score = Number(score) || 0;
+            if (score >= 70) return 'high';
+            if (score >= 55) return 'medium';
+            if (score >= 40) return 'low';
+            return 'reject';
+        }
+        function shouldSampleResearchSignal(coin) {
+            const r = ensureResearchState();
+            const rate = Number(r.sampleRates[researchBucket(coin.score)]);
+            return Math.random() < Math.max(0, Math.min(1, Number.isFinite(rate) ? rate : 0));
+        }
+        function researchSignalFingerprint(coin) {
+            const band = Math.floor((Number(coin.lastPrice)||0) * 100000) / 100000;
+            return `${coin.symbol}|${Math.floor(Date.now()/60000)}|${researchBucket(coin.score)}|${band}`;
+        }
+        function researchDirection(coin) {
+            return Number(coin.momentum1h) >= 0 ? 'LONG' : 'SHORT';
+        }
+        function createShadowTrade(coin) {
+            const r = ensureResearchState();
+            if (!r.enabled || !coin || r.active.length >= r.maxActive) return false;
+            if (!shouldSampleResearchSignal(coin)) return false;
+            const fp = researchSignalFingerprint(coin);
+            if (r.seen[fp]) return false;
+            r.seen[fp] = Date.now();
+            const entry = Number(coin.lastPrice) || 0;
+            if (entry <= 0) return false;
+            const dir = researchDirection(coin);
+            const notional = r.shadowNotional;
+            const qty = notional / entry;
+            const slPct = Number(adaptiveParams.stopLossPct)||4.5;
+            const tp1Pct = Number(adaptiveParams.tp1Pct)||4.2;
+            const tp2Pct = Number(adaptiveParams.tp2Pct)||10;
+            const id = `SHD_${Date.now()}_${coin.symbol}_${Math.random().toString(36).slice(2,6)}`;
+            const shadow = {
+                id, symbol:coin.symbol, executionMode:'SHADOW', lifecycle:'ACTIVE',
+                openedAt:Date.now(), openTime:Date.now(), closedAtTs:null,
+                direction:dir, entryPrice:entry, currentPrice:entry, markEntryPrice:entry,
+                qty, originalQty:qty, remainingQty:qty, notional,
+                stopLoss: dir==='LONG'?entry*(1-slPct/100):entry*(1+slPct/100),
+                tp1: dir==='LONG'?entry*(1+tp1Pct/100):entry*(1-tp1Pct/100),
+                tp2: dir==='LONG'?entry*(1+tp2Pct/100):entry*(1-tp2Pct/100),
+                tp1Reached:false, tp2Reached:false, isMoonBag:false,
+                highestPrice:entry, lowestPrice:entry, mfePct:0, maePct:0,
+                realizedPnl:0, realizedGrossPnl:0, totalFees:0, fills:[],
+                score:Number(coin.score)||0, grade:coin.grade||'N/A',
+                researchBucket:researchBucket(coin.score),
+                strategy:coin.strategy||'MARKET_SIGNAL',
+                regimeAtEntry:currentMarketRegime,
+                signalMetadata:{
+                    momentum1h:Number(coin.momentum1h)||0,rvol:Number(coin.rvol)||0,
+                    oiVelocity:Number(coin.oiVelocity)||0,oiAcceleration:Number(coin.oiAcceleration)||0,
+                    spreadPct:Number(coin.spreadPct)||0,fundingRate:Number(coin.fundingRate)||0,
+                    turnover24h:Number(coin.turnover24h)||0,price24hPcnt:Number(coin.price24hPcnt)||0
+                },
+                closeReason:null
+            };
+            r.active.push(shadow);
+            return true;
+        }
+        function shadowPnlAt(shadow, price) {
+            const q = Number(shadow.remainingQty)||0;
+            const entry = Number(shadow.entryPrice)||0;
+            if (shadow.direction === 'SHORT') return (entry-price)*q;
+            return (price-entry)*q;
+        }
+        function updateShadowMfeMae(s, price) {
+            const entry=Number(s.entryPrice)||price;
+            const pct = s.direction==='SHORT' ? ((entry-price)/entry)*100 : ((price-entry)/entry)*100;
+            s.highestPrice=Math.max(Number(s.highestPrice)||entry,price);
+            s.lowestPrice=Math.min(Number(s.lowestPrice)||entry,price);
+            s.mfePct=Math.max(Number(s.mfePct)||0,pct);
+            s.maePct=Math.min(Number(s.maePct)||0,pct);
+        }
+        function shadowHit(s, price, target) {
+            return s.direction==='SHORT' ? price<=target : price>=target;
+        }
+        function shadowStopHit(s, price) {
+            return s.direction==='SHORT' ? price>=s.stopLoss : price<=s.stopLoss;
+        }
+        function shadowFill(s, qty, price, reason) {
+            qty=Math.min(Number(qty)||0,Number(s.remainingQty)||0);
+            if(qty<=0) return;
+            const pnl=s.direction==='SHORT'?(s.entryPrice-price)*qty:(price-s.entryPrice)*qty;
+            s.remainingQty=Math.max(0,s.remainingQty-qty);
+            s.realizedGrossPnl=(Number(s.realizedGrossPnl)||0)+pnl;
+            s.realizedPnl=(Number(s.realizedPnl)||0)+pnl;
+            s.fills.push({timestamp:Date.now(),fillQty:qty,fillPrice:price,netPnl:pnl,reason});
+        }
+        function finalizeShadowTrade(s, reason) {
+            const r=ensureResearchState();
+            if(!s || s.lifecycle==='CLOSED') return;
+            if((Number(s.remainingQty)||0)>0) shadowFill(s,s.remainingQty,Number(s.currentPrice)||Number(s.entryPrice),reason);
+            s.lifecycle='CLOSED'; s.closeReason=reason; s.closedAtTs=Date.now();
+            s.durationMin=Math.max(0,Math.round((s.closedAtTs-s.openedAt)/60000));
+            s.pnl=Number(s.realizedPnl)||0;
+            r.active=r.active.filter(x=>x.id!==s.id);
+            r.archive.push(s);
+            if(r.archive.length>10000) r.archive=r.archive.slice(-10000);
+        }
+        function updateShadowTrades() {
+            const r=ensureResearchState();
+            if(!r.enabled || !r.active.length) return;
+            const now=Date.now(), timeout=r.timeoutMinutes*60000;
+            [...r.active].forEach(s=>{
+                const price=Number(allMarketPrices.get(s.symbol))||Number(s.currentPrice)||Number(s.entryPrice);
+                s.currentPrice=price; updateShadowMfeMae(s,price);
+                if(shadowStopHit(s,price)){ finalizeShadowTrade(s,'RESEARCH_SL'); return; }
+                if(!s.tp1Reached && shadowHit(s,price,s.tp1)){ s.tp1Reached=true; shadowFill(s,s.originalQty*0.35,price,'RESEARCH_TP1'); }
+                if(s.tp1Reached && !s.tp2Reached && shadowHit(s,price,s.tp2)){ s.tp2Reached=true; shadowFill(s,s.originalQty*0.35,price,'RESEARCH_TP2'); }
+                if(now-s.openedAt>=timeout){ finalizeShadowTrade(s,'RESEARCH_TIMEOUT'); }
+            });
+        }
+        function collectResearchSignals(tickers) {
+            const r=ensureResearchState(); if(!r.enabled) return;
+            const activeSymbols=new Set(r.active.map(x=>x.symbol));
+            tickers.filter(c=>!activeSymbols.has(c.symbol)).forEach(createShadowTrade);
+        }
+        function researchStats() {
+            const r=ensureResearchState(), a=r.archive||[], wins=a.filter(x=>(Number(x.pnl)||0)>0), losses=a.filter(x=>(Number(x.pnl)||0)<0);
+            const gp=wins.reduce((s,x)=>s+(Number(x.pnl)||0),0), gl=Math.abs(losses.reduce((s,x)=>s+(Number(x.pnl)||0),0));
+            const buckets={high:0,medium:0,low:0,reject:0};
+            a.forEach(x=>buckets[x.researchBucket||researchBucket(x.score)]++);
+            return {active:r.active.length,closed:a.length,winRate:a.length?wins.length/a.length:0,net:a.reduce((s,x)=>s+(Number(x.pnl)||0),0),pf:gl?gp/gl:(gp?Infinity:0),buckets};
+        }
+        function openResearchDashboard() {
+            const m=document.getElementById('researchDashboardModal'); if(!m)return;
+            const r=ensureResearchState(), s=researchStats();
+            document.getElementById('researchEnabledToggle').checked=!!r.enabled;
+            const cards=[['Active',s.active],['Closed',s.closed],['Win Rate',(s.winRate*100).toFixed(1)+'%'],['Net PnL','$'+s.net.toFixed(2)],['PF',s.pf===Infinity?'∞':s.pf.toFixed(2)],['Timeout',r.timeoutMinutes+'m']];
+            document.getElementById('researchSummary').innerHTML=cards.map(x=>`<div class="bg-slate-900/70 border border-crypto-border rounded-lg p-3"><div class="text-slate-400">${x[0]}</div><div class="text-lg font-bold text-white">${x[1]}</div></div>`).join('');
+            document.getElementById('researchDistribution').innerHTML=Object.entries(s.buckets).map(([k,v])=>`<div class="flex justify-between border-b border-slate-800 pb-2"><span class="uppercase text-slate-300">${k}</span><span class="text-white font-bold">${v}</span></div>`).join('');
+            const perf=[['Sampling','High 100% · Medium 100% · Low 50% · Reject 20%'],['Execution Isolation','Shadow does not touch balance / risk / positions'],['Lifecycle','Entry → TP1 → TP2 / SL / Timeout → Archive']];
+            document.getElementById('researchPerformance').innerHTML=perf.map(x=>`<div class="flex justify-between gap-3 border-b border-slate-800 pb-2"><span class="text-slate-400">${x[0]}</span><span class="text-white text-right">${x[1]}</span></div>`).join('');
+            document.getElementById('researchActive').innerHTML=(r.active||[]).slice(0,30).map(x=>`<div class="flex justify-between gap-2 border-b border-slate-800 pb-2"><span class="text-white font-bold">${x.symbol}</span><span class="text-slate-400">${x.researchBucket.toUpperCase()} · ${x.direction} · Score ${x.score}</span><span class="${shadowPnlAt(x,x.currentPrice)>=0?'text-emerald-400':'text-rose-400'}">$${shadowPnlAt(x,x.currentPrice).toFixed(2)}</span></div>`).join('')||'<div class="text-slate-500">暫無 Active Shadow Trades</div>';
+            m.classList.remove('hidden');
+        }
+        function closeResearchDashboard(){document.getElementById('researchDashboardModal')?.classList.add('hidden');}
+        function setResearchEnabled(v){ensureResearchState().enabled=!!v;saveToStorage(false);}
+        function exportResearchDataset(){
+            const r=ensureResearchState(), payload={version:'V8.6-A1.1',exportedAt:new Date().toISOString(),research:r,stats:researchStats()};
+            const b=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),u=URL.createObjectURL(b),a=document.createElement('a');
+            a.href=u;a.download='bybit-radar-v8611-research-'+Date.now()+'.json';a.click();URL.revokeObjectURL(u);
+        }
+
+
         function processTickersV85(list) {
             const newTickers = [];
 
@@ -1432,8 +1630,10 @@
             });
 
             rawTickers = newTickers;
+            collectResearchSignals(newTickers);
             renderMarketTable(newTickers);
             updateSimPositions();
+            updateShadowTrades();
             updateSimHeaderStats();
 
             if (simState.autoTrade && currentMarketRegime !== 'RISK_OFF') {
@@ -2517,6 +2717,7 @@
             loadFromStorage();
             initFirebaseSync();
             ensureRiskState();
+            ensureResearchState();
             updateSimHeaderStats();
             renderSimPositions();
             fetchMarketData();
@@ -2524,5 +2725,6 @@
         });
     </script>
     <button id="performanceAuditLauncher" onclick="openPerformanceAudit()" title="Performance Audit" class="fixed bottom-4 right-4 z-40 px-4 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-full shadow-lg font-bold text-xs">📊 Performance Audit</button>
+    <button id="researchDashboardLauncher" onclick="openResearchDashboard()" title="Research / Shadow Engine" class="fixed bottom-4 right-44 z-40 px-4 py-3 bg-violet-600 hover:bg-violet-500 text-white rounded-full shadow-lg font-bold text-xs">🔬 Research Lab</button>
 </body>
 </html>
