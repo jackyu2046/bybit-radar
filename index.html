@@ -63,7 +63,7 @@
                             <span class="text-[9px] bg-emerald-500/20 text-emerald-400 font-mono font-semibold px-1.5 py-0.2 rounded border border-emerald-500/30">V8.6 INTELLIGENCE</span>
                             <span class="text-[9px] bg-purple-500/20 text-purple-300 font-mono font-semibold px-1.5 py-0.2 rounded border border-purple-500/30" id="regimeHeaderBadge">Regime: CHOPPY</span>
                         </div>
-                        <p class="text-[11px] text-slate-400 hidden sm:block">V8.6 七維情報漏斗 · 標的歷史勝率智商庫 · 體制×策略矩陣 · 絕對去重數據防護</p>
+                        <p class="text-[11px] text-slate-400 hidden sm:block">V8.6 七維情報漏斗 · 標的歷史勝率智商庫 · 體制×策略矩陣 · 相關性曝險風控 2.0</p>
                     </div>
                 </div>
             </div>
@@ -597,16 +597,14 @@
         function v85StableTradeId(trade) {
             if (trade && trade.tradeId) return String(trade.tradeId);
             if (trade && trade.id && String(trade.id).startsWith('TRD_')) return String(trade.id);
-            
-            const symbol = String(trade?.symbol || 'UNKNOWN').toUpperCase();
-            const side = String(trade?.side || 'LONG').toUpperCase();
-            const entry = v85Number(trade?.entryPrice, 0).toFixed(6);
-            const exit = v85Number(trade?.exitPrice, 0).toFixed(6);
-            const pnl = v85Number(trade?.pnl ?? trade?.netPnl, 0).toFixed(4);
-            const closedStr = String(trade?.closedAt || trade?.closedAtTs || '');
-            const duration = v85Number(trade?.durationMin, 0);
-
-            const raw = [symbol, side, entry, exit, pnl, closedStr, duration].join('|');
+            const raw = [
+                trade?.symbol || '',
+                trade?.side || 'LONG',
+                v85Number(trade?.entryPrice),
+                v85Number(trade?.exitPrice),
+                v85Timestamp(trade?.openedAt ?? trade?.openTime, 0),
+                v85Timestamp(trade?.closedAtTs ?? trade?.closedAt, 0)
+            ].join('|');
             let hash = 2166136261;
             for (let i = 0; i < raw.length; i++) {
                 hash ^= raw.charCodeAt(i);
@@ -620,7 +618,7 @@
             const exitPrice = v85Number(trade?.exitPrice, entryPrice);
             const grossPnl = v85Number(trade?.grossPnl, v85Number(trade?.pnl));
             const netPnl = v85Number(trade?.netPnl, v85Number(trade?.pnl, grossPnl));
-            const openedAt = v85Timestamp(trade?.openedAt ?? trade?.openTime, 0);
+            const openedAt = v85Timestamp(trade?.openedAt ?? trade?.openTime, Date.now());
             const fills = Array.isArray(trade?.fills) ? trade.fills : [];
 
             // 強化時間戳回溯解析：排除中文時間字串導致的 NaN 歸零問題
@@ -628,23 +626,25 @@
             if (!closedAtTs && fills.length > 0) {
                 closedAtTs = v85Timestamp(fills[fills.length - 1]?.timestamp, 0);
             }
-            if (!closedAtTs && openedAt > 0) {
+            if (!closedAtTs) {
                 const durMin = v85Number(trade?.durationMin, 0);
-                closedAtTs = openedAt + (durMin * 60000);
+                closedAtTs = durMin > 0 ? openedAt + (durMin * 60000) : openedAt;
             }
 
             const entryFee = v85Number(trade?.entryFee);
             const exitFees = v85Number(trade?.exitFeesPaid ?? trade?.exitFees ?? trade?.exitFee);
             const totalFees = v85Number(trade?.totalFees, entryFee + exitFees);
 
-            const normalized = {
+            return {
                 ...trade,
+                tradeId: v85StableTradeId({ ...trade, openedAt, closedAtTs }),
+                id: trade?.id || v85StableTradeId({ ...trade, openedAt, closedAtTs }),
                 symbol: String(trade?.symbol || 'UNKNOWN').toUpperCase(),
                 side: String(trade?.side || 'LONG').toUpperCase(),
                 openedAt,
                 openTime: openedAt,
                 closedAtTs,
-                closedAt: trade?.closedAt || (closedAtTs > 0 ? new Date(closedAtTs).toLocaleTimeString() : '已平倉'),
+                closedAt: trade?.closedAt || new Date(closedAtTs).toLocaleTimeString(),
                 entryPrice,
                 exitPrice,
                 originalQty: v85Number(trade?.originalQty, v85Number(trade?.qty)),
@@ -653,7 +653,7 @@
                 netPnl,
                 pnl: netPnl,
                 pnlPct: v85Number(trade?.pnlPct, entryPrice > 0 ? ((exitPrice - entryPrice) / entryPrice) * 100 : 0),
-                durationMin: Math.max(0, Math.round(v85Number(trade?.durationMin, closedAtTs > openedAt ? (closedAtTs - openedAt) / 60000 : 0))),
+                durationMin: Math.max(0, Math.round(v85Number(trade?.durationMin, (closedAtTs - openedAt) / 60000))),
                 reason: trade?.reason || trade?.closeReason || 'CLOSED',
                 mfePct: v85Number(trade?.mfePct),
                 maePct: v85Number(trade?.maePct),
@@ -663,11 +663,6 @@
                 fills,
                 schemaVersion: V85_SCHEMA_VERSION
             };
-
-            normalized.tradeId = v85StableTradeId(normalized);
-            normalized.id = normalized.tradeId;
-
-            return normalized;
         }
 
         function v85SafeJsonParse(raw) {
@@ -773,10 +768,6 @@
                 const dt = v85Timestamp(b.closedAtTs ?? b.closedAt, 0) - v85Timestamp(a.closedAtTs ?? a.closedAt, 0);
                 return dt || String(a.tradeId).localeCompare(String(b.tradeId));
             });
-        }
-
-        function v85MergeTrades(...lists) {
-            return v85QualityMergeTrades(...lists);
         }
 
         function v85Checksum(value) {
@@ -972,6 +963,101 @@
             return (parseFloat(simState.balance) || 0) + u;
         }
 
+        /* V8.6 標的智商庫 (Coin Intelligence Matrix) */
+        function getCoinIntelligence(symbol) {
+            const h = (simState.historyArchive || simState.history || []).filter(t => t.symbol === symbol);
+            if (h.length === 0) return { symbol, trades: 0, winRate: 0.5, expectancy: 0, bonus: 0, label: 'NEW' };
+
+            const wins = h.filter(t => (parseFloat(t.pnl) || 0) > 0);
+            const winRate = wins.length / h.length;
+            const totalNet = h.reduce((sum, t) => sum + (parseFloat(t.pnl) || 0), 0);
+            const expectancy = totalNet / h.length;
+
+            let bonus = 0;
+            let label = 'NEUTRAL';
+            if (h.length >= 2) {
+                if (expectancy > 0.5 && winRate >= 0.6) {
+                    bonus = 10;
+                    label = 'HIGH_EDGE';
+                } else if (expectancy < -0.5 || winRate <= 0.3) {
+                    bonus = -15;
+                    label = 'PENALTY';
+                }
+            }
+
+            return { symbol, trades: h.length, winRate, expectancy, bonus, label };
+        }
+
+        function calculateSignalConfidence(c) {
+            if (!c) return { confidence: 0, reasons: ['NO_DATA'], blockers: ['NO_DATA'] };
+            const reasons = [], blockers = [];
+            let confidence = 0;
+            const score = parseFloat(c.score) || 0, rvol = parseFloat(c.rvol) || 0, oi = parseFloat(c.oiVelocity) || 0;
+            const mom = parseFloat(c.momentum1h) || 0, spread = parseFloat(c.spreadPct) || 999;
+
+            confidence += Math.min(30, Math.max(0, (score / 100) * strategyConfig.weights.score));
+            if (rvol >= strategyConfig.minRvol) { confidence += strategyConfig.weights.rvol; reasons.push('RVOL_CONFIRM'); } else blockers.push('LOW_RVOL');
+            if (oi >= strategyConfig.minOiVelocity) { confidence += strategyConfig.weights.oi; reasons.push('OI_CONFIRM'); } else blockers.push('LOW_OI');
+            if (mom >= strategyConfig.preferredMomentumMin && mom <= strategyConfig.preferredMomentumMax) { confidence += strategyConfig.weights.momentum; reasons.push('MOMENTUM_OK'); } else blockers.push('MOMENTUM_OUT_OF_RANGE');
+            if (spread <= strategyConfig.maxSpreadPct) { confidence += strategyConfig.weights.spread; reasons.push('SPREAD_OK'); } else blockers.push('SPREAD_TOO_WIDE');
+
+            // 標的歷史智商庫 (Coin Intelligence Bonus / Penalty)
+            const coinIntel = getCoinIntelligence(c.symbol);
+            if (coinIntel.bonus !== 0) {
+                confidence += coinIntel.bonus;
+                reasons.push(`COIN_INTEL_${coinIntel.label}_${coinIntel.bonus > 0 ? '+' : ''}${coinIntel.bonus}`);
+            }
+
+            if (score < strategyConfig.minScore) blockers.push('LOW_SCORE');
+
+            return { confidence: Math.round(Math.min(100, Math.max(0, confidence))), reasons, blockers };
+        }
+
+        function getOpenExposure() {
+            return (simState.positions || []).reduce((sum, p) => sum + (parseFloat(p.notional) || 0), 0);
+        }
+
+        function calculateRiskBasedNotional(entryPrice) {
+            const equity = Math.max(1, getCurrentEquity());
+            const riskBudget = (equity * riskConfig.riskPerTradePct) / 100;
+            const stopPct = Math.max(0.0001, parseFloat(adaptiveParams.stopLossPct) || 4.5) / 100;
+            const rawNotional = riskBudget / stopPct;
+            const userNotional = Math.max(riskConfig.minMargin * riskConfig.leverage, Math.min(riskConfig.maxMargin * riskConfig.leverage, parseFloat(simState.tradeSize) || 25));
+            return Math.max(1, Math.min(rawNotional, userNotional));
+        }
+
+        function evaluateRiskGate(candidate) {
+            const rs = ensureRiskState();
+            const now = Date.now();
+            const equity = getCurrentEquity();
+            rs.equityPeak = Math.max(parseFloat(rs.equityPeak) || equity, equity);
+            rs.maxDrawdownPct = Math.max(parseFloat(rs.maxDrawdownPct) || 0, ((rs.equityPeak - equity) / Math.max(1, rs.equityPeak)) * 100);
+
+            if (rs.halted) return { allowed: false, reason: rs.haltReason || 'RISK_HALTED' };
+            if (currentMarketRegime === 'RISK_OFF') return { allowed: false, reason: 'RISK_OFF' };
+            if (now < (parseInt(rs.cooldownUntil) || 0)) return { allowed: false, reason: 'SYSTEM_COOLDOWN' };
+            
+            // 幣種專屬停損冷卻檢查 (解決 BLAST 連續進場接刀缺陷)
+            const symCooldown = rs.cooldownBySymbol ? rs.cooldownBySymbol[candidate.symbol] : 0;
+            if (symCooldown && now < symCooldown) {
+                const remainingMin = Math.ceil((symCooldown - now) / 60000);
+                return { allowed: false, reason: `SYMBOL_COOLDOWN_${candidate.symbol}_${remainingMin}M` };
+            }
+
+            if ((parseFloat(rs.dailyRealizedPnl) || 0) <= -Math.abs(((parseFloat(rs.dayStartEquity) || equity) * riskConfig.maxDailyLossPct) / 100)) return { allowed: false, reason: 'DAILY_LOSS_LIMIT' };
+            if ((parseInt(rs.consecutiveLosses) || 0) >= riskConfig.maxConsecutiveLosses) return { allowed: false, reason: 'CONSECUTIVE_LOSS_LIMIT' };
+            if ((parseFloat(rs.maxDrawdownPct) || 0) >= riskConfig.maxDrawdownPct) return { allowed: false, reason: 'MAX_DRAWDOWN_LIMIT' };
+            if (simState.positions.length >= simState.maxPositions) return { allowed: false, reason: 'MAX_POSITIONS' };
+
+            const confidence = calculateSignalConfidence(candidate);
+            if (confidence.confidence < strategyConfig.minConfidence || confidence.blockers.length > 0) return { allowed: false, reason: 'SIGNAL_GATE', confidence };
+
+            const projectedExposure = getOpenExposure() + calculateRiskBasedNotional(parseFloat(candidate.lastPrice) || 0);
+            if (projectedExposure > (equity * riskConfig.maxExposurePct) / 100) return { allowed: false, reason: 'MAX_EXPOSURE', confidence };
+
+            return { allowed: true, reason: 'OK', confidence };
+        }
+
         function recordRiskOutcome(trade, shouldPersist = true) {
             const rs = ensureRiskState();
             const pnl = parseFloat(trade.pnl) || 0;
@@ -1150,16 +1236,6 @@
                 console.warn('V8.5 Safe Migration failed; originals were not intentionally cleared:', err);
             }
         }
-
-        const V85_SAVE_REASON = Object.freeze({
-            UI_STATE: 'UI_STATE',
-            SETTINGS: 'SETTINGS',
-            TRADE_CLOSE: 'TRADE_CLOSE',
-            MIGRATION: 'MIGRATION',
-            IMPORT: 'IMPORT',
-            CLOUD_MERGE: 'CLOUD_MERGE',
-            RESET: 'RESET'
-        });
 
         function saveToStorage(syncCloud = true, isMajorTransaction = false) {
             try {
@@ -1487,6 +1563,7 @@
                 regimeAtEntry: currentMarketRegime
             });
 
+            // Use hardened quality merge
             simState.historyArchive = v85QualityMergeTrades(simState.historyArchive || [], [trade]);
             simState.history = simState.historyArchive.slice(0, 300);
 
@@ -1876,9 +1953,9 @@
 
         function v85AuditKey(t) {
             if (!t) return 'UNCLASSIFIED';
+            if (typeof t.strategy === 'string' && t.strategy.length > 0) return t.strategy;
             if (typeof t.reason === 'string' && t.reason.length > 0) return t.reason;
             if (typeof t.closeReason === 'string' && t.closeReason.length > 0) return t.closeReason;
-            if (typeof t.strategy === 'string' && t.strategy.length > 0) return t.strategy;
             if (typeof t.signalType === 'string' && t.signalType.length > 0) return t.signalType;
             if (typeof t.grade === 'string' && t.grade.length > 0) return `GRADE_${t.grade}`;
             return 'UNCLASSIFIED';
@@ -2228,6 +2305,7 @@
                 const cloudHist = cloudState.historyArchive || cloudState.history || [];
                 const merged = v85QualityMergeTrades(localHist, cloudHist);
 
+                // 安全合併進行中持倉：避免雲端推送覆蓋本機剛開啟的倉位
                 const closedTradeIds = new Set(merged.map(t => t.id || t.tradeId));
                 const posMap = new Map();
                 (cloudState.positions || []).forEach(p => {
