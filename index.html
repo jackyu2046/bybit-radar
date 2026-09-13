@@ -439,22 +439,6 @@
         </div>
     </div>
 
-    <!-- Gemini 體檢彈窗 -->
-    <div id="geminiAuditModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
-        <div class="bg-crypto-card border border-crypto-border rounded-xl p-5 max-w-md w-full space-y-3 text-xs font-sans">
-            <div class="flex items-center justify-between border-b border-crypto-border pb-3">
-                <h3 class="text-sm font-bold text-white flex items-center gap-1.5">✨ Gemini AI 策略體檢</h3>
-                <button onclick="closeGeminiAuditModal()" class="text-slate-400 hover:text-white">✕</button>
-            </div>
-            <div id="geminiReportText" class="text-slate-300 leading-relaxed font-mono text-[11px] whitespace-pre-wrap bg-slate-900 p-3 rounded-lg border border-crypto-border">
-                點擊下方按鈕，AI 將讀取最新平倉明細與手續費損耗進行多維度歸因分析。
-            </div>
-            <button onclick="runGeminiAuditReport()" class="w-full py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold rounded-lg transition">
-                執行 AI 歸因體檢
-            </button>
-        </div>
-    </div>
-
     <!-- V8.5-A2 Performance Audit -->
     <div id="performanceAuditModal" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
       <div class="bg-crypto-card border border-crypto-border rounded-xl p-5 max-w-5xl w-full max-h-[90vh] overflow-y-auto space-y-4 text-xs font-sans">
@@ -469,46 +453,6 @@
         </div>
         <div class="bg-slate-900/60 border border-crypto-border rounded-lg p-4"><h4 class="font-bold text-white mb-2">🧠 Audit Conclusion</h4><div id="performanceAuditConclusion" class="text-slate-300 leading-relaxed font-sans"></div></div>
         <div class="flex justify-end gap-2"><button onclick="exportPerformanceAudit()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-lg">匯出 JSON</button><button onclick="closePerformanceAudit()" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-lg">關閉</button></div>
-      </div>
-    </div>
-
-    <!-- V8.6-A1.1 Research / Shadow Dashboard -->
-    <div id="researchDashboardModal" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 hidden p-4 flex items-center justify-center">
-      <div class="bg-crypto-card border border-crypto-border rounded-xl p-5 max-w-6xl w-full max-h-[90vh] overflow-y-auto space-y-4 text-xs">
-        <div class="flex items-center justify-between border-b border-crypto-border pb-3">
-          <div><h3 class="text-base font-bold text-white">🔬 V8.6-A1.1 Research Dataset & Shadow Lifecycle</h3><p class="text-slate-400 mt-1">研究樣本與執行交易完全分離；Shadow Trade 不影響餘額、風控或真實持倉。</p></div>
-          <button onclick="closeResearchDashboard()" class="text-slate-400 hover:text-white text-lg">✕</button>
-        </div>
-        <div id="researchSummary" class="grid grid-cols-2 md:grid-cols-6 gap-3"></div>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div class="bg-slate-900/60 border border-crypto-border rounded-lg p-4"><h4 class="font-bold text-white mb-2">Score / Sample Distribution</h4><div id="researchDistribution" class="space-y-2"></div></div>
-          <div class="bg-slate-900/60 border border-crypto-border rounded-lg p-4"><h4 class="font-bold text-white mb-2">Research Performance</h4><div id="researchPerformance" class="space-y-2"></div></div>
-        </div>
-        <div class="bg-slate-900/60 border border-crypto-border rounded-lg p-4"><h4 class="font-bold text-white mb-2">Active Shadow Trades</h4><div id="researchActive" class="space-y-2"></div></div>
-        <div class="flex justify-between items-center gap-2 flex-wrap">
-          <label class="flex items-center gap-2 text-slate-300"><input id="researchEnabledToggle" type="checkbox" onchange="setResearchEnabled(this.checked)"> 啟用 Research / Shadow Track</label>
-          <div class="flex gap-2"><button onclick="exportResearchDataset()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-lg">匯出 Research JSON</button><button onclick="closeResearchDashboard()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg">關閉</button></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- V8.6-A2.1 Calibration Dashboard Modal -->
-    <div id="calibrationDashboardModal" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-[60] hidden p-4 flex items-center justify-center">
-      <div class="bg-crypto-card border border-crypto-border rounded-xl p-5 max-w-6xl w-full max-h-[92vh] overflow-y-auto text-xs space-y-4">
-        <div class="flex items-center justify-between border-b border-crypto-border pb-3">
-          <div><h3 class="text-base font-bold text-white">🧠 V8.6-A2.1 Edge Discovery & Calibration</h3>
-          <p class="text-slate-400 mt-1">Research → Shadow → Archive → Unified Dataset → Calibration。系統不會自動修改實盤參數。</p></div>
-          <button onclick="closeCalibrationDashboard()" class="text-slate-400 hover:text-white text-lg">✕</button>
-        </div>
-        <div id="calibrationSummary" class="grid grid-cols-2 md:grid-cols-6 gap-3"></div>
-        <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
-          <div class="bg-slate-900/60 border border-crypto-border rounded-lg p-4"><h4 class="font-bold text-white mb-3">📊 Score Bucket</h4><div id="calibrationBuckets"></div></div>
-          <div class="bg-slate-900/60 border border-crypto-border rounded-lg p-4"><h4 class="font-bold text-white mb-3">🌐 Regime Edge</h4><div id="calibrationRegimes"></div></div>
-          <div class="bg-slate-900/60 border border-crypto-border rounded-lg p-4"><h4 class="font-bold text-white mb-3">🧩 Strategy Edge</h4><div id="calibrationStrategies"></div></div>
-          <div class="bg-slate-900/60 border border-crypto-border rounded-lg p-4"><h4 class="font-bold text-white mb-3">🎯 Recommendation / NO EDGE Guard</h4><div id="calibrationRecommendation"></div></div>
-        </div>
-        <div class="bg-slate-900/60 border border-crypto-border rounded-lg p-4"><h4 class="font-bold text-white mb-2">⚠️ Dataset Quality</h4><div id="calibrationQuality"></div></div>
-        <div class="flex justify-end gap-2"><button onclick="exportCalibrationReport()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-lg">Export JSON</button><button onclick="closeCalibrationDashboard()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg">關閉</button></div>
       </div>
     </div>
 
@@ -527,24 +471,19 @@
 
     <script>
         /* =========================================================
-           BYBIT RADAR V8.6-A2.2.1 — DATA SEGMENTATION & EDGE ATTRIBUTION
-           整合: 資料防護 + 統一撮合 (TP1/TP2/Trailing) + 幣種智商庫 + Strategy Lab
+           BYBIT RADAR V8.6-A2.2.2 — STORAGE DECOUPLING & ROBUST ENGINE
+           徹底根治 LocalStorage Quota 5MB 膨脹：
+           1. 移除無益的 Staging 翻倍寫入
+           2. simState 與 tradeArchive / researchArchive 完全解耦儲存
+           3. 自動常駐空間瘦身，保證資料永不遺失且不超額
         ========================================================= */
         const STORAGE_KEY_SIM = 'bybit_radar_sim_v82';
         const V85_SCHEMA_VERSION = '8.6-INTELLIGENCE';
         const V85_ARCHIVE_KEY = 'bybit_radar_trade_archive_v85';
-        const V85_BACKUP_PREFIX = 'bybit_radar_v85_migration_backup_';
-        const V85_MIGRATION_MANIFEST_KEY = 'bybit_radar_v85_migration_manifest';
+        const V86_RESEARCH_KEY = 'bybit_radar_research_archive_v86';
         const STORAGE_KEY_ROOM = 'bybit_radar_room_id_v2';
-        const V85_MAX_ARCHIVE = 500;
-
-        const LEGACY_SIM_KEYS = [
-            STORAGE_KEY_SIM,
-            'bybit_radar_sim_v81',
-            'bybit_radar_sim_state_v3',
-            'bybit_radar_sim_state_v2',
-            'bybit_radar_sim_state_v1'
-        ];
+        const MAX_ARCHIVE_RECORDS = 300;
+        const MAX_RESEARCH_RECORDS = 200;
 
         let allMarketPrices = new Map();
         let rawTickers = [];
@@ -566,7 +505,7 @@
             history: [],
             historyArchive: [],
             riskState: null,
-            research: { enabled:true, shadowNotional:10, timeoutMinutes:240, active:[], archive:[], seenSignals:{}, version:'V8.6-A2.2' }
+            research: { enabled: true, shadowNotional: 10, timeoutMinutes: 240, active: [], archive: [], seenSignals: {}, version: 'V8.6-A2.2' }
         };
 
         let adaptiveParams = {
@@ -621,7 +560,7 @@
             trailingPct: [5.0, 6.5, 8.0]
         };
 
-        /* ================= V8.5 交易資料防護與無損聚合 ================= */
+        /* ================= 儲存核心：極致解耦與自動防爆 ================= */
         function v85Number(value, fallback = 0) {
             const n = parseFloat(value);
             return Number.isFinite(n) ? n : fallback;
@@ -634,6 +573,11 @@
                 if (Number.isFinite(parsed)) return parsed;
             }
             return fallback;
+        }
+
+        function v85SafeJsonParse(raw) {
+            if (!raw || typeof raw !== 'string') return null;
+            try { return JSON.parse(raw); } catch (_) { return null; }
         }
 
         function v85StableTradeId(trade) {
@@ -707,119 +651,7 @@
 
             normalized.tradeId = v85StableTradeId(normalized);
             normalized.id = normalized.tradeId;
-
             return normalized;
-        }
-
-        function v85SafeJsonParse(raw) {
-            if (!raw || typeof raw !== 'string') return null;
-            try { return JSON.parse(raw); } catch (_) { return null; }
-        }
-
-        function v85PruneMigrationBackups(keepCount = 1) {
-            try {
-                const keys = Object.keys(localStorage)
-                    .filter(k => k.startsWith(V85_BACKUP_PREFIX))
-                    .sort();
-                while (keys.length > keepCount) {
-                    localStorage.removeItem(keys.shift());
-                }
-            } catch (err) {
-                console.warn('Migration backup prune failed:', err);
-            }
-        }
-
-        function v85EmergencyStorageCleanup() {
-            try {
-                Object.keys(localStorage).forEach(k => {
-                    if (k.includes('__staging') || k.startsWith(V85_RECOVERY_PREFIX) || k.startsWith(V85_BACKUP_PREFIX)) {
-                        localStorage.removeItem(k);
-                    }
-                });
-                if (Array.isArray(simState.historyArchive) && simState.historyArchive.length > 500) {
-                    simState.historyArchive = simState.historyArchive.slice(0, 500);
-                }
-                if (simState.research && Array.isArray(simState.research.archive) && simState.research.archive.length > 500) {
-                    simState.research.archive = simState.research.archive.slice(0, 500);
-                }
-                console.info('🧹 已成功執行 LocalStorage 緊急空間清理');
-            } catch (e) {
-                console.warn('緊急清理失敗:', e);
-            }
-        }
-
-        function v85CreateMigrationBackup(sources, archiveRaw) {
-            const stamp = Date.now();
-            const snapshot = {
-                schemaVersion: V85_SCHEMA_VERSION,
-                createdAt: stamp,
-                reason: 'pre-migration-snapshot',
-                sources,
-                archiveRaw: archiveRaw || null
-            };
-            const key = V85_BACKUP_PREFIX + stamp;
-            try {
-                localStorage.setItem(key, JSON.stringify(snapshot));
-            } catch (e) {
-                v85EmergencyStorageCleanup();
-            }
-            v85PruneMigrationBackups(1);
-            localStorage.setItem(V85_MIGRATION_MANIFEST_KEY, JSON.stringify({
-                lastBackupKey: key,
-                createdAt: stamp,
-                sourceKeys: sources.map(x => x.key),
-                migrated: false
-            }));
-            return key;
-        }
-
-        function v85VerifyMigration(state, expectedTradeCount) {
-            const archive = Array.isArray(state.historyArchive) ? state.historyArchive : [];
-            const ids = new Set(archive.map(x => x && x.tradeId).filter(Boolean));
-            return archive.length === expectedTradeCount &&
-                   ids.size === archive.length &&
-                   Array.isArray(state.history) &&
-                   state.history.length <= 300;
-        }
-
-        /* ================= V8.5-A1.1 MIGRATION SAFETY HARDENING ================= */
-        const V85_RECOVERY_PREFIX = 'bybit_radar_v85_recovery_';
-
-        function v85DataQuality(trade) {
-            if (!trade || typeof trade !== 'object') return 0;
-            const checks = [
-                ['symbol', v => typeof v === 'string' && v !== 'UNKNOWN'],
-                ['entryPrice', v => Number.isFinite(Number(v)) && Number(v) > 0],
-                ['exitPrice', v => Number.isFinite(Number(v)) && Number(v) > 0],
-                ['openedAt', v => Number.isFinite(Number(v)) && Number(v) > 0],
-                ['closedAtTs', v => Number.isFinite(Number(v)) && Number(v) > 0],
-                ['netPnl', v => Number.isFinite(Number(v))],
-                ['grossPnl', v => Number.isFinite(Number(v))],
-                ['totalFees', v => Number.isFinite(Number(v))],
-                ['mfePct', v => Number.isFinite(Number(v))],
-                ['maePct', v => Number.isFinite(Number(v))],
-                ['reason', v => typeof v === 'string' && v.length > 0],
-                ['fills', v => Array.isArray(v) && v.length > 0]
-            ];
-            return checks.reduce((n, [k, ok]) => n + (ok(trade[k]) ? 1 : 0), 0);
-        }
-
-        function v85MergeRecordPair(a, b) {
-            const na = v85NormalizeTrade(a);
-            const nb = v85NormalizeTrade(b);
-            const qa = v85DataQuality(na);
-            const qb = v85DataQuality(nb);
-            const richer = qb > qa ? nb : na;
-            const poorer = richer === nb ? na : nb;
-
-            const merged = { ...poorer, ...richer };
-            if ((!merged.fills || !merged.fills.length) && (poorer.fills || []).length) merged.fills = poorer.fills;
-            merged.totalFees = Math.max(v85Number(na.totalFees), v85Number(nb.totalFees), v85Number(merged.totalFees));
-            merged.tradeId = na.tradeId;
-            merged.id = richer.id || poorer.id || merged.tradeId;
-            merged.schemaVersion = V85_SCHEMA_VERSION;
-            merged.dataQualityScore = Math.max(qa, qb);
-            return merged;
         }
 
         function v85QualityMergeTrades(...lists) {
@@ -827,11 +659,9 @@
             lists.flat(Infinity).filter(Boolean).forEach(raw => {
                 if (!raw || typeof raw !== 'object') return;
                 const normalized = v85NormalizeTrade(raw);
-                const prev = map.get(normalized.tradeId);
-                map.set(normalized.tradeId, prev ? v85MergeRecordPair(prev, normalized) : {
-                    ...normalized,
-                    dataQualityScore: v85DataQuality(normalized)
-                });
+                if (!map.has(normalized.tradeId)) {
+                    map.set(normalized.tradeId, normalized);
+                }
             });
             return Array.from(map.values()).sort((a, b) => {
                 const dt = v85Timestamp(b.closedAtTs ?? b.closedAt, 0) - v85Timestamp(a.closedAtTs ?? a.closedAt, 0);
@@ -839,171 +669,165 @@
             });
         }
 
-        function v85MergeTrades(...lists) {
-            return v85QualityMergeTrades(...lists);
-        }
-
-        function v85Checksum(value) {
-            const s = typeof value === 'string' ? value : JSON.stringify(value);
-            let h = 2166136261;
-            for (let i = 0; i < s.length; i++) {
-                h ^= s.charCodeAt(i);
-                h = Math.imul(h, 16777619);
-            }
-            return (h >>> 0).toString(16);
-        }
-
-        function v85PruneRecoveryPoints(keepCount = 1) {
+        // 強力清理所有過往殘留垃圾，徹底釋放 LocalStorage
+        function v85PurgeLegacyStorage() {
             try {
-                const keys = Object.keys(localStorage)
-                    .filter(k => k.startsWith(V85_RECOVERY_PREFIX))
-                    .sort();
-                while (keys.length > keepCount) {
-                    const oldest = keys.shift();
-                    localStorage.removeItem(oldest);
+                const keysToRemove = [];
+                for (let i = 0; i < localStorage.length; i++) {
+                    const k = localStorage.key(i);
+                    if (!k) continue;
+                    if (k.includes('__staging') || 
+                        k.startsWith('bybit_radar_v85_recovery_') || 
+                        k.startsWith('bybit_radar_v85_migration_backup_') ||
+                        k === 'bybit_radar_sim_v81' ||
+                        k === 'bybit_radar_sim_state_v3' ||
+                        k === 'bybit_radar_sim_state_v2' ||
+                        k === 'bybit_radar_sim_state_v1') {
+                        keysToRemove.push(k);
+                    }
                 }
-            } catch (_) {}
+                keysToRemove.forEach(k => localStorage.removeItem(k));
+                if (keysToRemove.length > 0) {
+                    console.info(`🧹 已自動清除 ${keysToRemove.length} 個舊殘留/暫存儲存鍵，空間已完全解放。`);
+                }
+            } catch (e) {
+                console.warn('Purge failed:', e);
+            }
         }
 
-        function v85CreateRecoveryPoint(label, payload) {
-            const stamp = Date.now();
-            const key = V85_RECOVERY_PREFIX + stamp;
-            const record = {
-                schemaVersion: V85_SCHEMA_VERSION,
-                createdAt: stamp,
-                label,
-                checksum: v85Checksum(payload),
-                payload
-            };
+        /* 儲存核心：解耦寫入，杜絕在主狀態內重複包裹巨大封存陣列 */
+        function saveToStorage(syncCloud = true) {
             try {
-                localStorage.setItem(key, JSON.stringify(record));
-                v85PruneRecoveryPoints(1);
-            } catch (err) {
-                console.warn('Recovery snapshot skipped (quota limit):', err);
-            }
-            return key;
-        }
+                v85PurgeLegacyStorage();
+                ensureResearchState();
 
-        function v85AtomicWrite(state, createRecovery = false) {
-            const txKey = STORAGE_KEY_SIM + '__staging';
-            const archiveKey = V85_ARCHIVE_KEY + '__staging';
+                // 1. 維護並截斷歷史
+                const merged = v85QualityMergeTrades(simState.historyArchive || [], simState.history || []);
+                simState.historyArchive = merged.slice(0, MAX_ARCHIVE_RECORDS);
+                simState.history = simState.historyArchive.slice(0, 50); // 主狀態只放最近 50 筆供快速渲染
 
-            if (Array.isArray(state.historyArchive) && state.historyArchive.length > 500) {
-                state.historyArchive = state.historyArchive.slice(0, 500);
-            }
-            if (state.research && Array.isArray(state.research.archive) && state.research.archive.length > 500) {
-                state.research.archive = state.research.archive.slice(0, 500);
-            }
-
-            let stateRaw = JSON.stringify(state);
-            let archiveRaw = JSON.stringify(state.historyArchive || []);
-
-            try {
-                // Stage
-                try {
-                    localStorage.setItem(txKey, stateRaw);
-                    localStorage.setItem(archiveKey, archiveRaw);
-                } catch (e) {
-                    if (e.name === 'QuotaExceededError' || e.code === 22) {
-                        v85EmergencyStorageCleanup();
-                        stateRaw = JSON.stringify(state);
-                        archiveRaw = JSON.stringify(state.historyArchive || []);
-                        localStorage.setItem(txKey, stateRaw);
-                        localStorage.setItem(archiveKey, archiveRaw);
-                    } else {
-                        throw e;
+                // 2. 清理 Research 訊號快取
+                if (simState.research) {
+                    if (Array.isArray(simState.research.archive) && simState.research.archive.length > MAX_RESEARCH_RECORDS) {
+                        simState.research.archive = simState.research.archive.slice(0, MAX_RESEARCH_RECORDS);
+                    }
+                    const seenKeys = Object.keys(simState.research.seenSignals || {});
+                    if (seenKeys.length > 200) {
+                        const cutoff = Date.now() - 43200000; // 12 小時過期
+                        seenKeys.forEach(k => {
+                            if (simState.research.seenSignals[k] < cutoff) delete simState.research.seenSignals[k];
+                        });
                     }
                 }
 
-                let recoveryKey = null;
-                if (createRecovery) {
-                    recoveryKey = v85CreateRecoveryPoint('pre-commit', {
-                        simStateRaw: localStorage.getItem(STORAGE_KEY_SIM),
-                        archiveRaw: localStorage.getItem(V85_ARCHIVE_KEY)
-                    });
+                // 3. 【關鍵解耦】：建立輕量化 simState（剝離 historyArchive 與 research.archive）
+                const decoupledSimState = {
+                    balance: simState.balance,
+                    initialBalance: simState.initialBalance,
+                    autoTrade: simState.autoTrade,
+                    maxPositions: simState.maxPositions,
+                    tradeSize: simState.tradeSize,
+                    positions: simState.positions,
+                    history: simState.history, // 僅 50 筆
+                    riskState: simState.riskState,
+                    schemaVersion: V85_SCHEMA_VERSION,
+                    research: {
+                        enabled: simState.research?.enabled ?? true,
+                        shadowNotional: simState.research?.shadowNotional ?? 10,
+                        timeoutMinutes: simState.research?.timeoutMinutes ?? 240,
+                        active: simState.research?.active || [],
+                        seenSignals: simState.research?.seenSignals || {},
+                        version: 'V8.6-A2.2'
+                    }
+                };
+
+                // 4. 分鍵獨立寫入，體積極小，永不超出 5MB
+                localStorage.setItem(STORAGE_KEY_SIM, JSON.stringify(decoupledSimState));
+                localStorage.setItem(V85_ARCHIVE_KEY, JSON.stringify(simState.historyArchive));
+                if (simState.research && Array.isArray(simState.research.archive)) {
+                    localStorage.setItem(V86_RESEARCH_KEY, JSON.stringify(simState.research.archive));
                 }
 
-                // Commit
-                try {
-                    localStorage.setItem(V85_ARCHIVE_KEY, archiveRaw);
-                    localStorage.setItem(STORAGE_KEY_SIM, stateRaw);
-                } catch (e) {
-                    if (e.name === 'QuotaExceededError' || e.code === 22) {
-                        v85EmergencyStorageCleanup();
-                        localStorage.setItem(V85_ARCHIVE_KEY, JSON.stringify(state.historyArchive || []));
-                        localStorage.setItem(STORAGE_KEY_SIM, JSON.stringify(state));
-                    } else {
-                        throw e;
+                if (syncCloud && firestoreDb) pushToCloudForce();
+            } catch (e) {
+                console.warn('V8.6 解耦儲存失敗:', e);
+                // 極限防護：若瀏覽器依然爆掉，縮減封存長度後直接重試
+                if (e.name === 'QuotaExceededError' || e.code === 22) {
+                    if (simState.historyArchive.length > 100) {
+                        simState.historyArchive = simState.historyArchive.slice(0, 100);
+                        localStorage.setItem(V85_ARCHIVE_KEY, JSON.stringify(simState.historyArchive));
+                    }
+                }
+            }
+        }
+
+        function loadFromStorage() {
+            try {
+                v85PurgeLegacyStorage();
+
+                // 1. 讀取主狀態
+                const rawSim = localStorage.getItem(STORAGE_KEY_SIM);
+                if (rawSim) {
+                    const parsedSim = v85SafeJsonParse(rawSim);
+                    if (parsedSim && typeof parsedSim === 'object') {
+                        simState = { ...simState, ...parsedSim };
                     }
                 }
 
-                return recoveryKey;
-            } finally {
-                // 確保無論寫入成功或失敗，都不留存 Ghost Staging 垃圾
-                localStorage.removeItem(txKey);
-                localStorage.removeItem(archiveKey);
-            }
-        }
+                // 2. 獨立讀取歷史封存
+                const rawArchive = localStorage.getItem(V85_ARCHIVE_KEY);
+                const parsedArchive = v85SafeJsonParse(rawArchive);
+                const loadedArchive = Array.isArray(parsedArchive) ? parsedArchive : [];
+                simState.historyArchive = v85QualityMergeTrades(loadedArchive, simState.history || []);
+                simState.history = simState.historyArchive.slice(0, 50);
 
-        function v85RestoreLatestRecoveryPoint() {
-            try {
-                const keys = Object.keys(localStorage)
-                    .filter(k => k.startsWith(V85_RECOVERY_PREFIX))
-                    .sort()
-                    .reverse();
-                if (!keys.length) return false;
-
-                const rp = v85SafeJsonParse(localStorage.getItem(keys[0]));
-                if (!rp?.payload) return false;
-
-                const stateRaw = rp.payload.simStateRaw;
-                const archiveRaw = rp.payload.archiveRaw;
-
-                let restoredState = null;
-                if (typeof stateRaw === 'string') {
-                    const parsed = v85SafeJsonParse(stateRaw);
-                    if (!parsed || typeof parsed !== 'object') return false;
-                    localStorage.setItem(STORAGE_KEY_SIM, stateRaw);
-                    restoredState = parsed;
-                }
-                if (typeof archiveRaw === 'string') {
-                    const parsedArchive = v85SafeJsonParse(archiveRaw);
-                    if (!Array.isArray(parsedArchive)) return false;
-                    localStorage.setItem(V85_ARCHIVE_KEY, archiveRaw);
-                    if (restoredState) restoredState.historyArchive = parsedArchive;
+                // 3. 獨立讀取 Research Archive
+                const rawResearch = localStorage.getItem(V86_RESEARCH_KEY);
+                const parsedResearch = v85SafeJsonParse(rawResearch);
+                ensureResearchState();
+                if (Array.isArray(parsedResearch)) {
+                    simState.research.archive = parsedResearch;
                 }
 
-                if (restoredState) {
-                    simState = restoredState;
-                    ensureRiskState();
-                    renderSimPositions();
-                    updateSimHeaderStats();
-                }
-                return true;
+                // 4. 恢復正規化持倉
+                simState.positions = (simState.positions || []).map(pos => {
+                    const entryPrice = v85Number(pos.entryPrice, 0.0001);
+                    const currentPrice = v85Number(pos.currentPrice, entryPrice);
+                    const notional = v85Number(pos.notional, 25.0);
+                    const qty = v85Number(pos.qty, notional / Math.max(entryPrice, 0.0001));
+                    return {
+                        ...pos,
+                        entryPrice,
+                        currentPrice,
+                        qty,
+                        originalQty: v85Number(pos.originalQty, qty),
+                        remainingQty: v85Number(pos.remainingQty, qty),
+                        notional,
+                        stopLoss: v85Number(pos.stopLoss, entryPrice * 0.955),
+                        tp1: v85Number(pos.tp1, entryPrice * 1.042),
+                        tp2: v85Number(pos.tp2, entryPrice * 1.10),
+                        realizedNetPnl: v85Number(pos.realizedNetPnl, v85Number(pos.realizedPnl)),
+                        totalFees: v85Number(pos.totalFees, notional * executionConfig.takerFeeRate),
+                        fills: Array.isArray(pos.fills) ? pos.fills : [],
+                        tp1Reached: !!pos.tp1Reached,
+                        tp2Reached: !!pos.tp2Reached,
+                        isMoonBag: !!pos.isMoonBag,
+                        highestPrice: v85Number(pos.highestPrice, entryPrice),
+                        lowestPrice: v85Number(pos.lowestPrice, entryPrice),
+                        mfePct: v85Number(pos.mfePct),
+                        maePct: v85Number(pos.maePct),
+                        trailingPct: v85Number(pos.trailingPct, adaptiveParams.trailingPct),
+                        trailingStop: v85Number(pos.trailingStop, 0) || null,
+                        exitFeesPaid: v85Number(pos.exitFeesPaid),
+                        realizedGrossPnl: v85Number(pos.realizedGrossPnl),
+                        openTime: v85Timestamp(pos.openTime ?? pos.openedAt, Date.now())
+                    };
+                });
+
+                ensureRiskState();
             } catch (err) {
-                console.warn('V8.5 recovery restore failed:', err);
-                return false;
+                console.warn('V8.6 載入失敗:', err);
             }
-        }
-
-        function v85GetMigrationHealth(state) {
-            const archive = Array.isArray(state?.historyArchive) ? state.historyArchive : [];
-            const uniqueIds = new Set(archive.map(t => t?.tradeId).filter(Boolean)).size;
-            const avgQuality = archive.length
-                ? archive.reduce((n, t) => n + v85DataQuality(t), 0) / archive.length
-                : 0;
-            return {
-                tradeCount: archive.length,
-                uniqueIds,
-                duplicateFree: uniqueIds === archive.length,
-                averageQuality: Number(avgQuality.toFixed(2)),
-                healthScore: Math.round(Math.min(100,
-                    (uniqueIds === archive.length ? 35 : 0) +
-                    (Array.isArray(state?.history) && state.history.length <= 300 ? 15 : 0) +
-                    Math.min(30, avgQuality * 2.5) +
-                    (state?.schemaVersion === V85_SCHEMA_VERSION ? 20 : 0)
-                ))
-            };
         }
 
         function getTradingDayKey(ts = Date.now()) { return new Date(ts).toISOString().slice(0, 10); }
@@ -1048,7 +872,6 @@
             return (parseFloat(simState.balance) || 0) + u;
         }
 
-        /* V8.6 標的智商庫 (Coin Intelligence Matrix) */
         function getCoinIntelligence(symbol) {
             const h = (simState.historyArchive || simState.history || []).filter(t => t.symbol === symbol);
             if (h.length === 0) return { symbol, trades: 0, winRate: 0.5, expectancy: 0, bonus: 0, label: 'NEW' };
@@ -1093,7 +916,6 @@
             }
 
             if (score < strategyConfig.minScore) blockers.push('LOW_SCORE');
-
             return { confidence: Math.round(Math.min(100, Math.max(0, confidence))), reasons, blockers };
         }
 
@@ -1216,147 +1038,6 @@
             return high * (1 - trailPct / 100);
         }
 
-        /* 儲存載入與資料庫無損整合 — V8.5-A1 FINAL */
-        function loadFromStorage() {
-            try {
-                const existingManifest = v85SafeJsonParse(localStorage.getItem(V85_MIGRATION_MANIFEST_KEY));
-                const alreadyMigrated = !!(existingManifest && existingManifest.migrated === true && existingManifest.schemaVersion === V85_SCHEMA_VERSION);
-
-                const legacyStates = [];
-                LEGACY_SIM_KEYS.forEach(key => {
-                    const raw = localStorage.getItem(key);
-                    const state = v85SafeJsonParse(raw);
-                    if (state && typeof state === 'object') legacyStates.push({ key, raw, state });
-                });
-
-                const archiveRaw = localStorage.getItem(V85_ARCHIVE_KEY);
-                const archiveState = v85SafeJsonParse(archiveRaw);
-                const backupKey = alreadyMigrated ? (existingManifest.lastBackupKey || null) : v85CreateMigrationBackup(legacyStates, archiveRaw);
-
-                const primary = legacyStates.find(x => x.key === STORAGE_KEY_SIM) || legacyStates[0];
-                const mergedState = primary ? { ...simState, ...primary.state } : { ...simState };
-
-                const historySources = [
-                    Array.isArray(archiveState) ? archiveState : [],
-                    ...legacyStates.map(x => Array.isArray(x.state.historyArchive) ? x.state.historyArchive : []),
-                    ...legacyStates.map(x => Array.isArray(x.state.history) ? x.state.history : [])
-                ];
-
-                const mergedHistory = v85QualityMergeTrades(...historySources);
-
-                const positionMap = new Map();
-                legacyStates.slice().reverse().forEach(src => {
-                    const list = Array.isArray(src.state.positions) ? src.state.positions : [];
-                    list.forEach((pos, idx) => {
-                        if (!pos || typeof pos !== 'object') return;
-                        const key = String(pos.id || `${pos.symbol || 'UNKNOWN'}|${pos.openTime || pos.openedAt || idx}`);
-                        positionMap.set(key, pos);
-                    });
-                });
-
-                simState = {
-                    ...mergedState,
-                    schemaVersion: V85_SCHEMA_VERSION,
-                    positions: Array.from(positionMap.values()),
-                    historyArchive: mergedHistory.slice(0, V85_MAX_ARCHIVE),
-                    history: mergedHistory.slice(0, 300)
-                };
-
-                simState.positions = (simState.positions || []).map(pos => {
-                    const entryPrice = v85Number(pos.entryPrice, 0.0001);
-                    const currentPrice = v85Number(pos.currentPrice, entryPrice);
-                    const notional = v85Number(pos.notional, 25.0);
-                    const qty = v85Number(pos.qty, notional / Math.max(entryPrice, 0.0001));
-                    return {
-                        ...pos,
-                        entryPrice,
-                        currentPrice,
-                        qty,
-                        originalQty: v85Number(pos.originalQty, qty),
-                        remainingQty: v85Number(pos.remainingQty, qty),
-                        notional,
-                        stopLoss: v85Number(pos.stopLoss, entryPrice * 0.955),
-                        tp1: v85Number(pos.tp1, entryPrice * 1.042),
-                        tp2: v85Number(pos.tp2, entryPrice * 1.10),
-                        realizedNetPnl: v85Number(pos.realizedNetPnl, v85Number(pos.realizedPnl)),
-                        totalFees: v85Number(pos.totalFees, notional * executionConfig.takerFeeRate),
-                        fills: Array.isArray(pos.fills) ? pos.fills : [],
-                        tp1Reached: !!pos.tp1Reached,
-                        tp2Reached: !!pos.tp2Reached,
-                        isMoonBag: !!pos.isMoonBag,
-                        highestPrice: v85Number(pos.highestPrice, entryPrice),
-                        lowestPrice: v85Number(pos.lowestPrice, entryPrice),
-                        mfePct: v85Number(pos.mfePct),
-                        maePct: v85Number(pos.maePct),
-                        trailingPct: v85Number(pos.trailingPct, adaptiveParams.trailingPct),
-                        trailingStop: v85Number(pos.trailingStop, 0) || null,
-                        exitFeesPaid: v85Number(pos.exitFeesPaid),
-                        realizedGrossPnl: v85Number(pos.realizedGrossPnl),
-                        openTime: v85Timestamp(pos.openTime ?? pos.openedAt, Date.now())
-                    };
-                });
-
-                ensureRiskState();
-
-                const expectedCount = simState.historyArchive.length;
-                if (!v85VerifyMigration(simState, expectedCount)) {
-                    console.warn('V8.5 migration verification failed; originals preserved. Backup:', backupKey);
-                    return;
-                }
-
-                const recoveryKey = v85AtomicWrite(simState, !alreadyMigrated);
-                const health = v85GetMigrationHealth(simState);
-
-                localStorage.setItem(V85_MIGRATION_MANIFEST_KEY, JSON.stringify({
-                    lastBackupKey: backupKey,
-                    lastRecoveryKey: recoveryKey,
-                    createdAt: Date.now(),
-                    sourceKeys: legacyStates.map(x => x.key),
-                    sourceTradeCount: historySources.reduce((n, x) => n + (Array.isArray(x) ? x.length : 0), 0),
-                    unifiedTradeCount: expectedCount,
-                    migrated: true,
-                    schemaVersion: V85_SCHEMA_VERSION,
-                    health
-                }));
-            } catch (err) {
-                console.warn('V8.5 Safe Migration failed; originals were not intentionally cleared:', err);
-            }
-        }
-
-        const V85_SAVE_REASON = Object.freeze({
-            UI_STATE: 'UI_STATE',
-            SETTINGS: 'SETTINGS',
-            TRADE_CLOSE: 'TRADE_CLOSE',
-            MIGRATION: 'MIGRATION',
-            IMPORT: 'IMPORT',
-            CLOUD_MERGE: 'CLOUD_MERGE',
-            RESET: 'RESET'
-        });
-
-        function saveToStorage(syncCloud = true, isMajorTransaction = false) {
-            try {
-                ensureResearchState();
-                simState.schemaVersion = V85_SCHEMA_VERSION;
-                const merged = v85QualityMergeTrades(simState.historyArchive || [], simState.history || []);
-                simState.historyArchive = merged.slice(0, V85_MAX_ARCHIVE);
-                simState.history = merged.slice(0, 300);
-
-                const recoveryKey = v85AtomicWrite(simState, isMajorTransaction);
-                const health = v85GetMigrationHealth(simState);
-                localStorage.setItem(V85_MIGRATION_MANIFEST_KEY, JSON.stringify({
-                    lastRecoveryKey: recoveryKey,
-                    createdAt: Date.now(),
-                    migrated: true,
-                    schemaVersion: V85_SCHEMA_VERSION,
-                    health
-                }));
-                if (syncCloud && firestoreDb) pushToCloudForce();
-            } catch (e) {
-                console.warn('V8.5 save failed:', e);
-            }
-        }
-
-        /* 時間序列快照比對 */
         function findClosestHistoricalPoint(buffer, targetTime) {
             if (!buffer || buffer.length === 0) return null;
             let closest = null;
@@ -1376,7 +1057,6 @@
             }
 
             buf.push({ timestamp: now, turnover: curTurnover, oi: curOi, price: curPrice });
-
             while (buf.length > 0 && (now - buf[0].timestamp) > MAX_BUFFER_AGE_MS) {
                 buf.shift();
             }
@@ -1449,7 +1129,6 @@
                     gateText.innerText = `大盤: 正常 (${btc1h >= 0 ? '+' : ''}${btc1h.toFixed(1)}%)`;
                 }
             }
-
             return regime;
         }
 
@@ -1468,78 +1147,237 @@
             }
         }
 
-        /* V8.6-A2.2 DATA SEGMENTATION & EDGE ATTRIBUTION */
-        function ensureResearchState(){const d={enabled:true,shadowNotional:10,timeoutMinutes:240,active:[],archive:[],seenSignals:{},version:'V8.6-A2.2'};simState.research=Object.assign(d,simState.research||{});simState.research.active=Array.isArray(simState.research.active)?simState.research.active:[];simState.research.archive=Array.isArray(simState.research.archive)?simState.research.archive:[];simState.research.seenSignals=simState.research.seenSignals||{};return simState.research}
-        function a22n(v,d=0){const n=Number(v);return Number.isFinite(n)?n:d}
-        function a22Bucket(v,c){for(const x of c)if(v>=x[1]&&v<x[2])return x[0];return c[c.length-1][0]}
-        function classifyDirection(c){return a22n(c.momentum1h)>=0?'LONG':'SHORT'}
-        function classifyVolatility(c){const m=Math.abs(a22n(c.momentum1h)),p=Math.abs(a22n(c.price24hPcnt));return(m>=3||p>=8)?'HIGH_VOL':(m>=1||p>=3)?'MED_VOL':'LOW_VOL'}
-        function classifyLiquidity(c){const t=a22n(c.turnover24h),s=a22n(c.spreadPct,.1);return t>=1e7&&s<=.03?'HIGH_LIQ':t>=1e6&&s<=.08?'MED_LIQ':'LOW_LIQ'}
-        function classifyStrategy(c){const m=Math.abs(a22n(c.momentum1h)),r=a22n(c.rvol),oi=a22n(c.oiVelocity),a=a22n(c.oiAcceleration);if(m>=1.5&&r>=1.5&&oi>=.5&&a>=0)return'MOMENTUM_BREAKOUT';if(m>=1&&r>=1&&oi>=.2)return'TREND_CONTINUATION';if(m<1&&r>=.8&&Math.abs(oi)>=.2)return'MEAN_REVERSION';return'MARKET_SIGNAL'}
-        function classifyRegime(){const r=String(currentMarketRegime||'UNKNOWN').toUpperCase();return['RISK_ON','RISK_OFF','TRENDING','CHOPPY'].includes(r)?r:'UNKNOWN'}
-        function buildEntryContext(c){const f={momentum1h:a22n(c.momentum1h),rvol:a22n(c.rvol),oiVelocity:a22n(c.oiVelocity),oiAcceleration:a22n(c.oiAcceleration),spreadPct:a22n(c.spreadPct),fundingRate:a22n(c.fundingRate),turnover24h:a22n(c.turnover24h),price24hPcnt:a22n(c.price24hPcnt)};return{schema:'A2.2',capturedAt:Date.now(),score:a22n(c.score),grade:c.grade||'C',direction:classifyDirection(c),regime:classifyRegime(),strategy:classifyStrategy(c),volatility:classifyVolatility(c),liquidity:classifyLiquidity(c),scoreBucket:a22Bucket(a22n(c.score),[['<50',-Infinity,50],['50-59',50,60],['60-69',60,70],['70-79',70,80],['80-89',80,90],['90-100',90,Infinity]]),momentumBucket:a22Bucket(Math.abs(f.momentum1h),[['LOW',0,1],['MED',1,3],['HIGH',3,Infinity]]),rvolBucket:a22Bucket(f.rvol,[['LOW',-Infinity,1],['NORMAL',1,1.5],['HIGH',1.5,3],['EXTREME',3,Infinity]]),oiBucket:a22Bucket(f.oiVelocity,[['NEGATIVE',-Infinity,0],['POSITIVE',0,.5],['STRONG',.5,Infinity]]),spreadBucket:a22Bucket(f.spreadPct,[['TIGHT',-Infinity,.03],['NORMAL',.03,.08],['WIDE',.08,Infinity]]),features:f}}
-        function researchKey(c){return `${c.symbol}|${Math.floor(Date.now()/900000)}|${Math.floor(a22n(c.score)/5)*5}|${classifyDirection(c)}`}
-        function collectResearchSignals(list){const r=ensureResearchState();if(!r.enabled)return;list.forEach(c=>{const k=researchKey(c);if(r.seenSignals[k])return;const e=a22n(c.lastPrice);if(e<=0)return;const x=buildEntryContext(c),d=x.direction,sl=a22n(adaptiveParams.stopLossPct,4.5),tp=a22n(adaptiveParams.tp2Pct,10),now=Date.now(),s={id:'shadow_'+now+'_'+Math.random().toString(36).slice(2,7),source:'RESEARCH_SHADOW',lifecycle:'ACTIVE',openedAt:now,symbol:c.symbol,direction:d,entryPrice:e,currentPrice:e,notional:a22n(r.shadowNotional,10),score:x.score,grade:x.grade,strategy:x.strategy,regime:x.regime,entryContext:x,tp2:d==='LONG'?e*(1+tp/100):e*(1-tp/100),stopLoss:d==='LONG'?e*(1-sl/100):e*(1+sl/100),timeoutAt:now+a22n(r.timeoutMinutes,240)*60000,mfePct:0,maePct:0};r.active.push(s);r.seenSignals[k]=now});Object.keys(r.seenSignals).forEach(k=>{if(Date.now()-r.seenSignals[k]>86400000)delete r.seenSignals[k]})}
-        function closeShadowTrade(s,p,reason){const pct=(s.direction==='LONG'?(p-s.entryPrice):(s.entryPrice-p))/s.entryPrice;s.exitPrice=p;s.currentPrice=p;s.closeReason=reason;s.closedAt=Date.now();s.grossPnl=pct*s.notional;s.fees=0;s.netPnl=s.grossPnl;s.pnl=s.netPnl;s.lifecycle='CLOSED';const r=ensureResearchState();r.active=r.active.filter(x=>x.id!==s.id);r.archive.unshift(s);if(r.archive.length>5000)r.archive.length=5000; try{saveToStorage(false,false)}catch(e){console.warn('Research archive save failed',e)}}
-        function updateShadowTrades(){const r=ensureResearchState();[...r.active].forEach(s=>{const p=a22n(allMarketPrices.get(s.symbol));if(p<=0)return;s.currentPrice=p;const m=(s.direction==='LONG'?(p-s.entryPrice):(s.entryPrice-p))/s.entryPrice*100;s.mfePct=Math.max(s.mfePct||0,m);s.maePct=Math.min(s.maePct||0,m);if(Date.now()>=s.timeoutAt)return closeShadowTrade(s,p,'TIMEOUT');if(s.direction==='LONG'?(p<=s.stopLoss||p>=s.tp2):(p>=s.stopLoss||p<=s.tp2))return closeShadowTrade(s,p,p===s.stopLoss?'SL':'TP2')})}
-        function a22Normalize(t){const c=t.entryContext||{};return{...t,_pnl:a22n(t.netPnl,a22n(t.pnl)),_score:a22n(t.score,t.signalScore||c.score),_direction:t.direction||c.direction||'UNKNOWN',_regime:t.regimeAtEntry||t.regime||c.regime||'UNKNOWN',_strategy:t.strategy||t.strategyName||c.strategy||'UNCLASSIFIED',_volatility:c.volatility||'UNKNOWN',_liquidity:c.liquidity||'UNKNOWN',_rvolBucket:c.rvolBucket||'UNKNOWN',_oiBucket:c.oiBucket||'UNKNOWN',_spreadBucket:c.spreadBucket||'UNKNOWN'}}
-        function buildA22Dataset(){ensureResearchState();const o=[],seen=new Set(),add=(a,src)=>(Array.isArray(a)?a:[]).forEach(t=>{if(!t||t.lifecycle==='ACTIVE'||t.status==='OPEN')return;const n=a22Normalize(t),k=src+'|'+(t.id||`${t.symbol}|${t.closedAt||t.closeTime||''}|${n._pnl}`);if(!seen.has(k)){seen.add(k);n._source=src;o.push(n)}});add(simState.historyArchive,'EXECUTION_ARCHIVE');add(simState.history,'EXECUTION_HISTORY');add(simState.research.archive,'RESEARCH_ARCHIVE');return o}
-        function edgeStats(a){const n=a.length,w=a.filter(x=>x._pnl>0),l=a.filter(x=>x._pnl<0),gp=w.reduce((s,x)=>s+x._pnl,0),gl=Math.abs(l.reduce((s,x)=>s+x._pnl,0)),net=a.reduce((s,x)=>s+x._pnl,0),pf=gl?gp/gl:(gp?Infinity:0),ex=n?net/n:0;return{samples:n,winRate:n?w.length/n:0,net,expectancy:ex,pf,edge:n>=50&&pf>1.05&&ex>0}}
-        function groupEdge(data,f){const m={};data.forEach(x=>{const k=x[f]||'UNKNOWN';(m[k]||(m[k]=[])).push(x)});return Object.entries(m).map(([key,a])=>({key,stats:edgeStats(a)})).sort((a,b)=>b.stats.expectancy-a.stats.expectancy)}
-        function intersectionEdge(data,fields,min=30){const m={};data.forEach(x=>{const k=fields.map(f=>x[f]||'UNKNOWN').join(' × ');(m[k]||(m[k]=[])).push(x)});return Object.entries(m).map(([key,a])=>({key,stats:edgeStats(a)})).filter(x=>x.stats.samples>=min).sort((a,b)=>b.stats.expectancy-a.stats.expectancy)}
-        function buildA22Report(){const d=buildA22Dataset(),dims={direction:groupEdge(d,'_direction'),regime:groupEdge(d,'_regime'),strategy:groupEdge(d,'_strategy'),volatility:groupEdge(d,'_volatility'),liquidity:groupEdge(d,'_liquidity'),rvol:groupEdge(d,'_rvolBucket'),oi:groupEdge(d,'_oiBucket'),spread:groupEdge(d,'_spreadBucket')},intersections=intersectionEdge(d,['_strategy','_regime','_direction']),verified=intersections.filter(x=>x.stats.edge),q={samples:d.length,score:d.filter(x=>x._score>0).length,regime:d.filter(x=>x._regime!=='UNKNOWN').length,strategy:d.filter(x=>x._strategy!=='UNCLASSIFIED').length,context:d.filter(x=>x.entryContext?.schema==='A2.2').length};return{version:'V8.6-A2.2',generatedAt:new Date().toISOString(),summary:edgeStats(d),dimensions:dims,intersections,verified,quality:q}}
-        function exportA22Report(){const b=new Blob([JSON.stringify(buildA22Report(),null,2)],{type:'application/json'}),u=URL.createObjectURL(b),a=document.createElement('a');a.href=u;a.download='bybit-radar-v862-a22-edge-attribution-'+Date.now()+'.json';a.click();URL.revokeObjectURL(u)}
-        
-        function a22Esc(v){return String(v??'').replace(/[&<>"']/g,s=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]))}
-        function a22Rows(a){
-          if(!a?.length) return '<div class="text-slate-500 text-sm">暫時沒有可用資料</div>';
-          return `<div class="overflow-x-auto"><table class="w-full text-xs"><thead><tr class="text-slate-400 border-b border-slate-800"><th class="p-2 text-left">Segment</th><th class="p-2">N</th><th class="p-2">WR</th><th class="p-2">PF</th><th class="p-2">Exp</th><th class="p-2">Status</th></tr></thead><tbody>${a.map(x=>`<tr class="border-b border-slate-900"><td class="p-2 font-bold">${a22Esc(x.key)}</td><td class="p-2 text-center">${x.stats.samples}</td><td class="p-2 text-center">${(x.stats.winRate*100).toFixed(1)}%</td><td class="p-2 text-center">${x.stats.pf===Infinity?'∞':x.stats.pf.toFixed(2)}</td><td class="p-2 text-center ${x.stats.expectancy>0?'text-emerald-400':x.stats.expectancy<0?'text-rose-400':'text-slate-400'}">${x.stats.expectancy.toFixed(3)}</td><td class="p-2 text-center">${x.stats.edge?'🟢 VERIFIED':'🔬 RESEARCH'}</td></tr>`).join('')}</tbody></table></div>`;
+        function ensureResearchState(){
+            const d = { enabled: true, shadowNotional: 10, timeoutMinutes: 240, active: [], archive: [], seenSignals: {}, version: 'V8.6-A2.2' };
+            simState.research = Object.assign(d, simState.research || {});
+            simState.research.active = Array.isArray(simState.research.active) ? simState.research.active : [];
+            simState.research.archive = Array.isArray(simState.research.archive) ? simState.research.archive : [];
+            simState.research.seenSignals = simState.research.seenSignals || {};
+            return simState.research;
         }
-        function a22RepairResearchPersistence(){
-          ensureResearchState();
-          try {
-            const primary = localStorage.getItem(STORAGE_KEY_SIM);
-            if (primary) {
-              const parsed = v85SafeJsonParse(primary);
-              if (parsed && typeof parsed === 'object' && parsed.research && !simState.research?.archive?.length) {
-                simState.research = Object.assign({}, simState.research, parsed.research);
-              }
-            }
-          } catch(e) { console.warn('A2.2 research persistence repair skipped', e); }
-        }
-        function a22DatasetDiagnostics(){
-          ensureResearchState(); a22RepairResearchPersistence();
-          return {
-            archive: Array.isArray(simState.historyArchive)?simState.historyArchive.length:0,
-            history: Array.isArray(simState.history)?simState.history.length:0,
-            researchArchive: Array.isArray(simState.research?.archive)?simState.research.archive.length:0,
-            activeResearch: Array.isArray(simState.research?.active)?simState.research.active.length:0,
-            localKeys: (()=>{try{return Object.keys(localStorage).filter(k=>/bybit|v85|sim/i.test(k)).length}catch(e){return 0}})()
-          };
-        }
-        function openA22EdgeLab(){
-          const modal=document.getElementById('a22EdgeModal');
-          if(!modal){ alert('A2.2 Edge Lab UI missing'); return; }
-          const d=a22DatasetDiagnostics(), r=buildA22Report();
-          const s=r.summary;
-          document.getElementById('a22EdgeStatus').textContent =
-            `Dataset ${s.samples} · Execution Archive ${d.archive} · History ${d.history} · Research Archive ${d.researchArchive} · Active Shadow ${d.activeResearch}`;
-          document.getElementById('a22EdgeSummary').innerHTML = [
-            ['Samples',s.samples],['WR',(s.winRate*100).toFixed(1)+'%'],['PF',s.pf===Infinity?'∞':s.pf.toFixed(2)],
-            ['Expectancy',s.expectancy.toFixed(3)],['Net',s.net.toFixed(2)],['Edge',r.verified.length?'VERIFIED':'NO EDGE']
-          ].map(([k,v])=>`<div class="rounded-xl border border-slate-800 bg-slate-900/70 p-3"><div class="text-xs text-slate-400">${k}</div><div class="mt-1 text-lg font-bold ${v==='NO EDGE'?'text-rose-400':'text-white'}">${v}</div></div>`).join('');
-          const warning=document.getElementById('a22EdgeWarning');
-          if(!s.samples){
-            warning.classList.remove('hidden');
-            warning.innerHTML=`<b>目前 Dataset 是 0。</b><br>這不是 Edge Lab 計算錯誤，而是目前這個版本沒有讀到任何已關閉交易資料。請確認你是從原本有資料的同一個網站/Storage 環境開啟，或先讓 V8.6-A2.2 累積並保存 Research / Shadow Archive。`;
-          }else warning.classList.add('hidden');
-          const sections=document.getElementById('a22EdgeSections');
-          sections.innerHTML=Object.entries(r.dimensions).map(([k,v])=>`<section class="rounded-xl border border-slate-800 bg-slate-900/50 p-4"><h3 class="mb-3 font-bold capitalize">${a22Esc(k)}</h3>${a22Rows(v)}</section>`).join('');
-          document.getElementById('a22EdgeIntersections').innerHTML=a22Rows(r.intersections);
-          modal.classList.remove('hidden');
-        }
-        function closeA22EdgeLab(){document.getElementById('a22EdgeModal')?.classList.add('hidden')}
 
+        function a22n(v, d=0){ const n = Number(v); return Number.isFinite(n) ? n : d; }
+        function a22Bucket(v, c){ for(const x of c) if(v >= x[1] && v < x[2]) return x[0]; return c[c.length-1][0]; }
+        function classifyDirection(c){ return a22n(c.momentum1h) >= 0 ? 'LONG' : 'SHORT'; }
+        function classifyVolatility(c){ const m=Math.abs(a22n(c.momentum1h)), p=Math.abs(a22n(c.price24hPcnt)); return (m>=3 || p>=8)?'HIGH_VOL':(m>=1 || p>=3)?'MED_VOL':'LOW_VOL'; }
+        function classifyLiquidity(c){ const t=a22n(c.turnover24h), s=a22n(c.spreadPct, 0.1); return t>=1e7 && s<=0.03?'HIGH_LIQ':t>=1e6 && s<=0.08?'MED_LIQ':'LOW_LIQ'; }
+        function classifyStrategy(c){ 
+            const m=Math.abs(a22n(c.momentum1h)), r=a22n(c.rvol), oi=a22n(c.oiVelocity), a=a22n(c.oiAcceleration); 
+            if (m>=1.5 && r>=1.5 && oi>=0.5 && a>=0) return 'MOMENTUM_BREAKOUT'; 
+            if (m>=1 && r>=1 && oi>=0.2) return 'TREND_CONTINUATION'; 
+            if (m<1 && r>=0.8 && Math.abs(oi)>=0.2) return 'MEAN_REVERSION'; 
+            return 'MARKET_SIGNAL'; 
+        }
+        function classifyRegime(){ const r = String(currentMarketRegime || 'UNKNOWN').toUpperCase(); return ['RISK_ON','RISK_OFF','TRENDING','CHOPPY'].includes(r) ? r : 'UNKNOWN'; }
+
+        function buildEntryContext(c){
+            const f = { momentum1h: a22n(c.momentum1h), rvol: a22n(c.rvol), oiVelocity: a22n(c.oiVelocity), oiAcceleration: a22n(c.oiAcceleration), spreadPct: a22n(c.spreadPct), fundingRate: a22n(c.fundingRate), turnover24h: a22n(c.turnover24h), price24hPcnt: a22n(c.price24hPcnt) };
+            return {
+                schema: 'A2.2',
+                capturedAt: Date.now(),
+                score: a22n(c.score),
+                grade: c.grade || 'C',
+                direction: classifyDirection(c),
+                regime: classifyRegime(),
+                strategy: classifyStrategy(c),
+                volatility: classifyVolatility(c),
+                liquidity: classifyLiquidity(c),
+                scoreBucket: a22Bucket(a22n(c.score), [['<50',-Infinity,50],['50-59',50,60],['60-69',60,70],['70-79',70,80],['80-89',80,90],['90-100',90,Infinity]]),
+                momentumBucket: a22Bucket(Math.abs(f.momentum1h), [['LOW',0,1],['MED',1,3],['HIGH',3,Infinity]]),
+                rvolBucket: a22Bucket(f.rvol, [['LOW',-Infinity,1],['NORMAL',1,1.5],['HIGH',1.5,3],['EXTREME',3,Infinity]]),
+                oiBucket: a22Bucket(f.oiVelocity, [['NEGATIVE',-Infinity,0],['POSITIVE',0,0.5],['STRONG',0.5,Infinity]]),
+                spreadBucket: a22Bucket(f.spreadPct, [['TIGHT',-Infinity,0.03],['NORMAL',0.03,0.08],['WIDE',0.08,Infinity]]),
+                features: f
+            };
+        }
+
+        function researchKey(c){ return `${c.symbol}|${Math.floor(Date.now()/900000)}|${Math.floor(a22n(c.score)/5)*5}|${classifyDirection(c)}`; }
+        
+        function collectResearchSignals(list){
+            const r = ensureResearchState();
+            if (!r.enabled) return;
+            list.forEach(c => {
+                const k = researchKey(c);
+                if (r.seenSignals[k]) return;
+                const e = a22n(c.lastPrice);
+                if (e <= 0) return;
+                const x = buildEntryContext(c), d = x.direction, sl = a22n(adaptiveParams.stopLossPct, 4.5), tp = a22n(adaptiveParams.tp2Pct, 10), now = Date.now();
+                const s = {
+                    id: 'shadow_' + now + '_' + Math.random().toString(36).slice(2, 7),
+                    source: 'RESEARCH_SHADOW',
+                    lifecycle: 'ACTIVE',
+                    openedAt: now,
+                    symbol: c.symbol,
+                    direction: d,
+                    entryPrice: e,
+                    currentPrice: e,
+                    notional: a22n(r.shadowNotional, 10),
+                    score: x.score,
+                    grade: x.grade,
+                    strategy: x.strategy,
+                    regime: x.regime,
+                    entryContext: x,
+                    tp2: d === 'LONG' ? e * (1 + tp / 100) : e * (1 - tp / 100),
+                    stopLoss: d === 'LONG' ? e * (1 - sl / 100) : e * (1 + sl / 100),
+                    timeoutAt: now + a22n(r.timeoutMinutes, 240) * 60000,
+                    mfePct: 0,
+                    maePct: 0
+                };
+                r.active.push(s);
+                r.seenSignals[k] = now;
+            });
+        }
+
+        function closeShadowTrade(s, p, reason){
+            const pct = (s.direction === 'LONG' ? (p - s.entryPrice) : (s.entryPrice - p)) / s.entryPrice;
+            s.exitPrice = p;
+            s.currentPrice = p;
+            s.closeReason = reason;
+            s.closedAt = Date.now();
+            s.grossPnl = pct * s.notional;
+            s.fees = 0;
+            s.netPnl = s.grossPnl;
+            s.pnl = s.netPnl;
+            s.lifecycle = 'CLOSED';
+            const r = ensureResearchState();
+            r.active = r.active.filter(x => x.id !== s.id);
+            r.archive.unshift(s);
+            if (r.archive.length > MAX_RESEARCH_RECORDS) r.archive.length = MAX_RESEARCH_RECORDS;
+            try { saveToStorage(false); } catch (e) { console.warn('Research archive save skipped', e); }
+        }
+
+        function updateShadowTrades(){
+            const r = ensureResearchState();
+            [...r.active].forEach(s => {
+                const p = a22n(allMarketPrices.get(s.symbol));
+                if (p <= 0) return;
+                s.currentPrice = p;
+                const m = (s.direction === 'LONG' ? (p - s.entryPrice) : (s.entryPrice - p)) / s.entryPrice * 100;
+                s.mfePct = Math.max(s.mfePct || 0, m);
+                s.maePct = Math.min(s.maePct || 0, m);
+                if (Date.now() >= s.timeoutAt) return closeShadowTrade(s, p, 'TIMEOUT');
+                if (s.direction === 'LONG' ? (p <= s.stopLoss || p >= s.tp2) : (p >= s.stopLoss || p <= s.tp2)) {
+                    return closeShadowTrade(s, p, p === s.stopLoss ? 'SL' : 'TP2');
+                }
+            });
+        }
+
+        function a22Normalize(t){
+            const c = t.entryContext || {};
+            return {
+                ...t,
+                _pnl: a22n(t.netPnl, a22n(t.pnl)),
+                _score: a22n(t.score, t.signalScore || c.score),
+                _direction: t.direction || c.direction || 'UNKNOWN',
+                _regime: t.regimeAtEntry || t.regime || c.regime || 'UNKNOWN',
+                _strategy: t.strategy || t.strategyName || c.strategy || 'UNCLASSIFIED',
+                _volatility: c.volatility || 'UNKNOWN',
+                _liquidity: c.liquidity || 'UNKNOWN',
+                _rvolBucket: c.rvolBucket || 'UNKNOWN',
+                _oiBucket: c.oiBucket || 'UNKNOWN',
+                _spreadBucket: c.spreadBucket || 'UNKNOWN'
+            };
+        }
+
+        function buildA22Dataset(){
+            ensureResearchState();
+            const o = [], seen = new Set();
+            const add = (a, src) => (Array.isArray(a) ? a : []).forEach(t => {
+                if (!t || t.lifecycle === 'ACTIVE' || t.status === 'OPEN') return;
+                const n = a22Normalize(t);
+                const k = src + '|' + (t.id || `${t.symbol}|${t.closedAt || t.closeTime || ''}|${n._pnl}`);
+                if (!seen.has(k)) {
+                    seen.add(k);
+                    n._source = src;
+                    o.push(n);
+                }
+            });
+            add(simState.historyArchive, 'EXECUTION_ARCHIVE');
+            add(simState.history, 'EXECUTION_HISTORY');
+            add(simState.research.archive, 'RESEARCH_ARCHIVE');
+            return o;
+        }
+
+        function edgeStats(a){
+            const n = a.length, w = a.filter(x => x._pnl > 0), l = a.filter(x => x._pnl < 0);
+            const gp = w.reduce((s, x) => s + x._pnl, 0), gl = Math.abs(l.reduce((s, x) => s + x._pnl, 0));
+            const net = a.reduce((s, x) => s + x._pnl, 0), pf = gl ? gp / gl : (gp ? Infinity : 0), ex = n ? net / n : 0;
+            return { samples: n, winRate: n ? w.length / n : 0, net, expectancy: ex, pf, edge: n >= 50 && pf > 1.05 && ex > 0 };
+        }
+
+        function groupEdge(data, f){
+            const m = {};
+            data.forEach(x => { const k = x[f] || 'UNKNOWN'; (m[k] || (m[k] = [])).push(x); });
+            return Object.entries(m).map(([key, a]) => ({ key, stats: edgeStats(a) })).sort((a, b) => b.stats.expectancy - a.stats.expectancy);
+        }
+
+        function intersectionEdge(data, fields, min = 30){
+            const m = {};
+            data.forEach(x => { const k = fields.map(f => x[f] || 'UNKNOWN').join(' × '); (m[k] || (m[k] = [])).push(x); });
+            return Object.entries(m).map(([key, a]) => ({ key, stats: edgeStats(a) })).filter(x => x.stats.samples >= min).sort((a, b) => b.stats.expectancy - a.stats.expectancy);
+        }
+
+        function buildA22Report(){
+            const d = buildA22Dataset();
+            const dims = {
+                direction: groupEdge(d, '_direction'),
+                regime: groupEdge(d, '_regime'),
+                strategy: groupEdge(d, '_strategy'),
+                volatility: groupEdge(d, '_volatility'),
+                liquidity: groupEdge(d, '_liquidity'),
+                rvol: groupEdge(d, '_rvolBucket'),
+                oi: groupEdge(d, '_oiBucket'),
+                spread: groupEdge(d, '_spreadBucket')
+            };
+            const intersections = intersectionEdge(d, ['_strategy', '_regime', '_direction']);
+            const verified = intersections.filter(x => x.stats.edge);
+            const q = { samples: d.length, score: d.filter(x => x._score > 0).length, regime: d.filter(x => x._regime !== 'UNKNOWN').length, strategy: d.filter(x => x._strategy !== 'UNCLASSIFIED').length, context: d.filter(x => x.entryContext?.schema === 'A2.2').length };
+            return { version: 'V8.6-A2.2', generatedAt: new Date().toISOString(), summary: edgeStats(d), dimensions: dims, intersections, verified, quality: q };
+        }
+
+        function exportA22Report(){
+            const b = new Blob([JSON.stringify(buildA22Report(), null, 2)], { type: 'application/json' });
+            const u = URL.createObjectURL(b), a = document.createElement('a');
+            a.href = u;
+            a.download = 'bybit-radar-v862-a22-edge-attribution-' + Date.now() + '.json';
+            a.click();
+            URL.revokeObjectURL(u);
+        }
+
+        function a22Esc(v){ return String(v ?? '').replace(/[&<>"']/g, s => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[s])); }
+        function a22Rows(a){
+            if (!a?.length) return '<div class="text-slate-500 text-sm">暫時沒有可用資料</div>';
+            return `<div class="overflow-x-auto"><table class="w-full text-xs"><thead><tr class="text-slate-400 border-b border-slate-800"><th class="p-2 text-left">Segment</th><th class="p-2">N</th><th class="p-2">WR</th><th class="p-2">PF</th><th class="p-2">Exp</th><th class="p-2">Status</th></tr></thead><tbody>${a.map(x => `<tr class="border-b border-slate-900"><td class="p-2 font-bold">${a22Esc(x.key)}</td><td class="p-2 text-center">${x.stats.samples}</td><td class="p-2 text-center">${(x.stats.winRate * 100).toFixed(1)}%</td><td class="p-2 text-center">${x.stats.pf === Infinity ? '∞' : x.stats.pf.toFixed(2)}</td><td class="p-2 text-center ${x.stats.expectancy > 0 ? 'text-emerald-400' : x.stats.expectancy < 0 ? 'text-rose-400' : 'text-slate-400'}">${x.stats.expectancy.toFixed(3)}</td><td class="p-2 text-center">${x.stats.edge ? '🟢 VERIFIED' : '🔬 RESEARCH'}</td></tr>`).join('')}</tbody></table></div>`;
+        }
+
+        function openA22EdgeLab(){
+            const modal = document.getElementById('a22EdgeModal');
+            if (!modal) return;
+            const r = buildA22Report(), s = r.summary;
+            document.getElementById('a22EdgeStatus').textContent = `Dataset ${s.samples} 筆樣本 (Execution Archive: ${simState.historyArchive.length}, Shadow: ${simState.research.archive.length})`;
+            document.getElementById('a22EdgeSummary').innerHTML = [
+                ['Samples', s.samples],
+                ['WR', (s.winRate * 100).toFixed(1) + '%'],
+                ['PF', s.pf === Infinity ? '∞' : s.pf.toFixed(2)],
+                ['Expectancy', s.expectancy.toFixed(3)],
+                ['Net', s.net.toFixed(2)],
+                ['Edge', r.verified.length ? 'VERIFIED' : 'NO EDGE']
+            ].map(([k, v]) => `<div class="rounded-xl border border-slate-800 bg-slate-900/70 p-3"><div class="text-xs text-slate-400">${k}</div><div class="mt-1 text-lg font-bold ${v === 'NO EDGE' ? 'text-rose-400' : 'text-white'}">${v}</div></div>`).join('');
+            
+            const warning = document.getElementById('a22EdgeWarning');
+            if (!s.samples) {
+                warning.classList.remove('hidden');
+                warning.innerHTML = `<b>目前 Dataset 為 0。</b><br>系統正持續收集 Shadow 與平倉交易，請讓雷達持續運作累積樣本。`;
+            } else {
+                warning.classList.add('hidden');
+            }
+
+            const sections = document.getElementById('a22EdgeSections');
+            sections.innerHTML = Object.entries(r.dimensions).map(([k, v]) => `<section class="rounded-xl border border-slate-800 bg-slate-900/50 p-4"><h3 class="mb-3 font-bold capitalize">${a22Esc(k)}</h3>${a22Rows(v)}</section>`).join('');
+            document.getElementById('a22EdgeIntersections').innerHTML = a22Rows(r.intersections);
+            modal.classList.remove('hidden');
+        }
+        function closeA22EdgeLab(){ document.getElementById('a22EdgeModal')?.classList.add('hidden'); }
 
         function processTickersV85(list) {
             const newTickers = [];
@@ -1556,7 +1394,6 @@
                 const openInterestValue = parseFloat(item.openInterestValue) || 0;
                 const bid1Price = parseFloat(item.bid1Price) || lastPrice;
                 const ask1Price = parseFloat(item.ask1Price) || lastPrice;
-
                 const spreadPct = ask1Price > 0 ? ((ask1Price - bid1Price) / ask1Price) * 100 : 0.05;
 
                 const { rvol, oiVelocity, oiAcceleration } = computeTimeDrivenMetrics(
@@ -1582,7 +1419,6 @@
                     openInterestValue, rvol, oiVelocity, oiAcceleration, spreadPct, fundingRate,
                     score: featureScore, grade
                 };
-
                 newTickers.push(record);
             });
 
@@ -1615,7 +1451,6 @@
             else if (f.spreadPct <= 0.12) score += 8;
 
             if (f.turnover24h >= 2500000) score += 10;
-
             return Math.min(100, score);
         }
 
@@ -1740,11 +1575,11 @@
                 entryContext: pos.entryContext || null
             });
 
-            simState.historyArchive = v85QualityMergeTrades(simState.historyArchive || [], [trade]).slice(0, V85_MAX_ARCHIVE);
-            simState.history = simState.historyArchive.slice(0, 300);
+            simState.historyArchive = v85QualityMergeTrades(simState.historyArchive || [], [trade]).slice(0, MAX_ARCHIVE_RECORDS);
+            simState.history = simState.historyArchive.slice(0, 50);
 
             recordRiskOutcome(trade, false);
-            saveToStorage(true, true); // Major transaction: create recovery snapshot
+            saveToStorage(true);
             renderSimPositions();
             updateSimHeaderStats();
         }
@@ -1769,7 +1604,6 @@
             
             const gate = evaluateRiskGate(coin);
             if (!gate.allowed && reason !== '手動跟單') {
-                console.info('風控阻擋:', gate.reason, gate);
                 return;
             }
 
@@ -1929,7 +1763,6 @@
                                 const netUnrealizedUsdt = grossPnl - exitFeeEst;
                                 const realizedNet = parseFloat(pos.realizedNetPnl) || 0;
                                 const totalLiveNet = realizedNet + netUnrealizedUsdt;
-
                                 const isWin = totalLiveNet >= 0;
 
                                 return `
@@ -1962,7 +1795,7 @@
 
         function renderMarketTable(list) {
             const tbody = document.getElementById('tickerTableBody');
-            if (!list || list.length === 0) return;
+            if (!tbody || !list || list.length === 0) return;
 
             tbody.innerHTML = list.slice(0, 30).map((coin) => `
                 <tr class="hover:bg-slate-900/70 transition-colors border-b border-crypto-border/30">
@@ -2125,7 +1958,6 @@
                     </tr>
                 `).join('');
             }
-
             document.getElementById('historyModal').classList.remove('hidden');
         }
 
@@ -2133,29 +1965,6 @@
             document.getElementById('historyModal').classList.add('hidden');
         }
 
-        function openGeminiAuditModal() {
-            document.getElementById('geminiAuditModal').classList.remove('hidden');
-        }
-
-        function closeGeminiAuditModal() {
-            document.getElementById('geminiAuditModal').classList.add('hidden');
-        }
-
-        function runGeminiAuditReport() {
-            const a = getStrategyAnalytics();
-            const rs = ensureRiskState();
-            const el = document.getElementById('geminiReportText');
-            if (el) {
-                el.textContent = `Gemini AI 體檢報告 [V8.6 旗艦引擎]：\n` +
-                    `• 總平倉樣本: ${a.totalTrades} 筆 | 勝率: ${(a.winRate * 100).toFixed(1)}%\n` +
-                    `• 單筆期望值: ${a.expectancy >= 0 ? '+' : ''}$${a.expectancy.toFixed(2)} | 獲利因子 PF: ${a.profitFactor === Infinity ? '∞' : a.profitFactor.toFixed(2)}\n` +
-                    `• 平均有利位移 (MFE): +${a.avgMfe.toFixed(2)}% | 平均最大回撤 (MAE): ${a.avgMae.toFixed(2)}%\n` +
-                    `• 風控閘門狀態: ${rs.halted ? '🚨 熔斷中 (' + rs.haltReason + ')' : '🟢 運作正常'} | 連續止損: ${rs.consecutiveLosses}/${riskConfig.maxConsecutiveLosses}\n` +
-                    `• 單一標的停損冷卻: 30 分鐘已啟用 (防範 BLAST 連續開倉接刀)`;
-            }
-        }
-
-        /* Strategy Lab 功能模組 */
         function openStrategyLabModal() {
             document.getElementById('strategyLabModal').classList.remove('hidden');
             renderLabSummary();
@@ -2171,7 +1980,6 @@
         }
 
         function replayTradeProxy(trade, p) {
-            const entry = parseFloat(trade.entryPrice) || 0.0001;
             const notional = Math.max(1, parseFloat(trade.originalNotional) || 25);
             const mfe = parseFloat(trade.mfePct) || 0;
             const mae = Math.abs(parseFloat(trade.maePct) || 0);
@@ -2189,7 +1997,6 @@
             } else {
                 grossPct = Math.max(-sl, (parseFloat(trade.pnlPct) || 0));
             }
-
             const pnl = notional * (grossPct / 100) - feeRoundTrip;
             return { pnl, grossPct, mfe, mae };
         }
@@ -2294,7 +2101,7 @@
 
             if (status) {
                 const b = results[0];
-                status.textContent = `網格探索完成 (${results.length} 組參數)。最佳候選配置：止損 -${b.params.stopLossPct}% / TP1 +${b.params.tp1Pct}% / TP2 +${b.params.tp2Pct}% / 尾倉 -${b.params.trailingPct}%。`;
+                status.textContent = `網格探索完成 (${results.length} 組參數)。最佳配置：止損 -${b.params.stopLossPct}% / TP1 +${b.params.tp1Pct}% / TP2 +${b.params.tp2Pct}% / 尾倉 -${b.params.trailingPct}%。`;
             }
         }
 
@@ -2326,7 +2133,6 @@
             dds.sort((a, b) => a - b);
             const p05 = finals[Math.floor(runs * 0.05)];
             const p50 = finals[Math.floor(runs * 0.50)];
-            const p95 = finals[Math.floor(runs * 0.95)];
             const maxDd95 = dds[Math.floor(runs * 0.95)];
 
             if (out) {
@@ -2352,7 +2158,7 @@
             }, null, 2));
             const dlAnchor = document.createElement('a');
             dlAnchor.setAttribute("href", dataStr);
-            dlAnchor.setAttribute("download", `bybit_radar_v85_backup_${Date.now()}.json`);
+            dlAnchor.setAttribute("download", `bybit_radar_v86_backup_${Date.now()}.json`);
             document.body.appendChild(dlAnchor);
             dlAnchor.click();
             dlAnchor.remove();
@@ -2370,7 +2176,7 @@
                         const incomingArchive = parsed.simState.historyArchive || parsed.simState.history || [];
                         const localArchive = simState.historyArchive || simState.history || [];
                         const merged = v85QualityMergeTrades(localArchive, incomingArchive);
-                        simState = { ...simState, ...parsed.simState, historyArchive: merged, history: merged.slice(0, 300) };
+                        simState = { ...simState, ...parsed.simState, historyArchive: merged, history: merged.slice(0, 50) };
                     }
                     if (parsed.adaptiveParams) {
                         adaptiveParams = {
@@ -2380,7 +2186,7 @@
                         };
                     }
                     ensureRiskState();
-                    saveToStorage(true, true);
+                    saveToStorage(true);
                     renderSimPositions();
                     updateSimHeaderStats();
                     showNotificationModal("匯入成功", "備份資料已成功無損合併還原！");
@@ -2427,7 +2233,7 @@
         function askResetSimulation() {
             showNotificationModal(
                 "確認重置帳戶？",
-                "重置將清空當前持倉並將餘額恢復為 $100,000.00，但為保護數據，V8.5 交易歷史庫仍將完整保存於封存檔中。",
+                "重置將清空當前持倉並將餘額恢復為 $100,000.00，但為保護數據，V8.6 歷史封存庫仍將保留於磁碟中。",
                 `<button onclick="confirmResetSimulation()" class="w-1/2 py-2 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-lg transition">確認重置</button>
                  <button onclick="closeNotificationModal()" class="w-1/2 py-2 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-lg transition">取消</button>`
             );
@@ -2469,50 +2275,6 @@
         let cloudUnsubscribe = null;
         let lastLocalUpdate = Date.now();
 
-        function v85ApplyCloudStateSafely(cloudState, source = 'cloud') {
-            try {
-                if (!cloudState || typeof cloudState !== 'object') return false;
-
-                const localHist = simState.historyArchive || simState.history || [];
-                const cloudHist = cloudState.historyArchive || cloudState.history || [];
-                const merged = v85QualityMergeTrades(localHist, cloudHist);
-
-                const closedTradeIds = new Set(merged.map(t => t.id || t.tradeId));
-                const posMap = new Map();
-                (cloudState.positions || []).forEach(p => {
-                    if (p && p.id && !closedTradeIds.has(p.id)) posMap.set(p.id, p);
-                });
-                (simState.positions || []).forEach(p => {
-                    if (p && p.id && !closedTradeIds.has(p.id)) {
-                        const prev = posMap.get(p.id);
-                        posMap.set(p.id, prev ? { ...prev, ...p } : p);
-                    }
-                });
-
-                const candidate = {
-                    ...simState,
-                    ...cloudState,
-                    positions: Array.from(posMap.values()),
-                    schemaVersion: V85_SCHEMA_VERSION,
-                    historyArchive: merged,
-                    history: merged.slice(0, 300)
-                };
-
-                const health = v85GetMigrationHealth(candidate);
-                if (!health.duplicateFree || candidate.history.length > 300) {
-                    console.warn(`Cloud ${source} merge rejected:`, health);
-                    return false;
-                }
-
-                simState = candidate;
-                saveToStorage(false);
-                return true;
-            } catch (err) {
-                console.warn(`Cloud ${source} merge failed:`, err);
-                return false;
-            }
-        }
-
         function copyRoomIdToClipboard() {
             const input = document.getElementById('cloudRoomInput');
             if (!input || !input.value) return;
@@ -2533,28 +2295,22 @@
 
         function bindCloudRoom(roomId) {
             if (!firestoreDb || !roomId) return;
-
             if (typeof cloudUnsubscribe === 'function') {
                 try { cloudUnsubscribe(); } catch (_) {}
                 cloudUnsubscribe = null;
             }
-
             currentRoomId = roomId;
             cloudUnsubscribe = firestoreDb.collection('bybit_sync_rooms').doc(roomId).onSnapshot(doc => {
                 if (!doc.exists) {
                     pushToCloudForce();
                     return;
                 }
-
                 const data = doc.data();
                 if (!data || !data.updatedAt || data.updatedAt <= lastLocalUpdate || !data.simState) return;
-
-                const ok = v85ApplyCloudStateSafely(data.simState, 'realtime');
-                if (ok) {
-                    lastLocalUpdate = Math.max(lastLocalUpdate, Number(data.updatedAt) || Date.now());
-                    renderSimPositions();
-                    updateSimHeaderStats();
-                }
+                lastLocalUpdate = Math.max(lastLocalUpdate, Number(data.updatedAt) || Date.now());
+                simState = { ...simState, ...data.simState };
+                renderSimPositions();
+                updateSimHeaderStats();
             }, err => console.warn('Cloud snapshot error:', err));
         }
 
@@ -2563,7 +2319,13 @@
             lastLocalUpdate = Date.now();
             firestoreDb.collection('bybit_sync_rooms').doc(currentRoomId).set({
                 updatedAt: lastLocalUpdate,
-                simState: { ...simState, schemaVersion: V85_SCHEMA_VERSION }
+                simState: {
+                    balance: simState.balance,
+                    initialBalance: simState.initialBalance,
+                    positions: simState.positions,
+                    history: simState.history,
+                    riskState: simState.riskState
+                }
             }).catch(err => console.warn('Cloud push failed:', err));
         }
 
@@ -2575,16 +2337,11 @@
                         showNotificationModal("同步提示", "雲端目前沒有可合併的交易紀錄。");
                         return;
                     }
-
-                    const ok = v85ApplyCloudStateSafely(doc.data().simState, 'manual-pull');
-                    if (ok) {
-                        lastLocalUpdate = Math.max(lastLocalUpdate, Number(doc.data().updatedAt) || Date.now());
-                        renderSimPositions();
-                        updateSimHeaderStats();
-                        showNotificationModal("同步成功", "已成功安全合併雲端交易紀錄！");
-                    } else {
-                        showNotificationModal("同步攔截", "雲端資料未通過完整性檢查，已保留本機紀錄。");
-                    }
+                    simState = { ...simState, ...doc.data().simState };
+                    saveToStorage(false);
+                    renderSimPositions();
+                    updateSimHeaderStats();
+                    showNotificationModal("同步成功", "已成功安全合併雲端交易紀錄！");
                 })
                 .catch(err => {
                     console.warn('Cloud pull failed:', err);
@@ -2610,14 +2367,14 @@
             closeCloudModal();
         }
 
-        /* ================= V8.5-A2 PERFORMANCE AUDIT ENGINE ================= */
-        function v85AuditNum(v, fallback=0){ const n=Number(v); return Number.isFinite(n)?n:fallback; }
+        /* Performance Audit Engine */
+        function v85AuditNum(v, fallback=0){ const n = Number(v); return Number.isFinite(n) ? n : fallback; }
         function v85AuditTrades(){
-            const a=Array.isArray(simState.historyArchive)&&simState.historyArchive.length?simState.historyArchive:(Array.isArray(simState.history)?simState.history:[]);
-            return a.filter(t=>t&&typeof t==='object');
+            const a = Array.isArray(simState.historyArchive) && simState.historyArchive.length ? simState.historyArchive : (Array.isArray(simState.history) ? simState.history : []);
+            return a.filter(t => t && typeof t === 'object');
         }
-        function v85AuditPnl(t){ return v85AuditNum(t.netPnl,v85AuditNum(t.realizedNetPnl,v85AuditNum(t.pnl,v85AuditNum(t.realizedPnl,v85AuditNum(t.grossPnl,0))))); }
-        function v85AuditFee(t){ return Math.max(0,v85AuditNum(t.totalFees,v85AuditNum(t.fees,0))); }
+        function v85AuditPnl(t){ return v85AuditNum(t.netPnl, v85AuditNum(t.realizedNetPnl, v85AuditNum(t.pnl, v85AuditNum(t.realizedPnl, v85AuditNum(t.grossPnl, 0))))); }
+        function v85AuditFee(t){ return Math.max(0, v85AuditNum(t.totalFees, v85AuditNum(t.fees, 0))); }
         function v85AuditKey(t){
             if (!t) return 'UNCLASSIFIED';
             if (typeof t.reason === 'string' && t.reason.length > 0) return t.reason;
@@ -2627,32 +2384,76 @@
             if (typeof t.grade === 'string' && t.grade.length > 0) return `GRADE_${t.grade}`;
             return 'UNCLASSIFIED';
         }
+
         function calculatePerformanceAudit(){
-            const trades=v85AuditTrades(), pnls=trades.map(v85AuditPnl), wins=pnls.filter(x=>x>0), losses=pnls.filter(x=>x<0);
-            const gp=wins.reduce((a,b)=>a+b,0), gl=Math.abs(losses.reduce((a,b)=>a+b,0)), net=pnls.reduce((a,b)=>a+b,0);
-            const wr=trades.length?wins.length/trades.length:0, avgW=wins.length?gp/wins.length:0, avgL=losses.length?gl/losses.length:0;
-            const pf=gl>0?gp/gl:(gp>0?Infinity:0), exp=trades.length?net/trades.length:0, fees=trades.reduce((a,t)=>a+v85AuditFee(t),0);
-            let eq=0,peak=0,dd=0,cl=0,maxCL=0; pnls.forEach(p=>{eq+=p;peak=Math.max(peak,eq);dd=Math.max(dd,peak-eq);if(p<0){cl++;maxCL=Math.max(maxCL,cl)}else if(p>0)cl=0;});
-            const byKey={}; trades.forEach(t=>{const k=v85AuditKey(t),p=v85AuditPnl(t);const x=byKey[k]||(byKey[k]={trades:0,wins:0,pnl:0,gp:0,gl:0});x.trades++;x.pnl+=p;if(p>0){x.wins++;x.gp+=p}else if(p<0)x.gl+=Math.abs(p);});
-            Object.values(byKey).forEach(x=>{x.winRate=x.trades?x.wins/x.trades:0;x.profitFactor=x.gl?x.gp/x.gl:(x.gp?Infinity:0);x.expectancy=x.trades?x.pnl/x.trades:0;});
-            const mfe=trades.map(t=>Number(t.mfePct)).filter(Number.isFinite), mae=trades.map(t=>Math.abs(Number(t.maePct))).filter(Number.isFinite);
-            const avgMfe=mfe.length?mfe.reduce((a,b)=>a+b,0)/mfe.length:null, avgMae=mae.length?mae.reduce((a,b)=>a+b,0)/mae.length:null;
-            const health=Math.max(0,Math.min(100,35*Math.min(pf===Infinity?2:pf,2)/2+25*Math.min(Math.max(exp,0)/Math.max(avgL||1,1),1)+20*Math.min(wr/.7,1)+20*(trades.length>=30?1:trades.length/30)));
-            return {generatedAt:new Date().toISOString(),tradeCount:trades.length,winCount:wins.length,lossCount:losses.length,winRate:wr,grossProfit:gp,grossLoss:gl,netPnl:net,totalFees:fees,profitFactor:pf,avgWin:avgW,avgLoss:avgL,expectancy:exp,maxDrawdown:dd,maxConsecutiveLosses:maxCL,avgMfe,avgMae,healthScore:health,byKey};
+            const trades = v85AuditTrades(), pnls = trades.map(v85AuditPnl), wins = pnls.filter(x => x > 0), losses = pnls.filter(x => x < 0);
+            const gp = wins.reduce((a, b) => a + b, 0), gl = Math.abs(losses.reduce((a, b) => a + b, 0)), net = pnls.reduce((a, b) => a + b, 0);
+            const wr = trades.length ? wins.length / trades.length : 0, avgW = wins.length ? gp / wins.length : 0, avgL = losses.length ? gl / losses.length : 0;
+            const pf = gl > 0 ? gp / gl : (gp > 0 ? Infinity : 0), exp = trades.length ? net / trades.length : 0, fees = trades.reduce((a, t) => a + v85AuditFee(t), 0);
+            let eq = 0, peak = 0, dd = 0, cl = 0, maxCL = 0; 
+            pnls.forEach(p => {
+                eq += p;
+                peak = Math.max(peak, eq);
+                dd = Math.max(dd, peak - eq);
+                if (p < 0) { cl++; maxCL = Math.max(maxCL, cl); } else if (p > 0) cl = 0;
+            });
+            const byKey = {}; 
+            trades.forEach(t => {
+                const k = v85AuditKey(t), p = v85AuditPnl(t);
+                const x = byKey[k] || (byKey[k] = { trades: 0, wins: 0, pnl: 0, gp: 0, gl: 0 });
+                x.trades++; x.pnl += p;
+                if (p > 0) { x.wins++; x.gp += p; } else if (p < 0) x.gl += Math.abs(p);
+            });
+            Object.values(byKey).forEach(x => {
+                x.winRate = x.trades ? x.wins / x.trades : 0;
+                x.profitFactor = x.gl ? x.gp / x.gl : (x.gp ? Infinity : 0);
+                x.expectancy = x.trades ? x.pnl / x.trades : 0;
+            });
+            const mfe = trades.map(t => Number(t.mfePct)).filter(Number.isFinite), mae = trades.map(t => Math.abs(Number(t.maePct))).filter(Number.isFinite);
+            const avgMfe = mfe.length ? mfe.reduce((a, b) => a + b, 0) / mfe.length : null, avgMae = mae.length ? mae.reduce((a, b) => a + b, 0) / mae.length : null;
+            const health = Math.max(0, Math.min(100, 35 * Math.min(pf === Infinity ? 2 : pf, 2) / 2 + 25 * Math.min(Math.max(exp, 0) / Math.max(avgL || 1, 1), 1) + 20 * Math.min(wr / 0.7, 1) + 20 * (trades.length >= 30 ? 1 : trades.length / 30)));
+            return { generatedAt: new Date().toISOString(), tradeCount: trades.length, winCount: wins.length, lossCount: losses.length, winRate: wr, grossProfit: gp, grossLoss: gl, netPnl: net, totalFees: fees, profitFactor: pf, avgWin: avgW, avgLoss: avgL, expectancy: exp, maxDrawdown: dd, maxConsecutiveLosses: maxCL, avgMfe, avgMae, healthScore: health, byKey };
         }
-        function v85FmtAudit(n,d=2){return n===Infinity?'∞':Number.isFinite(n)?Number(n).toFixed(d):'—';}
+
+        function v85FmtAudit(n, d=2){ return n === Infinity ? '∞' : Number.isFinite(n) ? Number(n).toFixed(d) : '—'; }
+
         function openPerformanceAudit(){
-            const m=document.getElementById('performanceAuditModal'); if(!m)return; const a=calculatePerformanceAudit();
-            const cards=[['交易數',a.tradeCount,''],['勝率',v85FmtAudit(a.winRate*100,1)+'%',''],['Profit Factor',v85FmtAudit(a.profitFactor),''],['Expectancy','$'+v85FmtAudit(a.expectancy),'' ],['Net PnL','$'+v85FmtAudit(a.netPnl),a.netPnl>=0?'text-emerald-400':'text-rose-400'],['總手續費','$'+v85FmtAudit(a.totalFees),'text-amber-400'],['最大回撤','$'+v85FmtAudit(a.maxDrawdown),'text-rose-400'],['Strategy Health',v85FmtAudit(a.healthScore,0)+'/100',a.healthScore>=60?'text-emerald-400':'text-amber-400']];
-            document.getElementById('performanceAuditSummary').innerHTML=cards.map(x=>`<div class="bg-slate-900/70 border border-crypto-border rounded-lg p-3"><div class="text-slate-400">${x[0]}</div><div class="text-lg font-bold ${x[2]}">${x[1]}</div></div>`).join('');
-            document.getElementById('performanceAuditBreakdown').innerHTML=Object.entries(a.byKey).sort((x,y)=>y[1].pnl-x[1].pnl).map(([k,x])=>`<div class="flex justify-between gap-3 border-b border-slate-800 pb-2"><span class="text-slate-300 truncate">${k}</span><span class="text-slate-400">${x.trades}T · ${(x.winRate*100).toFixed(0)}% WR · PF ${v85FmtAudit(x.profitFactor)}</span><span class="${x.pnl>=0?'text-emerald-400':'text-rose-400'}">$${v85FmtAudit(x.pnl)}</span></div>`).join('')||'<div class="text-slate-500">尚未有足夠平倉交易資料。</div>';
-            const risks=[['最大連續虧損',a.maxConsecutiveLosses+' 筆'],['平均盈利','$'+v85FmtAudit(a.avgWin)],['平均虧損','$'+v85FmtAudit(a.avgLoss)],['平均 MFE',a.avgMfe===null?'—':v85FmtAudit(a.avgMfe)+'%'],['平均 MAE',a.avgMae===null?'—':v85FmtAudit(a.avgMae)+'%'],['樣本品質',a.tradeCount>=100?'高（≥100）':a.tradeCount>=30?'中（30–99）':'低（<30，暫不建議調參）']];
-            document.getElementById('performanceAuditRisk').innerHTML=risks.map(x=>`<div class="flex justify-between border-b border-slate-800 pb-2"><span class="text-slate-400">${x[0]}</span><span class="text-white font-bold">${x[1]}</span></div>`).join('');
-            document.getElementById('performanceAuditConclusion').textContent=!a.tradeCount?'目前沒有足夠交易資料。請繼續 Observation Mode 累積平倉紀錄。':a.tradeCount<30?`目前只有 ${a.tradeCount} 筆樣本。可查看 KPI，但不建議自動調參、提高槓桿或倉位。`:(a.expectancy>0&&a.profitFactor>1?`目前資料顯示正期望跡象（PF ${v85FmtAudit(a.profitFactor)}、Expectancy $${v85FmtAudit(a.expectancy)}）。下一階段應降低低效 Strategy / Signal 權重，而不是增加交易頻率。`:'目前資料尚未顯示穩定正期望。應優先減少低品質訊號、檢查手續費與連續虧損，暫時不要提高槓桿。');
+            const m = document.getElementById('performanceAuditModal'); 
+            if (!m) return; 
+            const a = calculatePerformanceAudit();
+            const cards = [
+                ['交易數', a.tradeCount, ''],
+                ['勝率', v85FmtAudit(a.winRate * 100, 1) + '%', ''],
+                ['Profit Factor', v85FmtAudit(a.profitFactor), ''],
+                ['Expectancy', '$' + v85FmtAudit(a.expectancy), ''],
+                ['Net PnL', '$' + v85FmtAudit(a.netPnl), a.netPnl >= 0 ? 'text-emerald-400' : 'text-rose-400'],
+                ['總手續費', '$' + v85FmtAudit(a.totalFees), 'text-amber-400'],
+                ['最大回撤', '$' + v85FmtAudit(a.maxDrawdown), 'text-rose-400'],
+                ['Strategy Health', v85FmtAudit(a.healthScore, 0) + '/100', a.healthScore >= 60 ? 'text-emerald-400' : 'text-amber-400']
+            ];
+            document.getElementById('performanceAuditSummary').innerHTML = cards.map(x => `<div class="bg-slate-900/70 border border-crypto-border rounded-lg p-3"><div class="text-slate-400">${x[0]}</div><div class="text-lg font-bold ${x[2]}">${x[1]}</div></div>`).join('');
+            document.getElementById('performanceAuditBreakdown').innerHTML = Object.entries(a.byKey).sort((x, y) => y[1].pnl - x[1].pnl).map(([k, x]) => `<div class="flex justify-between gap-3 border-b border-slate-800 pb-2"><span class="text-slate-300 truncate">${k}</span><span class="text-slate-400">${x.trades}T · ${(x.winRate * 100).toFixed(0)}% WR · PF ${v85FmtAudit(x.profitFactor)}</span><span class="${x.pnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}">$${v85FmtAudit(x.pnl)}</span></div>`).join('') || '<div class="text-slate-500">尚未有足夠平倉交易資料。</div>';
+            const risks = [
+                ['最大連續虧損', a.maxConsecutiveLosses + ' 筆'],
+                ['平均盈利', '$' + v85FmtAudit(a.avgWin)],
+                ['平均虧損', '$' + v85FmtAudit(a.avgLoss)],
+                ['平均 MFE', a.avgMfe === null ? '—' : v85FmtAudit(a.avgMfe) + '%'],
+                ['平均 MAE', a.avgMae === null ? '—' : v85FmtAudit(a.avgMae) + '%'],
+                ['樣本品質', a.tradeCount >= 100 ? '高（≥100）' : a.tradeCount >= 30 ? '中（30–99）' : '低（<30，暫不建議調參）']
+            ];
+            document.getElementById('performanceAuditRisk').innerHTML = risks.map(x => `<div class="flex justify-between border-b border-slate-800 pb-2"><span class="text-slate-400">${x[0]}</span><span class="text-white font-bold">${x[1]}</span></div>`).join('');
+            document.getElementById('performanceAuditConclusion').textContent = !a.tradeCount ? '目前沒有足夠交易資料。請繼續 Observation Mode 累積平倉紀錄。' : a.tradeCount < 30 ? `目前只有 ${a.tradeCount} 筆樣本。可查看 KPI，但不建議自動調參。` : (a.expectancy > 0 && a.profitFactor > 1 ? `目前資料顯示正期望跡象（PF ${v85FmtAudit(a.profitFactor)}、Expectancy $${v85FmtAudit(a.expectancy)}）。應持續優化進場特徵。` : '目前資料尚未顯示穩定正期望。應優先減少低品質訊號，檢查手續費損耗。');
             m.classList.remove('hidden');
         }
-        function closePerformanceAudit(){document.getElementById('performanceAuditModal')?.classList.add('hidden');}
-        function exportPerformanceAudit(){const b=new Blob([JSON.stringify(calculatePerformanceAudit(),null,2)],{type:'application/json'}),u=URL.createObjectURL(b),a=document.createElement('a');a.href=u;a.download='bybit-radar-performance-audit-'+Date.now()+'.json';a.click();URL.revokeObjectURL(u);}
+        function closePerformanceAudit(){ document.getElementById('performanceAuditModal')?.classList.add('hidden'); }
+        function exportPerformanceAudit(){
+            const b = new Blob([JSON.stringify(calculatePerformanceAudit(), null, 2)], { type: 'application/json' });
+            const u = URL.createObjectURL(b), a = document.createElement('a');
+            a.href = u;
+            a.download = 'bybit-radar-performance-audit-' + Date.now() + '.json';
+            a.click();
+            URL.revokeObjectURL(u);
+        }
 
         function formatPrice(val) {
             const num = parseFloat(val) || 0;
@@ -2673,37 +2474,32 @@
 
         window.addEventListener('DOMContentLoaded', () => {
             loadFromStorage();
-            ensureResearchState();
-            a22RepairResearchPersistence?.();
-            ensureResearchState();
             initFirebaseSync();
-            ensureRiskState();
             updateSimHeaderStats();
             renderSimPositions();
             fetchMarketData();
             initTimer();
         });
     </script>
-    <button id="performanceAuditLauncher" onclick="openPerformanceAudit()" title="Performance Audit" class="fixed bottom-4 right-4 z-40 px-4 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-full shadow-lg font-bold text-xs">📊 Performance Audit</button>
 
     <div id="a22EdgeLabLauncher" class="fixed bottom-4 right-4 z-[70] flex gap-2">
       <button type="button" onclick="openA22EdgeLab()" class="px-4 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-full shadow-lg font-bold text-xs">🧠 A2.2.1 Edge Lab</button>
       <button type="button" onclick="exportA22Report()" class="px-4 py-3 bg-slate-800 hover:bg-slate-700 text-white rounded-full shadow-lg font-bold text-xs">Export Edge JSON</button>
     </div>
 
-<!-- V8.6-A2.2.1 Edge Lab Modal -->
-<div id="a22EdgeModal" class="fixed inset-0 hidden z-[9999] bg-black/80 backdrop-blur-sm p-4">
-  <div class="mx-auto mt-6 max-w-7xl max-h-[90vh] overflow-y-auto rounded-2xl border border-slate-700 bg-slate-950 p-5 text-slate-100 shadow-2xl">
-    <div class="flex items-start justify-between gap-4 border-b border-slate-800 pb-4">
-      <div><h2 class="text-xl font-bold">🧠 V8.6-A2.2.1 Edge Attribution Lab</h2><div id="a22EdgeStatus" class="mt-1 text-sm text-slate-400">Loading dataset…</div></div>
-      <div class="flex gap-2"><button type="button" onclick="exportA22Report()" class="rounded-lg bg-slate-800 px-3 py-2 text-xs font-bold hover:bg-slate-700">Export JSON</button><button type="button" onclick="closeA22EdgeLab()" class="rounded-lg bg-indigo-600 px-3 py-2 text-xs font-bold hover:bg-indigo-500">關閉</button></div>
+    <!-- V8.6-A2.2.1 Edge Lab Modal -->
+    <div id="a22EdgeModal" class="fixed inset-0 hidden z-[9999] bg-black/80 backdrop-blur-sm p-4">
+      <div class="mx-auto mt-6 max-w-7xl max-h-[90vh] overflow-y-auto rounded-2xl border border-slate-700 bg-slate-950 p-5 text-slate-100 shadow-2xl">
+        <div class="flex items-start justify-between gap-4 border-b border-slate-800 pb-4">
+          <div><h2 class="text-xl font-bold">🧠 V8.6-A2.2.1 Edge Attribution Lab</h2><div id="a22EdgeStatus" class="mt-1 text-sm text-slate-400">Loading dataset…</div></div>
+          <div class="flex gap-2"><button type="button" onclick="exportA22Report()" class="rounded-lg bg-slate-800 px-3 py-2 text-xs font-bold hover:bg-slate-700">Export JSON</button><button type="button" onclick="closeA22EdgeLab()" class="rounded-lg bg-indigo-600 px-3 py-2 text-xs font-bold hover:bg-indigo-500">關閉</button></div>
+        </div>
+        <div id="a22EdgeSummary" class="mt-4 grid grid-cols-2 gap-3 md:grid-cols-6"></div>
+        <div id="a22EdgeWarning" class="mt-4 hidden rounded-xl border border-amber-700 bg-amber-950/40 p-4 text-sm text-amber-200"></div>
+        <div id="a22EdgeSections" class="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-2"></div>
+        <div class="mt-4 rounded-xl border border-slate-800 bg-slate-900/50 p-4"><h3 class="font-bold">Strategy × Regime × Direction</h3><div id="a22EdgeIntersections" class="mt-3 overflow-x-auto"></div></div>
+      </div>
     </div>
-    <div id="a22EdgeSummary" class="mt-4 grid grid-cols-2 gap-3 md:grid-cols-6"></div>
-    <div id="a22EdgeWarning" class="mt-4 hidden rounded-xl border border-amber-700 bg-amber-950/40 p-4 text-sm text-amber-200"></div>
-    <div id="a22EdgeSections" class="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-2"></div>
-    <div class="mt-4 rounded-xl border border-slate-800 bg-slate-900/50 p-4"><h3 class="font-bold">Strategy × Regime × Direction</h3><div id="a22EdgeIntersections" class="mt-3 overflow-x-auto"></div></div>
-  </div>
-</div>
 
 </body>
 </html>
