@@ -253,40 +253,61 @@
         };
 
         // 核心加載與資料驗證 (徹底解決 NaN 問題)
-        function loadFromStorage() {
-            try {
-                const simSaved = localStorage.getItem(STORAGE_KEY_SIM);
-                if (simSaved) {
-                    const parsed = JSON.parse(simSaved);
-                    simState = { ...simState, ...parsed };
-                }
+       // 全版本相容與自動資料遷移加載函式
+function loadFromStorage() {
+    try {
+        // 1. 依次掃描 V8.1 新鍵名以及所有歷史版本的舊鍵名
+        const legacyKeys = [
+            STORAGE_KEY_SIM,
+            'bybit_radar_sim_v81',
+            'bybit_radar_sim_state_v3',
+            'bybit_radar_sim_state_v2',
+            'bybit_radar_sim_state_v1'
+        ];
 
-                // 核心防禦：淨化歷史持倉中的任何 NaN 或非數值型態
-                if (simState.positions && Array.isArray(simState.positions)) {
-                    simState.positions = simState.positions.map(pos => {
-                        const entryPrice = parseFloat(pos.entryPrice) || 0.0001;
-                        const currentPrice = parseFloat(pos.currentPrice) || entryPrice;
-                        const notional = parseFloat(pos.notional) || 50.0;
-                        const qty = parseFloat(pos.qty) || (notional / entryPrice);
-                        return {
-                            ...pos,
-                            entryPrice,
-                            currentPrice,
-                            qty: isNaN(qty) ? 1.0 : qty,
-                            originalQty: parseFloat(pos.originalQty) || qty,
-                            notional: isNaN(notional) ? 50.0 : notional,
-                            stopLoss: parseFloat(pos.stopLoss) || (entryPrice * 0.955),
-                            tp1: parseFloat(pos.tp1) || (entryPrice * 1.042),
-                            tp2: parseFloat(pos.tp2) || (entryPrice * 1.10),
-                            realizedPnl: parseFloat(pos.realizedPnl) || 0.0,
-                            openTime: parseInt(pos.openTime) || Date.now()
-                        };
-                    });
-                }
-            } catch (err) {
-                console.warn("解析存檔失敗，還原預設:", err);
+        let simSaved = null;
+        for (const key of legacyKeys) {
+            const data = localStorage.getItem(key);
+            if (data) {
+                simSaved = data;
+                break; // 找到最近一次有資料的鍵名即停止
             }
         }
+
+        if (simSaved) {
+            const parsed = JSON.parse(simSaved);
+            simState = { ...simState, ...parsed };
+        }
+
+        // 2. 自動將舊持倉資料的欄位轉換為安全數字型態，徹底排除 NaN 錯誤
+        if (simState.positions && Array.isArray(simState.positions)) {
+            simState.positions = simState.positions.map(pos => {
+                const entryPrice = parseFloat(pos.entryPrice) || 0.0001;
+                const currentPrice = parseFloat(pos.currentPrice) || entryPrice;
+                const notional = parseFloat(pos.notional) || 50.0;
+                const qty = parseFloat(pos.qty) || (notional / entryPrice);
+                return {
+                    ...pos,
+                    entryPrice,
+                    currentPrice,
+                    qty: isNaN(qty) ? 1.0 : qty,
+                    originalQty: parseFloat(pos.originalQty) || qty,
+                    notional: isNaN(notional) ? 50.0 : notional,
+                    stopLoss: parseFloat(pos.stopLoss) || (entryPrice * 0.955),
+                    tp1: parseFloat(pos.tp1) || (entryPrice * 1.042),
+                    tp2: parseFloat(pos.tp2) || (entryPrice * 1.10),
+                    realizedPnl: parseFloat(pos.realizedPnl) || 0.0,
+                    openTime: parseInt(pos.openTime) || Date.now()
+                };
+            });
+        }
+
+        // 3. 自動把救援出來的舊資料存寫入 V8.1 格式，完成無縫升級
+        saveToStorage();
+    } catch (err) {
+        console.warn("讀取歷史存檔失敗，還原預設:", err);
+    }
+}
 
         function saveToStorage() {
             try {
