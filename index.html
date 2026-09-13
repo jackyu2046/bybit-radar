@@ -651,6 +651,173 @@
                    state.history.length <= 300;
         }
 
+        /* ================= V8.5-A1.1 MIGRATION SAFETY HARDENING ================= */
+        const V85_RECOVERY_PREFIX = 'bybit_radar_v85_recovery_';
+
+        function v85DataQuality(trade) {
+            if (!trade || typeof trade !== 'object') return 0;
+            const checks = [
+                ['symbol', v => typeof v === 'string' && v !== 'UNKNOWN'],
+                ['entryPrice', v => Number.isFinite(Number(v)) && Number(v) > 0],
+                ['exitPrice', v => Number.isFinite(Number(v)) && Number(v) > 0],
+                ['openedAt', v => Number.isFinite(Number(v)) && Number(v) > 0],
+                ['closedAtTs', v => Number.isFinite(Number(v)) && Number(v) > 0],
+                ['netPnl', v => Number.isFinite(Number(v))],
+                ['grossPnl', v => Number.isFinite(Number(v))],
+                ['totalFees', v => Number.isFinite(Number(v))],
+                ['mfePct', v => Number.isFinite(Number(v))],
+                ['maePct', v => Number.isFinite(Number(v))],
+                ['reason', v => typeof v === 'string' && v.length > 0],
+                ['fills', v => Array.isArray(v) && v.length > 0]
+            ];
+            return checks.reduce((n, [k, ok]) => n + (ok(trade[k]) ? 1 : 0), 0);
+        }
+
+        function v85MergeRecordPair(a, b) {
+            const na = v85NormalizeTrade(a);
+            const nb = v85NormalizeTrade(b);
+            const qa = v85DataQuality(na);
+            const qb = v85DataQuality(nb);
+            const richer = qb > qa ? nb : na;
+            const poorer = richer === nb ? na : nb;
+
+            const merged = { ...poorer, ...richer };
+            if ((!merged.fills || !merged.fills.length) && (poorer.fills || []).length) merged.fills = poorer.fills;
+            merged.totalFees = Math.max(v85Number(na.totalFees), v85Number(nb.totalFees), v85Number(merged.totalFees));
+            merged.tradeId = na.tradeId;
+            merged.id = richer.id || poorer.id || merged.tradeId;
+            merged.schemaVersion = V85_SCHEMA_VERSION;
+            merged.dataQualityScore = Math.max(qa, qb);
+            return merged;
+        }
+
+        function v85QualityMergeTrades(...lists) {
+            const map = new Map();
+            lists.flat(Infinity).filter(Boolean).forEach(raw => {
+                if (!raw || typeof raw !== 'object') return;
+                const normalized = v85NormalizeTrade(raw);
+                const prev = map.get(normalized.tradeId);
+                map.set(normalized.tradeId, prev ? v85MergeRecordPair(prev, normalized) : {
+                    ...normalized,
+                    dataQualityScore: v85DataQuality(normalized)
+                });
+            });
+            return Array.from(map.values()).sort((a, b) => {
+                const dt = v85Timestamp(b.closedAtTs ?? b.closedAt, 0) - v85Timestamp(a.closedAtTs ?? a.closedAt, 0);
+                return dt || String(a.tradeId).localeCompare(String(b.tradeId));
+            });
+        }
+
+        function v85Checksum(value) {
+            const s = typeof value === 'string' ? value : JSON.stringify(value);
+            let h = 2166136261;
+            for (let i = 0; i < s.length; i++) {
+                h ^= s.charCodeAt(i);
+                h = Math.imul(h, 16777619);
+            }
+            return (h >>> 0).toString(16);
+        }
+
+        function v85PruneRecoveryPoints(keepCount = 3) {
+            try {
+                const keys = Object.keys(localStorage)
+                    .filter(k => k.startsWith(V85_RECOVERY_PREFIX))
+                    .sort();
+                while (keys.length > keepCount) {
+                    const oldest = keys.shift();
+                    localStorage.removeItem(oldest);
+                }
+            } catch (_) {}
+        }
+
+        function v85CreateRecoveryPoint(label, payload) {
+            const stamp = Date.now();
+            const key = V85_RECOVERY_PREFIX + stamp;
+            const record = {
+                schemaVersion: V85_SCHEMA_VERSION,
+                createdAt: stamp,
+                label,
+                checksum: v85Checksum(payload),
+                payload
+            };
+            try {
+                localStorage.setItem(key, JSON.stringify(record));
+                v85PruneRecoveryPoints(3);
+            } catch (err) {
+                console.warn('Recovery snapshot skipped (quota limit):', err);
+            }
+            return key;
+        }
+
+        function v85AtomicWrite(state, createRecovery = false) {
+            const txKey = STORAGE_KEY_SIM + '__staging';
+            const archiveKey = V85_ARCHIVE_KEY + '__staging';
+            const stateRaw = JSON.stringify(state);
+            const archiveRaw = JSON.stringify(state.historyArchive || []);
+
+            // Stage
+            localStorage.setItem(txKey, stateRaw);
+            localStorage.setItem(archiveKey, archiveRaw);
+
+            const stagedState = v85SafeJsonParse(localStorage.getItem(txKey));
+            const stagedArchive = v85SafeJsonParse(localStorage.getItem(archiveKey));
+            if (!stagedState || !Array.isArray(stagedArchive) ||
+                v85Checksum(stateRaw) !== v85Checksum(JSON.stringify(stagedState)) ||
+                v85Checksum(archiveRaw) !== v85Checksum(JSON.stringify(stagedArchive))) {
+                throw new Error('staging verification failed');
+            }
+
+            // Recovery point created only on major transactions (trade closure / migration)
+            let recoveryKey = null;
+            if (createRecovery) {
+                recoveryKey = v85CreateRecoveryPoint('pre-commit', {
+                    simStateRaw: localStorage.getItem(STORAGE_KEY_SIM),
+                    archiveRaw: localStorage.getItem(V85_ARCHIVE_KEY)
+                });
+            }
+
+            // Commit
+            localStorage.setItem(V85_ARCHIVE_KEY, archiveRaw);
+            localStorage.setItem(STORAGE_KEY_SIM, stateRaw);
+
+            // Verify commit
+            const committedState = v85SafeJsonParse(localStorage.getItem(STORAGE_KEY_SIM));
+            const committedArchive = v85SafeJsonParse(localStorage.getItem(V85_ARCHIVE_KEY));
+            if (!committedState || !Array.isArray(committedArchive) ||
+                committedArchive.length !== (state.historyArchive || []).length) {
+                if (recoveryKey) {
+                    const rp = v85SafeJsonParse(localStorage.getItem(recoveryKey));
+                    if (rp?.payload?.simStateRaw !== null) localStorage.setItem(STORAGE_KEY_SIM, rp.payload.simStateRaw);
+                    if (rp?.payload?.archiveRaw !== null) localStorage.setItem(V85_ARCHIVE_KEY, rp.payload.archiveRaw);
+                }
+                throw new Error('commit verification failed; rollback attempted');
+            }
+
+            localStorage.removeItem(txKey);
+            localStorage.removeItem(archiveKey);
+            return recoveryKey;
+        }
+
+        function v85GetMigrationHealth(state) {
+            const archive = Array.isArray(state?.historyArchive) ? state.historyArchive : [];
+            const uniqueIds = new Set(archive.map(t => t?.tradeId).filter(Boolean)).size;
+            const avgQuality = archive.length
+                ? archive.reduce((n, t) => n + v85DataQuality(t), 0) / archive.length
+                : 0;
+            return {
+                tradeCount: archive.length,
+                uniqueIds,
+                duplicateFree: uniqueIds === archive.length,
+                averageQuality: Number(avgQuality.toFixed(2)),
+                healthScore: Math.round(Math.min(100,
+                    (uniqueIds === archive.length ? 35 : 0) +
+                    (Array.isArray(state?.history) && state.history.length <= 300 ? 15 : 0) +
+                    Math.min(30, avgQuality * 2.5) +
+                    (state?.schemaVersion === V85_SCHEMA_VERSION ? 20 : 0)
+                ))
+            };
+        }
+
         function getTradingDayKey(ts = Date.now()) { return new Date(ts).toISOString().slice(0, 10); }
 
         function ensureRiskState() {
@@ -858,7 +1025,7 @@
                     ...legacyStates.map(x => Array.isArray(x.state.history) ? x.state.history : [])
                 ];
 
-                const mergedHistory = v85MergeTrades(...historySources);
+                const mergedHistory = v85QualityMergeTrades(...historySources);
 
                 // Merge positions from all sources by stable position identity; current source wins.
                 const positionMap = new Map();
@@ -923,51 +1090,43 @@
                     return;
                 }
 
-                // Phase 5: two-key commit + post-write verification.
-                const nextStateRaw = JSON.stringify(simState);
-                const nextArchiveRaw = JSON.stringify(simState.historyArchive);
-                localStorage.setItem(V85_ARCHIVE_KEY, nextArchiveRaw);
-                localStorage.setItem(STORAGE_KEY_SIM, nextStateRaw);
-
-                const verifyState = v85SafeJsonParse(localStorage.getItem(STORAGE_KEY_SIM));
-                const verifyArchive = v85SafeJsonParse(localStorage.getItem(V85_ARCHIVE_KEY));
-                if (!verifyState || !Array.isArray(verifyArchive) || verifyArchive.length !== expectedCount) {
-                    console.warn('V8.5 post-write verification failed; pre-migration backup key:', backupKey);
-                    return;
-                }
+                // Phase 5: staged + verified commit with recovery point.
+                const recoveryKey = v85AtomicWrite(simState, true);
+                const health = v85GetMigrationHealth(simState);
 
                 localStorage.setItem(V85_MIGRATION_MANIFEST_KEY, JSON.stringify({
                     lastBackupKey: backupKey,
+                    lastRecoveryKey: recoveryKey,
                     createdAt: Date.now(),
                     sourceKeys: legacyStates.map(x => x.key),
                     sourceTradeCount: historySources.reduce((n, x) => n + (Array.isArray(x) ? x.length : 0), 0),
                     unifiedTradeCount: expectedCount,
                     migrated: true,
-                    schemaVersion: V85_SCHEMA_VERSION
+                    schemaVersion: V85_SCHEMA_VERSION,
+                    health
                 }));
             } catch (err) {
                 console.warn('V8.5 Safe Migration failed; originals were not intentionally cleared:', err);
             }
         }
 
-        function saveToStorage(syncCloud = true) {
+        function saveToStorage(syncCloud = true, isMajorTransaction = false) {
             try {
                 simState.schemaVersion = V85_SCHEMA_VERSION;
-                const merged = v85MergeTrades(simState.historyArchive || [], simState.history || []);
+                const merged = v85QualityMergeTrades(simState.historyArchive || [], simState.history || []);
                 simState.historyArchive = merged;
                 simState.history = merged.slice(0, 300);
 
-                const stateRaw = JSON.stringify(simState);
-                const archiveRaw = JSON.stringify(simState.historyArchive);
-                localStorage.setItem(V85_ARCHIVE_KEY, archiveRaw);
-                localStorage.setItem(STORAGE_KEY_SIM, stateRaw);
-
-                // Verify writes before any optional cloud sync.
-                const verifyState = v85SafeJsonParse(localStorage.getItem(STORAGE_KEY_SIM));
-                const verifyArchive = v85SafeJsonParse(localStorage.getItem(V85_ARCHIVE_KEY));
-                if (!verifyState || !Array.isArray(verifyArchive)) {
-                    throw new Error('localStorage verification failed');
-                }
+                // Only create full recovery snapshots on major transactions (trade closure / import)
+                const recoveryKey = v85AtomicWrite(simState, isMajorTransaction);
+                const health = v85GetMigrationHealth(simState);
+                localStorage.setItem(V85_MIGRATION_MANIFEST_KEY, JSON.stringify({
+                    lastRecoveryKey: recoveryKey,
+                    createdAt: Date.now(),
+                    migrated: true,
+                    schemaVersion: V85_SCHEMA_VERSION,
+                    health
+                }));
                 if (syncCloud && firestoreDb) pushToCloudForce();
             } catch (e) {
                 console.warn('V8.5 save failed:', e);
@@ -1278,11 +1437,12 @@
                 regimeAtEntry: currentMarketRegime
             });
 
-            simState.historyArchive = v85MergeTrades(simState.historyArchive || [], [trade]);
+            // Use hardened quality merge
+            simState.historyArchive = v85QualityMergeTrades(simState.historyArchive || [], [trade]);
             simState.history = simState.historyArchive.slice(0, 300);
 
             recordRiskOutcome(trade);
-            saveToStorage();
+            saveToStorage(true, true); // Major transaction: create recovery snapshot
             renderSimPositions();
             updateSimHeaderStats();
         }
@@ -1838,7 +1998,7 @@
                     if (parsed.simState) {
                         const incomingArchive = parsed.simState.historyArchive || parsed.simState.history || [];
                         const localArchive = simState.historyArchive || simState.history || [];
-                        const merged = v85MergeTrades(localArchive, incomingArchive);
+                        const merged = v85QualityMergeTrades(localArchive, incomingArchive);
                         simState = { ...simState, ...parsed.simState, historyArchive: merged, history: merged.slice(0, 300) };
                     }
                     if (parsed.adaptiveParams) {
@@ -1849,7 +2009,7 @@
                         };
                     }
                     ensureRiskState();
-                    saveToStorage();
+                    saveToStorage(true, true); // Major transaction: create recovery snapshot
                     renderSimPositions();
                     updateSimHeaderStats();
                     showNotificationModal("匯入成功", "備份資料已成功無損合併還原！");
