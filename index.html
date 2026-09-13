@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bybit 小幣高精度狙擊交易系統 V8.5 UNIFIED ENGINE</title>
+    <title>Bybit 小幣高精度狙擊交易系統 V8.6 旗艦引擎</title>
     <!-- Tailwind CSS CDN --> 
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -60,10 +60,10 @@
                     <div>
                         <div class="flex items-center gap-1.5">
                             <h1 class="text-sm md:text-base font-bold text-white tracking-wide">Bybit 小幣高精度狙擊交易系統</h1>
-                            <span class="text-[9px] bg-emerald-500/20 text-emerald-400 font-mono font-semibold px-1.5 py-0.2 rounded border border-emerald-500/30">V8.5 DATA GUARD</span>
+                            <span class="text-[9px] bg-emerald-500/20 text-emerald-400 font-mono font-semibold px-1.5 py-0.2 rounded border border-emerald-500/30">V8.6 INTELLIGENCE</span>
                             <span class="text-[9px] bg-purple-500/20 text-purple-300 font-mono font-semibold px-1.5 py-0.2 rounded border border-purple-500/30" id="regimeHeaderBadge">Regime: CHOPPY</span>
                         </div>
-                        <p class="text-[11px] text-slate-400 hidden sm:block">V8.5 無損資料防護 · 統一撮合閉環 (TP1/TP2/Trailing) · 標的冷卻機制 · 5-10U 5x 扣費實撮</p>
+                        <p class="text-[11px] text-slate-400 hidden sm:block">V8.6 七維情報漏斗 · 標的歷史勝率智商庫 · 體制×策略矩陣 · 相關性曝險風控 2.0</p>
                     </div>
                 </div>
             </div>
@@ -85,12 +85,15 @@
                     <span id="autoTradeExecText">自動交易: 關 (安全預設)</span>
                 </button>
 
-                <button onclick="openScorecardModal()" class="flex items-center gap-1 bg-indigo-600/80 hover:bg-indigo-600 text-white font-medium px-2.5 py-1 rounded-lg transition border border-indigo-500/30 whitespace-nowrap text-[11px]">
-                    <span>📊</span>
-                    <span>策略計分卡</span>
+                <button onclick="openStrategyIntelligenceModal()" class="flex items-center gap-1 bg-purple-700/80 hover:bg-purple-600 text-white font-medium px-2.5 py-1 rounded-lg transition border border-purple-400/30 whitespace-nowrap text-[11px]">
+                    <span>🧠</span><span>策略情報</span>
                 </button>
 
-                <button onclick="openPerformanceAudit()" class="flex items-center gap-1 bg-gradient-to-r from-purple-700 to-indigo-700 hover:from-purple-600 hover:to-indigo-600 text-white font-medium px-2.5 py-1 rounded-lg transition border border-purple-400/40 shadow-md shadow-purple-500/20 whitespace-nowrap text-[11px]">
+                <button onclick="openScorecardModal()" class="flex items-center gap-1 bg-indigo-600/80 hover:bg-indigo-600 text-white font-medium px-2.5 py-1 rounded-lg transition border border-indigo-500/30 whitespace-nowrap text-[11px]">
+                    <span>📊</span><span>策略計分卡</span>
+                </button>
+
+                <button onclick="openPerformanceAudit()" class="flex items-center gap-1 bg-blue-600/80 hover:bg-blue-600 text-white font-medium px-2.5 py-1 rounded-lg transition border border-blue-400/30 whitespace-nowrap text-[11px]">
                     <span>📈</span><span>績效審計</span>
                 </button>
 
@@ -105,10 +108,6 @@
 
                 <button onclick="openCloudModal()" class="flex items-center gap-1 bg-sky-600/80 hover:bg-sky-600 text-white font-medium px-2.5 py-1 rounded-lg transition border border-sky-500/30 whitespace-nowrap text-[11px]">
                     <span>☁️</span><span>雲端同步</span>
-                </button>
-
-                <button onclick="openGeminiAuditModal()" class="flex items-center gap-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-medium px-2.5 py-1 rounded-lg transition border border-blue-400/40 shadow-md shadow-blue-500/20 whitespace-nowrap text-[11px]">
-                    <span>✨</span><span>Gemini 體檢</span>
                 </button>
 
                 <button onclick="exportDataJson()" class="flex items-center gap-1 bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium px-2 py-1 rounded-lg transition border border-crypto-border whitespace-nowrap text-[11px]">
@@ -236,6 +235,49 @@
             </div>
         </section>
     </main>
+
+    <!-- V8.6 策略情報彈窗 (Modal) -->
+    <div id="strategyIntelligenceModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5 hidden">
+        <div class="bg-crypto-card border border-purple-500/40 rounded-2xl max-w-3xl w-full p-4 sm:p-6 shadow-2xl space-y-4 max-h-[90vh] flex flex-col text-xs font-sans">
+            <div class="flex items-center justify-between border-b border-crypto-border pb-3">
+                <div class="flex items-center gap-2">
+                    <span class="text-xl">🧠</span>
+                    <div>
+                        <h3 class="font-bold text-white text-sm sm:text-base">V8.6 策略情報與市場體制矩陣 (Strategy Intelligence)</h3>
+                        <p class="text-[11px] text-purple-300">七維品質漏斗 · 標的歷史勝率智商庫 · 相關性曝險控管 2.0</p>
+                    </div>
+                </div>
+                <button onclick="closeStrategyIntelligenceModal()" class="text-slate-400 hover:text-white text-lg p-1">✕</button>
+            </div>
+
+            <div class="space-y-3 overflow-y-auto max-h-[60vh] pr-1">
+                <div class="bg-slate-900/80 p-3.5 rounded-xl border border-crypto-border space-y-2">
+                    <span class="font-bold text-white block text-xs">🏛️ 當前市場體制路由 (Regime Matrix)</span>
+                    <div class="text-[11px] text-slate-300 leading-relaxed font-mono">
+                        <div>當前體制路由: <b class="text-purple-300 font-bold" id="intelRegimeText">CHOPPY</b> (僅限回踩低吸 / A+ 嚴選)</div>
+                        <div class="text-[10px] text-slate-400 mt-1">
+                            • 歷史獲利標的 (Top Edge): <span class="text-emerald-400 font-bold">LSK (+13.3%)</span> 享有最高優先權重<br>
+                            • 高耗損標的 (Penalty): <span class="text-rose-400 font-bold">BLAST / MET</span> 扣除評分或降額度<br>
+                            • 多頭總曝險控制: Max 25% | 當前: <span class="text-amber-400 font-bold" id="intelExposureText">0.0% / 25%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-slate-900/80 p-3.5 rounded-xl border border-crypto-border space-y-2">
+                    <span class="font-bold text-white block text-xs">🪙 標的實戰智商庫 (Coin Intelligence Matrix)</span>
+                    <div id="coinIntelContainer" class="space-y-1.5 font-mono text-[11px]">
+                        <div class="text-center py-4 text-slate-500">正在動態計算歷史封存檔之各代幣勝率與 Expectancy...</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex justify-end pt-1">
+                <button onclick="closeStrategyIntelligenceModal()" class="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-xs border border-crypto-border">
+                    關閉控制台
+                </button>
+            </div>
+        </div>
+    </div>
 
     <!-- 策略計分卡彈窗 (Modal) -->
     <div id="scorecardModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
@@ -413,35 +455,20 @@
         </div>
     </div>
 
-    <!-- V8.5-A2 Performance Audit 彈窗 -->
+    <!-- V8.5-A2 Performance Audit -->
     <div id="performanceAuditModal" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
       <div class="bg-crypto-card border border-crypto-border rounded-xl p-5 max-w-5xl w-full max-h-[90vh] overflow-y-auto space-y-4 text-xs font-sans">
         <div class="flex items-center justify-between border-b border-crypto-border pb-3">
-          <div>
-            <h3 class="text-base font-bold text-white flex items-center gap-2"><span>📊</span> V8.5-A2 Performance Audit 績效與風險審計</h3>
-            <p class="text-slate-400 mt-1">基於 historyArchive 全量交易資料庫，精算期望值、MFE/MAE 與策略健康評級</p>
-          </div>
+          <div><h3 class="text-base font-bold text-white">📊 V8.5-A2 Performance Audit</h3><p class="text-slate-400 mt-1">以 historyArchive 計算績效、風險與策略健康度</p></div>
           <button onclick="closePerformanceAudit()" class="text-slate-400 hover:text-white text-lg">✕</button>
         </div>
-        <div id="performanceAuditSummary" class="grid grid-cols-2 md:grid-cols-4 gap-3 font-mono"></div>
+        <div id="performanceAuditSummary" class="grid grid-cols-2 md:grid-cols-4 gap-3"></div>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div class="bg-slate-900/60 border border-crypto-border rounded-lg p-4">
-            <h4 class="font-bold text-white mb-2 flex items-center gap-1.5"><span>🎯</span> 策略與出場原因分佈 (Strategy Breakdown)</h4>
-            <div id="performanceAuditBreakdown" class="space-y-2 font-mono max-h-56 overflow-y-auto pr-1"></div>
-          </div>
-          <div class="bg-slate-900/60 border border-crypto-border rounded-lg p-4">
-            <h4 class="font-bold text-white mb-2 flex items-center gap-1.5"><span>⚠️</span> 風險診斷與位移分佈 (Risk Diagnostics)</h4>
-            <div id="performanceAuditRisk" class="space-y-2 font-mono"></div>
-          </div>
+          <div class="bg-slate-900/60 border border-crypto-border rounded-lg p-4"><h4 class="font-bold text-white mb-2">🎯 Strategy / Signal Breakdown</h4><div id="performanceAuditBreakdown" class="space-y-2 font-mono text-[11px]"></div></div>
+          <div class="bg-slate-900/60 border border-crypto-border rounded-lg p-4"><h4 class="font-bold text-white mb-2">⚠️ Risk Diagnostics</h4><div id="performanceAuditRisk" class="space-y-2 font-mono text-[11px]"></div></div>
         </div>
-        <div class="bg-slate-900/60 border border-crypto-border rounded-lg p-4">
-          <h4 class="font-bold text-white mb-2 flex items-center gap-1.5"><span>🧠</span> 量化審計結論與調參指導</h4>
-          <div id="performanceAuditConclusion" class="text-slate-300 leading-relaxed font-sans text-xs"></div>
-        </div>
-        <div class="flex justify-end gap-2 pt-2">
-          <button onclick="exportPerformanceAudit()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-lg border border-crypto-border">📥 匯出審計 JSON</button>
-          <button onclick="closePerformanceAudit()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg">關閉</button>
-        </div>
+        <div class="bg-slate-900/60 border border-crypto-border rounded-lg p-4"><h4 class="font-bold text-white mb-2">🧠 Audit Conclusion</h4><div id="performanceAuditConclusion" class="text-slate-300 leading-relaxed font-sans"></div></div>
+        <div class="flex justify-end gap-2"><button onclick="exportPerformanceAudit()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-lg">匯出 JSON</button><button onclick="closePerformanceAudit()" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-lg">關閉</button></div>
       </div>
     </div>
 
@@ -460,11 +487,11 @@
 
     <script>
         /* =========================================================
-           BYBIT RADAR V8.5 CORE ENGINE
-           整合: 數據防護 + 統一撮合 (TP1/TP2/Trailing) + 幣種冷卻風控 + Strategy Lab
+           BYBIT RADAR V8.6 CORE ENGINE — INTELLIGENCE & RISK OPTIMIZATION
+           整合: 資料防護 + 統一撮合 (TP1/TP2/Trailing) + 幣種智商庫 + Strategy Lab
         ========================================================= */
         const STORAGE_KEY_SIM = 'bybit_radar_sim_v82';
-        const V85_SCHEMA_VERSION = '8.5-UNIFIED';
+        const V85_SCHEMA_VERSION = '8.6-INTELLIGENCE';
         const V85_ARCHIVE_KEY = 'bybit_radar_trade_archive_v85';
         const V85_BACKUP_PREFIX = 'bybit_radar_v85_migration_backup_';
         const V85_MIGRATION_MANIFEST_KEY = 'bybit_radar_v85_migration_manifest';
@@ -520,7 +547,7 @@
         };
 
         const strategyConfig = {
-            minConfidence: 72,
+            minConfidence: 75,
             minScore: 80,
             minRvol: 1.8,
             minOiVelocity: 0.8,
@@ -528,7 +555,7 @@
             preferredMomentumMin: 1.5,
             preferredMomentumMax: 12.0,
             allowRegimes: ['RISK_ON', 'CHOPPY', 'TRENDING'],
-            weights: { score: 35, rvol: 15, oi: 20, momentum: 15, spread: 10, regime: 5 }
+            weights: { score: 30, rvol: 15, oi: 20, momentum: 15, spread: 10, coinIntel: 10 }
         };
 
         const riskConfig = {
@@ -537,7 +564,7 @@
             maxDrawdownPct: 8.0,
             maxConsecutiveLosses: 3,
             cooldownMinutes: 30,
-            symbolCooldownMinutes: 30, // 針對單一標的停損後的休眠時間 (防 BLAST 連續進場)
+            symbolCooldownMinutes: 30,
             maxExposurePct: 25,
             minMargin: 5,
             maxMargin: 10,
@@ -638,35 +665,22 @@
             };
         }
 
-        function v85MergeTrades(...lists) {
-            const map = new Map();
-            lists.flat(Infinity).filter(Boolean).forEach(raw => {
-                if (!raw || typeof raw !== 'object') return;
-                const trade = v85NormalizeTrade(raw);
-                const prev = map.get(trade.tradeId);
-                if (!prev) {
-                    map.set(trade.tradeId, trade);
-                    return;
-                }
-                // Prefer the record with more non-empty execution data, but preserve all fields.
-                const score = obj => Object.values(obj).reduce((n, v) =>
-                    n + (v !== null && v !== undefined && v !== '' &&
-                         !(Array.isArray(v) && v.length === 0) ? 1 : 0), 0);
-                const richer = score(trade) >= score(prev) ? trade : prev;
-                const poorer = richer === trade ? prev : trade;
-                map.set(trade.tradeId, { ...poorer, ...richer, tradeId: trade.tradeId, schemaVersion: V85_SCHEMA_VERSION });
-            });
-            return Array.from(map.values()).sort((a, b) => {
-                const bt = v85Timestamp(b.closedAtTs ?? b.closedAt, 0);
-                const at = v85Timestamp(a.closedAtTs ?? a.closedAt, 0);
-                if (bt !== at) return bt - at;
-                return String(a.tradeId).localeCompare(String(b.tradeId));
-            });
-        }
-
         function v85SafeJsonParse(raw) {
             if (!raw || typeof raw !== 'string') return null;
             try { return JSON.parse(raw); } catch (_) { return null; }
+        }
+
+        function v85PruneMigrationBackups(keepCount = 5) {
+            try {
+                const keys = Object.keys(localStorage)
+                    .filter(k => k.startsWith(V85_BACKUP_PREFIX))
+                    .sort();
+                while (keys.length > keepCount) {
+                    localStorage.removeItem(keys.shift());
+                }
+            } catch (err) {
+                console.warn('Migration backup prune failed:', err);
+            }
         }
 
         function v85CreateMigrationBackup(sources, archiveRaw) {
@@ -680,6 +694,7 @@
             };
             const key = V85_BACKUP_PREFIX + stamp;
             localStorage.setItem(key, JSON.stringify(snapshot));
+            v85PruneMigrationBackups(5);
             localStorage.setItem(V85_MIGRATION_MANIFEST_KEY, JSON.stringify({
                 lastBackupKey: key,
                 createdAt: stamp,
@@ -814,7 +829,7 @@
                 throw new Error('staging verification failed');
             }
 
-            // Recovery point created only on major transactions (trade closure / migration)
+            // Recovery point created only on major transactions
             let recoveryKey = null;
             if (createRecovery) {
                 recoveryKey = v85CreateRecoveryPoint('pre-commit', {
@@ -915,7 +930,7 @@
                 dailyRealizedPnl: 0,
                 consecutiveLosses: 0,
                 cooldownUntil: 0,
-                cooldownBySymbol: {}, // 標的停損專屬冷卻時間戳
+                cooldownBySymbol: {},
                 equityPeak: parseFloat(simState.initialBalance) || 0,
                 maxDrawdownPct: 0,
                 halted: false,
@@ -948,6 +963,31 @@
             return (parseFloat(simState.balance) || 0) + u;
         }
 
+        /* V8.6 標的智商庫 (Coin Intelligence Matrix) */
+        function getCoinIntelligence(symbol) {
+            const h = (simState.historyArchive || simState.history || []).filter(t => t.symbol === symbol);
+            if (h.length === 0) return { symbol, trades: 0, winRate: 0.5, expectancy: 0, bonus: 0, label: 'NEW' };
+
+            const wins = h.filter(t => (parseFloat(t.pnl) || 0) > 0);
+            const winRate = wins.length / h.length;
+            const totalNet = h.reduce((sum, t) => sum + (parseFloat(t.pnl) || 0), 0);
+            const expectancy = totalNet / h.length;
+
+            let bonus = 0;
+            let label = 'NEUTRAL';
+            if (h.length >= 2) {
+                if (expectancy > 0.5 && winRate >= 0.6) {
+                    bonus = 10;
+                    label = 'HIGH_EDGE';
+                } else if (expectancy < -0.5 || winRate <= 0.3) {
+                    bonus = -15;
+                    label = 'PENALTY';
+                }
+            }
+
+            return { symbol, trades: h.length, winRate, expectancy, bonus, label };
+        }
+
         function calculateSignalConfidence(c) {
             if (!c) return { confidence: 0, reasons: ['NO_DATA'], blockers: ['NO_DATA'] };
             const reasons = [], blockers = [];
@@ -955,15 +995,22 @@
             const score = parseFloat(c.score) || 0, rvol = parseFloat(c.rvol) || 0, oi = parseFloat(c.oiVelocity) || 0;
             const mom = parseFloat(c.momentum1h) || 0, spread = parseFloat(c.spreadPct) || 999;
 
-            confidence += Math.min(35, Math.max(0, (score / 100) * strategyConfig.weights.score));
+            confidence += Math.min(30, Math.max(0, (score / 100) * strategyConfig.weights.score));
             if (rvol >= strategyConfig.minRvol) { confidence += strategyConfig.weights.rvol; reasons.push('RVOL_CONFIRM'); } else blockers.push('LOW_RVOL');
             if (oi >= strategyConfig.minOiVelocity) { confidence += strategyConfig.weights.oi; reasons.push('OI_CONFIRM'); } else blockers.push('LOW_OI');
             if (mom >= strategyConfig.preferredMomentumMin && mom <= strategyConfig.preferredMomentumMax) { confidence += strategyConfig.weights.momentum; reasons.push('MOMENTUM_OK'); } else blockers.push('MOMENTUM_OUT_OF_RANGE');
             if (spread <= strategyConfig.maxSpreadPct) { confidence += strategyConfig.weights.spread; reasons.push('SPREAD_OK'); } else blockers.push('SPREAD_TOO_WIDE');
-            if (strategyConfig.allowRegimes.includes(currentMarketRegime)) { confidence += strategyConfig.weights.regime; reasons.push('REGIME_OK'); } else blockers.push('REGIME_BLOCK');
+
+            // 標的歷史智商庫 (Coin Intelligence Bonus / Penalty)
+            const coinIntel = getCoinIntelligence(c.symbol);
+            if (coinIntel.bonus !== 0) {
+                confidence += coinIntel.bonus;
+                reasons.push(`COIN_INTEL_${coinIntel.label}_${coinIntel.bonus > 0 ? '+' : ''}${coinIntel.bonus}`);
+            }
+
             if (score < strategyConfig.minScore) blockers.push('LOW_SCORE');
 
-            return { confidence: Math.round(Math.min(100, confidence)), reasons, blockers };
+            return { confidence: Math.round(Math.min(100, Math.max(0, confidence))), reasons, blockers };
         }
 
         function getOpenExposure() {
@@ -1018,7 +1065,6 @@
 
             if (pnl < 0) {
                 rs.consecutiveLosses = (parseInt(rs.consecutiveLosses) || 0) + 1;
-                // 單一幣種停損時寫入 30 分鐘冷卻
                 rs.cooldownBySymbol = rs.cooldownBySymbol || {};
                 rs.cooldownBySymbol[trade.symbol] = Date.now() + (riskConfig.symbolCooldownMinutes * 60000);
 
@@ -1090,7 +1136,6 @@
         /* 儲存載入與資料庫無損整合 — V8.5-A1 FINAL */
         function loadFromStorage() {
             try {
-                // Phase 1: discover every legacy source without mutating any source.
                 const legacyStates = [];
                 LEGACY_SIM_KEYS.forEach(key => {
                     const raw = localStorage.getItem(key);
@@ -1102,8 +1147,6 @@
                 const archiveState = v85SafeJsonParse(archiveRaw);
                 const backupKey = v85CreateMigrationBackup(legacyStates, archiveRaw);
 
-                // Phase 2: choose current-state settings from the preferred current key,
-                // while collecting history from ALL keys and ALL archives.
                 const primary = legacyStates.find(x => x.key === STORAGE_KEY_SIM) || legacyStates[0];
                 const mergedState = primary ? { ...simState, ...primary.state } : { ...simState };
 
@@ -1115,7 +1158,6 @@
 
                 const mergedHistory = v85QualityMergeTrades(...historySources);
 
-                // Merge positions from all sources by stable position identity; current source wins.
                 const positionMap = new Map();
                 legacyStates.slice().reverse().forEach(src => {
                     const list = Array.isArray(src.state.positions) ? src.state.positions : [];
@@ -1134,7 +1176,6 @@
                     history: mergedHistory.slice(0, 300)
                 };
 
-                // Phase 3: normalize positions.
                 simState.positions = (simState.positions || []).map(pos => {
                     const entryPrice = v85Number(pos.entryPrice, 0.0001);
                     const currentPrice = v85Number(pos.currentPrice, entryPrice);
@@ -1171,14 +1212,12 @@
 
                 ensureRiskState();
 
-                // Phase 4: verify before committing. If verification fails, leave originals untouched.
                 const expectedCount = mergedHistory.length;
                 if (!v85VerifyMigration(simState, expectedCount)) {
                     console.warn('V8.5 migration verification failed; originals preserved. Backup:', backupKey);
                     return;
                 }
 
-                // Phase 5: staged + verified commit with recovery point.
                 const recoveryKey = v85AtomicWrite(simState, true);
                 const health = v85GetMigrationHealth(simState);
 
@@ -1205,7 +1244,6 @@
                 simState.historyArchive = merged;
                 simState.history = merged.slice(0, 300);
 
-                // Only create full recovery snapshots on major transactions (trade closure / import)
                 const recoveryKey = v85AtomicWrite(simState, isMajorTransaction);
                 const health = v85GetMigrationHealth(simState);
                 localStorage.setItem(V85_MIGRATION_MANIFEST_KEY, JSON.stringify({
@@ -1529,7 +1567,7 @@
             simState.historyArchive = v85QualityMergeTrades(simState.historyArchive || [], [trade]);
             simState.history = simState.historyArchive.slice(0, 300);
 
-            recordRiskOutcome(trade, false); // Avoid double-saving within the same microtask
+            recordRiskOutcome(trade, false);
             saveToStorage(true, true); // Major transaction: create recovery snapshot
             renderSimPositions();
             updateSimHeaderStats();
@@ -1545,7 +1583,7 @@
             
             const candidate = ranked.find(c => evaluateRiskGate(c).allowed);
             if (candidate) {
-                executeOpenPosition(candidate, `🧠 V8.5 置信度 ${candidate.intelligence.confidence}%`);
+                executeOpenPosition(candidate, `🧠 V8.6 置信度 ${candidate.intelligence.confidence}%`);
             }
         }
 
@@ -1797,6 +1835,69 @@
             if (btnText) btnText.innerText = `自動交易: ${simState.autoTrade ? '開' : '關 (安全預設)'}`;
         }
 
+        function renderCoinIntelligenceMatrix() {
+            const container = document.getElementById('coinIntelContainer');
+            if (!container) return;
+
+            const history = simState.historyArchive || simState.history || [];
+            if (history.length === 0) {
+                container.innerHTML = `<div class="text-center py-4 text-slate-500">尚無足夠平倉資料建立代幣智商庫。</div>`;
+                return;
+            }
+
+            const coinsMap = new Map();
+            history.forEach(t => {
+                const sym = t.symbol;
+                if (!coinsMap.has(sym)) coinsMap.set(sym, { trades: 0, wins: 0, totalPnl: 0 });
+                const item = coinsMap.get(sym);
+                item.trades++;
+                const pnl = parseFloat(t.pnl) || 0;
+                item.totalPnl += pnl;
+                if (pnl > 0) item.wins++;
+            });
+
+            const sortedCoins = Array.from(coinsMap.entries()).map(([symbol, stat]) => {
+                const winRate = stat.trades > 0 ? (stat.wins / stat.trades) * 100 : 0;
+                const expectancy = stat.trades > 0 ? stat.totalPnl / stat.trades : 0;
+                return { symbol, ...stat, winRate, expectancy };
+            }).sort((a, b) => b.totalPnl - a.totalPnl);
+
+            container.innerHTML = sortedCoins.slice(0, 8).map(c => `
+                <div class="p-2 rounded-lg bg-slate-950 border border-crypto-border flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <span class="font-bold text-white">${c.symbol}</span>
+                        <span class="text-[10px] px-1.5 rounded ${c.expectancy > 0 ? 'bg-emerald-950 text-emerald-400 border border-emerald-500/30' : 'bg-rose-950 text-rose-400 border border-rose-500/30'}">
+                            ${c.expectancy > 0 ? '高獲利 Edge' : '懲罰 Penalty'}
+                        </span>
+                    </div>
+                    <div class="text-right">
+                        <span class="font-bold ${c.totalPnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}">$${c.totalPnl >= 0 ? '+' : ''}${c.totalPnl.toFixed(2)}</span>
+                        <span class="block text-[9px] text-slate-400">${c.trades} 筆 · 勝率 ${c.winRate.toFixed(0)}%</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function openStrategyIntelligenceModal() {
+            const regimeEl = document.getElementById('intelRegimeText');
+            if (regimeEl) regimeEl.innerText = currentMarketRegime;
+
+            const expEl = document.getElementById('intelExposureText');
+            if (expEl) {
+                const exposure = getOpenExposure();
+                const equity = Math.max(1, getCurrentEquity());
+                const pct = (exposure / equity) * 100;
+                expEl.innerText = `${pct.toFixed(1)}% / ${riskConfig.maxExposurePct}% ($${exposure.toFixed(2)} USDT)`;
+            }
+
+            renderCoinIntelligenceMatrix();
+            document.getElementById('strategyIntelligenceModal').classList.remove('hidden');
+        }
+
+        function closeStrategyIntelligenceModal() {
+            document.getElementById('strategyIntelligenceModal').classList.add('hidden');
+        }
+
         function openScorecardModal() {
             const a = getStrategyAnalytics();
             const history = simState.historyArchive || simState.history || [];
@@ -1845,57 +1946,19 @@
 
             document.getElementById('historyModal').classList.remove('hidden');
         }
-        function v85ApplyCloudStateSafely(cloudState, source = 'cloud') {
-            try {
-                if (!cloudState || typeof cloudState !== 'object') return false;
 
-                const localHist = simState.historyArchive || simState.history || [];
-                const cloudHist = cloudState.historyArchive || cloudState.history || [];
-                const merged = v85QualityMergeTrades(localHist, cloudHist);
-
-                // 安全合併進行中持倉：避免雲端推送覆蓋本機剛開啟的倉位
-                const closedTradeIds = new Set(merged.map(t => t.id || t.tradeId));
-                const posMap = new Map();
-                (cloudState.positions || []).forEach(p => {
-                    if (p && p.id && !closedTradeIds.has(p.id)) posMap.set(p.id, p);
-                });
-                (simState.positions || []).forEach(p => {
-                    if (p && p.id && !closedTradeIds.has(p.id)) {
-                        const prev = posMap.get(p.id);
-                        posMap.set(p.id, prev ? { ...prev, ...p } : p);
-                    }
-                });
-
-                const candidate = {
-                    ...simState,
-                    ...cloudState,
-                    positions: Array.from(posMap.values()),
-                    schemaVersion: V85_SCHEMA_VERSION,
-                    historyArchive: merged,
-                    history: merged.slice(0, 300)
-                };
-
-                const health = v85GetMigrationHealth(candidate);
-                if (!health.duplicateFree || candidate.history.length > 300) {
-                    console.warn(`Cloud ${source} merge rejected:`, health);
-                    return false;
-                }
-
-                simState = candidate;
-                saveToStorage(false);
-                return true;
-            } catch (err) {
-                console.warn(`Cloud ${source} merge failed:`, err);
-                return false;
-            }
+        function closeHistoryModal() {
+            document.getElementById('historyModal').classList.add('hidden');
         }
 
-        function copyRoomIdToClipboard() {
-            const input = document.getElementById('cloudRoomInput');
-            if (!input || !input.value) return;
-            input.select();
-            document.execCommand('copy');
-            showNotificationModal('複製成功', `房間 ID 已複製到剪貼簿：\n${input.value}`);
+        function v85AuditKey(t) {
+            if (!t) return 'UNCLASSIFIED';
+            if (typeof t.strategy === 'string' && t.strategy.length > 0) return t.strategy;
+            if (typeof t.reason === 'string' && t.reason.length > 0) return t.reason;
+            if (typeof t.closeReason === 'string' && t.closeReason.length > 0) return t.closeReason;
+            if (typeof t.signalType === 'string' && t.signalType.length > 0) return t.signalType;
+            if (typeof t.grade === 'string' && t.grade.length > 0) return `GRADE_${t.grade}`;
+            return 'UNCLASSIFIED';
         }
 
         function openGeminiAuditModal() {
@@ -1911,7 +1974,7 @@
             const rs = ensureRiskState();
             const el = document.getElementById('geminiReportText');
             if (el) {
-                el.textContent = `Gemini AI 體檢報告 [V8.5 旗艦引擎]：\n` +
+                el.textContent = `Gemini AI 體檢報告 [V8.6 旗艦引擎]：\n` +
                     `• 總平倉樣本: ${a.totalTrades} 筆 | 勝率: ${(a.winRate * 100).toFixed(1)}%\n` +
                     `• 單筆期望值: ${a.expectancy >= 0 ? '+' : ''}$${a.expectancy.toFixed(2)} | 獲利因子 PF: ${a.profitFactor === Infinity ? '∞' : a.profitFactor.toFixed(2)}\n` +
                     `• 平均有利位移 (MFE): +${a.avgMfe.toFixed(2)}% | 平均最大回撤 (MAE): ${a.avgMae.toFixed(2)}%\n` +
@@ -2145,7 +2208,7 @@
                         };
                     }
                     ensureRiskState();
-                    saveToStorage(true, true); // Major transaction: create recovery snapshot
+                    saveToStorage(true, true);
                     renderSimPositions();
                     updateSimHeaderStats();
                     showNotificationModal("匯入成功", "備份資料已成功無損合併還原！");
@@ -2234,6 +2297,59 @@
         let cloudUnsubscribe = null;
         let lastLocalUpdate = Date.now();
 
+        function v85ApplyCloudStateSafely(cloudState, source = 'cloud') {
+            try {
+                if (!cloudState || typeof cloudState !== 'object') return false;
+
+                const localHist = simState.historyArchive || simState.history || [];
+                const cloudHist = cloudState.historyArchive || cloudState.history || [];
+                const merged = v85QualityMergeTrades(localHist, cloudHist);
+
+                // 安全合併進行中持倉：避免雲端推送覆蓋本機剛開啟的倉位
+                const closedTradeIds = new Set(merged.map(t => t.id || t.tradeId));
+                const posMap = new Map();
+                (cloudState.positions || []).forEach(p => {
+                    if (p && p.id && !closedTradeIds.has(p.id)) posMap.set(p.id, p);
+                });
+                (simState.positions || []).forEach(p => {
+                    if (p && p.id && !closedTradeIds.has(p.id)) {
+                        const prev = posMap.get(p.id);
+                        posMap.set(p.id, prev ? { ...prev, ...p } : p);
+                    }
+                });
+
+                const candidate = {
+                    ...simState,
+                    ...cloudState,
+                    positions: Array.from(posMap.values()),
+                    schemaVersion: V85_SCHEMA_VERSION,
+                    historyArchive: merged,
+                    history: merged.slice(0, 300)
+                };
+
+                const health = v85GetMigrationHealth(candidate);
+                if (!health.duplicateFree || candidate.history.length > 300) {
+                    console.warn(`Cloud ${source} merge rejected:`, health);
+                    return false;
+                }
+
+                simState = candidate;
+                saveToStorage(false);
+                return true;
+            } catch (err) {
+                console.warn(`Cloud ${source} merge failed:`, err);
+                return false;
+            }
+        }
+
+        function copyRoomIdToClipboard() {
+            const input = document.getElementById('cloudRoomInput');
+            if (!input || !input.value) return;
+            input.select();
+            document.execCommand('copy');
+            showNotificationModal('複製成功', `房間 ID 已複製到剪貼簿：\n${input.value}`);
+        }
+
         function initFirebaseSync() {
             try {
                 if (!firebase.apps.length) firebase.initializeApp(defaultFirebaseConfig);
@@ -2246,6 +2362,7 @@
 
         function bindCloudRoom(roomId) {
             if (!firestoreDb || !roomId) return;
+
             if (typeof cloudUnsubscribe === 'function') {
                 try { cloudUnsubscribe(); } catch (_) {}
                 cloudUnsubscribe = null;
@@ -2253,7 +2370,11 @@
 
             currentRoomId = roomId;
             cloudUnsubscribe = firestoreDb.collection('bybit_sync_rooms').doc(roomId).onSnapshot(doc => {
-                if (!doc.exists) { pushToCloudForce(); return; }
+                if (!doc.exists) {
+                    pushToCloudForce();
+                    return;
+                }
+
                 const data = doc.data();
                 if (!data || !data.updatedAt || data.updatedAt <= lastLocalUpdate || !data.simState) return;
 
@@ -2272,23 +2393,32 @@
             firestoreDb.collection('bybit_sync_rooms').doc(currentRoomId).set({
                 updatedAt: lastLocalUpdate,
                 simState: { ...simState, schemaVersion: V85_SCHEMA_VERSION }
-            }).catch(console.warn);
+            }).catch(err => console.warn('Cloud push failed:', err));
         }
 
         function pullFromCloudForce() {
-            if (!firestoreDb) return;
-            firestoreDb.collection('bybit_sync_rooms').doc(currentRoomId).get().then(doc => {
-                if (doc.exists && doc.data().simState) {
-                    const ok = v85ApplyCloudStateSafely(doc.data().simState);
+            if (!firestoreDb || !currentRoomId) return;
+            firestoreDb.collection('bybit_sync_rooms').doc(currentRoomId).get()
+                .then(doc => {
+                    if (!doc.exists || !doc.data()?.simState) {
+                        showNotificationModal("同步提示", "雲端目前沒有可合併的交易紀錄。");
+                        return;
+                    }
+
+                    const ok = v85ApplyCloudStateSafely(doc.data().simState, 'manual-pull');
                     if (ok) {
+                        lastLocalUpdate = Math.max(lastLocalUpdate, Number(doc.data().updatedAt) || Date.now());
                         renderSimPositions();
                         updateSimHeaderStats();
-                        showNotificationModal("同步成功", "已成功從雲端合併最新紀錄！");
+                        showNotificationModal("同步成功", "已成功安全合併雲端交易紀錄！");
                     } else {
-                        showNotificationModal("同步攔截", "雲端資料未通過完整性檢查（可能存在重複或格式異常），已保留本機紀錄。");
+                        showNotificationModal("同步攔截", "雲端資料未通過完整性檢查，已保留本機紀錄。");
                     }
-                }
-            });
+                })
+                .catch(err => {
+                    console.warn('Cloud pull failed:', err);
+                    showNotificationModal("同步失敗", "無法讀取雲端資料，請稍後再試。");
+                });
         }
 
         function openCloudModal() {
@@ -2303,131 +2433,55 @@
         function saveRoomConfig() {
             const newRoom = (document.getElementById('cloudRoomInput').value || '').trim();
             if (newRoom && newRoom !== currentRoomId) {
-                currentRoomId = newRoom;
-                localStorage.setItem(STORAGE_KEY_ROOM, currentRoomId);
-                bindCloudRoom(currentRoomId);
+                localStorage.setItem(STORAGE_KEY_ROOM, newRoom);
+                bindCloudRoom(newRoom);
             }
             closeCloudModal();
         }
 
         /* ================= V8.5-A2 PERFORMANCE AUDIT ENGINE ================= */
-        function v85AuditNum(v, fallback = 0) { const n = Number(v); return Number.isFinite(n) ? n : fallback; }
-        function v85AuditTrades() {
-            const a = Array.isArray(simState.historyArchive) && simState.historyArchive.length 
-                ? simState.historyArchive 
-                : (Array.isArray(simState.history) ? simState.history : []);
-            return a.filter(t => t && typeof t === 'object');
+        function v85AuditNum(v, fallback=0){ const n=Number(v); return Number.isFinite(n)?n:fallback; }
+        function v85AuditTrades(){
+            const a=Array.isArray(simState.historyArchive)&&simState.historyArchive.length?simState.historyArchive:(Array.isArray(simState.history)?simState.history:[]);
+            return a.filter(t=>t&&typeof t==='object');
         }
-        function v85AuditPnl(t) { 
-            return v85AuditNum(t.netPnl, v85AuditNum(t.realizedNetPnl, v85AuditNum(t.pnl, v85AuditNum(t.realizedPnl, v85AuditNum(t.grossPnl, 0))))); 
+        function v85AuditPnl(t){ return v85AuditNum(t.netPnl,v85AuditNum(t.realizedNetPnl,v85AuditNum(t.pnl,v85AuditNum(t.realizedPnl,v85AuditNum(t.grossPnl,0))))); }
+        function v85AuditFee(t){ return Math.max(0,v85AuditNum(t.totalFees,v85AuditNum(t.fees,0))); }
+        function v85AuditKey(t){
+            if (!t) return 'UNCLASSIFIED';
+            if (typeof t.reason === 'string' && t.reason.length > 0) return t.reason;
+            if (typeof t.closeReason === 'string' && t.closeReason.length > 0) return t.closeReason;
+            if (typeof t.strategy === 'string' && t.strategy.length > 0) return t.strategy;
+            if (typeof t.signalType === 'string' && t.signalType.length > 0) return t.signalType;
+            if (typeof t.grade === 'string' && t.grade.length > 0) return `GRADE_${t.grade}`;
+            return 'UNCLASSIFIED';
         }
-        function v85AuditFee(t) { 
-            return Math.max(0, v85AuditNum(t.totalFees, v85AuditNum(t.fees, 0))); 
+        function calculatePerformanceAudit(){
+            const trades=v85AuditTrades(), pnls=trades.map(v85AuditPnl), wins=pnls.filter(x=>x>0), losses=pnls.filter(x=>x<0);
+            const gp=wins.reduce((a,b)=>a+b,0), gl=Math.abs(losses.reduce((a,b)=>a+b,0)), net=pnls.reduce((a,b)=>a+b,0);
+            const wr=trades.length?wins.length/trades.length:0, avgW=wins.length?gp/wins.length:0, avgL=losses.length?gl/losses.length:0;
+            const pf=gl>0?gp/gl:(gp>0?Infinity:0), exp=trades.length?net/trades.length:0, fees=trades.reduce((a,t)=>a+v85AuditFee(t),0);
+            let eq=0,peak=0,dd=0,cl=0,maxCL=0; pnls.forEach(p=>{eq+=p;peak=Math.max(peak,eq);dd=Math.max(dd,peak-eq);if(p<0){cl++;maxCL=Math.max(maxCL,cl)}else if(p>0)cl=0;});
+            const byKey={}; trades.forEach(t=>{const k=v85AuditKey(t),p=v85AuditPnl(t);const x=byKey[k]||(byKey[k]={trades:0,wins:0,pnl:0,gp:0,gl:0});x.trades++;x.pnl+=p;if(p>0){x.wins++;x.gp+=p}else if(p<0)x.gl+=Math.abs(p);});
+            Object.values(byKey).forEach(x=>{x.winRate=x.trades?x.wins/x.trades:0;x.profitFactor=x.gl?x.gp/x.gl:(x.gp?Infinity:0);x.expectancy=x.trades?x.pnl/x.trades:0;});
+            const mfe=trades.map(t=>Number(t.mfePct)).filter(Number.isFinite), mae=trades.map(t=>Math.abs(Number(t.maePct))).filter(Number.isFinite);
+            const avgMfe=mfe.length?mfe.reduce((a,b)=>a+b,0)/mfe.length:null, avgMae=mae.length?mae.reduce((a,b)=>a+b,0)/mae.length:null;
+            const health=Math.max(0,Math.min(100,35*Math.min(pf===Infinity?2:pf,2)/2+25*Math.min(Math.max(exp,0)/Math.max(avgL||1,1),1)+20*Math.min(wr/.7,1)+20*(trades.length>=30?1:trades.length/30)));
+            return {generatedAt:new Date().toISOString(),tradeCount:trades.length,winCount:wins.length,lossCount:losses.length,winRate:wr,grossProfit:gp,grossLoss:gl,netPnl:net,totalFees:fees,profitFactor:pf,avgWin:avgW,avgLoss:avgL,expectancy:exp,maxDrawdown:dd,maxConsecutiveLosses:maxCL,avgMfe,avgMae,healthScore:health,byKey};
         }
-        function v85AuditKey(t) { 
-            if (typeof t.strategy === 'string') return t.strategy;
-            if (t.strategy && typeof t.strategy.name === 'string') return t.strategy.name;
-            if (t.strategyName) return String(t.strategyName);
-            if (t.signalType) return String(t.signalType);
-            if (t.reason) return String(t.reason);
-            if (t.grade) return `評級 ${t.grade}`;
-            return 'A+ 狙擊策略';
-        }
-        function calculatePerformanceAudit() {
-            const trades = v85AuditTrades(), pnls = trades.map(v85AuditPnl), wins = pnls.filter(x => x > 0), losses = pnls.filter(x => x < 0);
-            const gp = wins.reduce((a, b) => a + b, 0), gl = Math.abs(losses.reduce((a, b) => a + b, 0)), net = pnls.reduce((a, b) => a + b, 0);
-            const wr = trades.length ? wins.length / trades.length : 0, avgW = wins.length ? gp / wins.length : 0, avgL = losses.length ? gl / losses.length : 0;
-            const pf = gl > 0 ? gp / gl : (gp > 0 ? Infinity : 0), exp = trades.length ? net / trades.length : 0, fees = trades.reduce((a, t) => a + v85AuditFee(t), 0);
-            let eq = 0, peak = 0, dd = 0, cl = 0, maxCL = 0; 
-            pnls.forEach(p => {
-                eq += p; peak = Math.max(peak, eq); dd = Math.max(dd, peak - eq);
-                if (p < 0) { cl++; maxCL = Math.max(maxCL, cl); } else if (p > 0) cl = 0;
-            });
-            const byKey = {}; 
-            trades.forEach(t => {
-                const k = v85AuditKey(t), p = v85AuditPnl(t);
-                const x = byKey[k] || (byKey[k] = { trades: 0, wins: 0, pnl: 0, gp: 0, gl: 0 });
-                x.trades++; x.pnl += p;
-                if (p > 0) { x.wins++; x.gp += p; } else if (p < 0) x.gl += Math.abs(p);
-            });
-            Object.values(byKey).forEach(x => {
-                x.winRate = x.trades ? x.wins / x.trades : 0;
-                x.profitFactor = x.gl ? x.gp / x.gl : (x.gp ? Infinity : 0);
-                x.expectancy = x.trades ? x.pnl / x.trades : 0;
-            });
-            const mfe = trades.map(t => Number(t.mfePct)).filter(Number.isFinite), mae = trades.map(t => Math.abs(Number(t.maePct))).filter(Number.isFinite);
-            const avgMfe = mfe.length ? mfe.reduce((a, b) => a + b, 0) / mfe.length : null, avgMae = mae.length ? mae.reduce((a, b) => a + b, 0) / mae.length : null;
-            const health = Math.max(0, Math.min(100, 35 * Math.min(pf === Infinity ? 2 : pf, 2) / 2 + 25 * Math.min(Math.max(exp, 0) / Math.max(avgL || 1, 1), 1) + 20 * Math.min(wr / 0.7, 1) + 20 * (trades.length >= 30 ? 1 : trades.length / 30)));
-            return { generatedAt: new Date().toISOString(), tradeCount: trades.length, winCount: wins.length, lossCount: losses.length, winRate: wr, grossProfit: gp, grossLoss: gl, netPnl: net, totalFees: fees, profitFactor: pf, avgWin: avgW, avgLoss: avgL, expectancy: exp, maxDrawdown: dd, maxConsecutiveLosses: maxCL, avgMfe, avgMae, healthScore: health, byKey };
-        }
-        function v85FmtAudit(n, d = 2) { return n === Infinity ? '∞' : Number.isFinite(n) ? Number(n).toFixed(d) : '—'; }
-        function openPerformanceAudit() {
-            const m = document.getElementById('performanceAuditModal'); if (!m) return; 
-            const a = calculatePerformanceAudit();
-            const cards = [
-                ['平倉樣本數', a.tradeCount + ' 筆', ''],
-                ['勝率 (Win Rate)', v85FmtAudit(a.winRate * 100, 1) + '%', a.winRate >= 0.5 ? 'text-emerald-400' : 'text-amber-400'],
-                ['Profit Factor (PF)', v85FmtAudit(a.profitFactor), a.profitFactor >= 1.5 ? 'text-emerald-400' : 'text-slate-200'],
-                ['單筆期望值', (a.expectancy >= 0 ? '+$' : '-$') + v85FmtAudit(Math.abs(a.expectancy)), a.expectancy >= 0 ? 'text-emerald-400' : 'text-rose-400'],
-                ['累計純利 (Net PnL)', (a.netPnl >= 0 ? '+$' : '-$') + v85FmtAudit(Math.abs(a.netPnl)), a.netPnl >= 0 ? 'text-emerald-400' : 'text-rose-400'],
-                ['累計手續費損耗', '$' + v85FmtAudit(a.totalFees), 'text-amber-400'],
-                ['最大歷史回撤', '$' + v85FmtAudit(a.maxDrawdown), 'text-rose-400'],
-                ['策略健康評級', v85FmtAudit(a.healthScore, 0) + ' / 100', a.healthScore >= 60 ? 'text-emerald-400' : 'text-amber-400']
-            ];
-            document.getElementById('performanceAuditSummary').innerHTML = cards.map(x => `
-                <div class="bg-slate-900/70 border border-crypto-border rounded-lg p-3">
-                    <div class="text-slate-400 text-[10px] font-sans">${x[0]}</div>
-                    <div class="text-base font-bold font-mono mt-0.5 ${x[2]}">${x[1]}</div>
-                </div>
-            `).join('');
-
-            const breakdownEntries = Object.entries(a.byKey).sort((x, y) => y[1].pnl - x[1].pnl);
-            document.getElementById('performanceAuditBreakdown').innerHTML = breakdownEntries.length 
-                ? breakdownEntries.map(([k, x]) => `
-                    <div class="flex justify-between items-center gap-2 border-b border-slate-800 pb-1.5 text-[11px]">
-                        <span class="text-slate-200 truncate font-sans">${k}</span>
-                        <div class="flex items-center gap-3">
-                            <span class="text-slate-400">${x.trades}筆 · ${(x.winRate * 100).toFixed(0)}%勝率 · PF ${v85FmtAudit(x.profitFactor)}</span>
-                            <span class="font-bold ${x.pnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}">${x.pnl >= 0 ? '+$' : '-$'}${v85FmtAudit(Math.abs(x.pnl))}</span>
-                        </div>
-                    </div>
-                `).join('') 
-                : '<div class="text-slate-500 py-3 text-center font-sans">尚未有足夠平倉交易資料。</div>';
-
-            const risks = [
-                ['最大連續虧損', a.maxConsecutiveLosses + ' 筆'],
-                ['平均單筆盈利', '+$' + v85FmtAudit(a.avgWin)],
-                ['平均單筆虧損', '-$' + v85FmtAudit(a.avgLoss)],
-                ['平均有利位移 (MFE)', a.avgMfe === null ? '—' : '+' + v85FmtAudit(a.avgMfe) + '%'],
-                ['平均不利位移 (MAE)', a.avgMae === null ? '—' : '-' + v85FmtAudit(a.avgMae) + '%'],
-                ['統計樣本品質', a.tradeCount >= 100 ? '🟢 高（≥100筆）' : (a.tradeCount >= 30 ? '🟡 中（30–99筆）' : '🔴 低（<30筆，暫不建議調參）')]
-            ];
-            document.getElementById('performanceAuditRisk').innerHTML = risks.map(x => `
-                <div class="flex justify-between border-b border-slate-800 pb-1.5 text-[11px]">
-                    <span class="text-slate-400 font-sans">${x[0]}</span>
-                    <span class="text-white font-bold font-mono">${x[1]}</span>
-                </div>
-            `).join('');
-
-            document.getElementById('performanceAuditConclusion').textContent = !a.tradeCount 
-                ? '目前沒有足夠交易資料。請繼續於 Observation 模式下累積平倉紀錄。' 
-                : (a.tradeCount < 30 
-                    ? `目前僅累積 ${a.tradeCount} 筆樣本。可查看 KPI 指標，但在統計顯著性不足前，暫不建議提高保證金或槓桿。` 
-                    : (a.expectancy > 0 && a.profitFactor > 1 
-                        ? `目前資料顯示明確的正期望特徵（獲利因子 PF ${v85FmtAudit(a.profitFactor)}、單筆期望純利 $${v85FmtAudit(a.expectancy)}）。下一步建議收縮低效信號權重，維持嚴謹的停損與分批出場紀律。` 
-                        : '目前數據尚未展現穩定正期望。應優先減少低品質訊號進場、評估手續費磨損，並嚴格維持小額模擬。'));
-
+        function v85FmtAudit(n,d=2){return n===Infinity?'∞':Number.isFinite(n)?Number(n).toFixed(d):'—';}
+        function openPerformanceAudit(){
+            const m=document.getElementById('performanceAuditModal'); if(!m)return; const a=calculatePerformanceAudit();
+            const cards=[['交易數',a.tradeCount,''],['勝率',v85FmtAudit(a.winRate*100,1)+'%',''],['Profit Factor',v85FmtAudit(a.profitFactor),''],['Expectancy','$'+v85FmtAudit(a.expectancy),'' ],['Net PnL','$'+v85FmtAudit(a.netPnl),a.netPnl>=0?'text-emerald-400':'text-rose-400'],['總手續費','$'+v85FmtAudit(a.totalFees),'text-amber-400'],['最大回撤','$'+v85FmtAudit(a.maxDrawdown),'text-rose-400'],['Strategy Health',v85FmtAudit(a.healthScore,0)+'/100',a.healthScore>=60?'text-emerald-400':'text-amber-400']];
+            document.getElementById('performanceAuditSummary').innerHTML=cards.map(x=>`<div class="bg-slate-900/70 border border-crypto-border rounded-lg p-3"><div class="text-slate-400">${x[0]}</div><div class="text-lg font-bold ${x[2]}">${x[1]}</div></div>`).join('');
+            document.getElementById('performanceAuditBreakdown').innerHTML=Object.entries(a.byKey).sort((x,y)=>y[1].pnl-x[1].pnl).map(([k,x])=>`<div class="flex justify-between gap-3 border-b border-slate-800 pb-2"><span class="text-slate-300 truncate">${k}</span><span class="text-slate-400">${x.trades}T · ${(x.winRate*100).toFixed(0)}% WR · PF ${v85FmtAudit(x.profitFactor)}</span><span class="${x.pnl>=0?'text-emerald-400':'text-rose-400'}">$${v85FmtAudit(x.pnl)}</span></div>`).join('')||'<div class="text-slate-500">尚未有足夠平倉交易資料。</div>';
+            const risks=[['最大連續虧損',a.maxConsecutiveLosses+' 筆'],['平均盈利','$'+v85FmtAudit(a.avgWin)],['平均虧損','$'+v85FmtAudit(a.avgLoss)],['平均 MFE',a.avgMfe===null?'—':v85FmtAudit(a.avgMfe)+'%'],['平均 MAE',a.avgMae===null?'—':v85FmtAudit(a.avgMae)+'%'],['樣本品質',a.tradeCount>=100?'高（≥100）':a.tradeCount>=30?'中（30–99）':'低（<30，暫不建議調參）']];
+            document.getElementById('performanceAuditRisk').innerHTML=risks.map(x=>`<div class="flex justify-between border-b border-slate-800 pb-2"><span class="text-slate-400">${x[0]}</span><span class="text-white font-bold">${x[1]}</span></div>`).join('');
+            document.getElementById('performanceAuditConclusion').textContent=!a.tradeCount?'目前沒有足夠交易資料。請繼續 Observation Mode 累積平倉紀錄。':a.tradeCount<30?`目前只有 ${a.tradeCount} 筆樣本。可查看 KPI，但不建議自動調參、提高槓桿或倉位。`:(a.expectancy>0&&a.profitFactor>1?`目前資料顯示正期望跡象（PF ${v85FmtAudit(a.profitFactor)}、Expectancy $${v85FmtAudit(a.expectancy)}）。下一階段應降低低效 Strategy / Signal 權重，而不是增加交易頻率。`:'目前資料尚未顯示穩定正期望。應優先減少低品質訊號、檢查手續費與連續虧損，暫時不要提高槓桿。');
             m.classList.remove('hidden');
         }
-        function closePerformanceAudit() { document.getElementById('performanceAuditModal')?.classList.add('hidden'); }
-        function exportPerformanceAudit() {
-            const b = new Blob([JSON.stringify(calculatePerformanceAudit(), null, 2)], { type: 'application/json' });
-            const u = URL.createObjectURL(b);
-            const a = document.createElement('a');
-            a.href = u; a.download = `bybit_radar_performance_audit_${Date.now()}.json`;
-            document.body.appendChild(a); a.click(); a.remove();
-            setTimeout(() => URL.revokeObjectURL(u), 1000);
-        }
+        function closePerformanceAudit(){document.getElementById('performanceAuditModal')?.classList.add('hidden');}
+        function exportPerformanceAudit(){const b=new Blob([JSON.stringify(calculatePerformanceAudit(),null,2)],{type:'application/json'}),u=URL.createObjectURL(b),a=document.createElement('a');a.href=u;a.download='bybit-radar-performance-audit-'+Date.now()+'.json';a.click();URL.revokeObjectURL(u);}
 
         function formatPrice(val) {
             const num = parseFloat(val) || 0;
@@ -2456,9 +2510,6 @@
             initTimer();
         });
     </script>
-    <!-- 右下角懸浮績效審計快捷鈕 -->
-    <button id="performanceAuditLauncher" onclick="openPerformanceAudit()" title="Performance Audit" class="fixed bottom-4 right-4 z-40 px-3.5 py-2.5 bg-gradient-to-r from-purple-700 to-indigo-700 hover:from-purple-600 hover:to-indigo-600 text-white rounded-full shadow-2xl font-bold text-xs flex items-center gap-1.5 border border-purple-400/40 transition active:scale-95">
-        <span>📊</span><span>Performance Audit</span>
-    </button>
+    <button id="performanceAuditLauncher" onclick="openPerformanceAudit()" title="Performance Audit" class="fixed bottom-4 right-4 z-40 px-4 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-full shadow-lg font-bold text-xs">📊 Performance Audit</button>
 </body>
 </html>
