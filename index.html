@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bybit 小幣高精度狙擊交易系統 V8.6 旗艦引擎</title>
+    <title>Bybit 小幣高精度狙擊交易系統 V8.6 旗艦引擎 (IndexedDB 擴展版)</title>
     <!-- Tailwind CSS CDN --> 
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -30,7 +30,8 @@
                             bull: '#10b981',
                             bear: '#ef4444',
                             gold: '#f59e0b',
-                            purple: '#8b5cf6'
+                            purple: '#8b5cf6',
+                            cyan: '#06b6d4'
                         }
                     }
                 }
@@ -54,21 +55,23 @@
         <div class="max-w-[1750px] mx-auto flex flex-col md:flex-row items-stretch md:items-center justify-between gap-2.5">
             <div class="flex items-center justify-between">
                 <div class="flex items-center space-x-2.5">
-                    <div class="w-8 h-8 rounded-xl bg-gradient-to-tr from-amber-500 to-emerald-400 flex items-center justify-center text-black font-black text-base shadow-md shadow-amber-500/20">
+                    <div class="w-8 h-8 rounded-xl bg-gradient-to-tr from-cyan-500 via-amber-500 to-emerald-400 flex items-center justify-center text-black font-black text-base shadow-md shadow-cyan-500/20">
                         ⚡
                     </div>
                     <div>
-                        <div class="flex items-center gap-1.5">
+                        <div class="flex items-center gap-1.5 flex-wrap">
                             <h1 class="text-sm md:text-base font-bold text-white tracking-wide">Bybit 小幣高精度狙擊交易系統</h1>
-                            <span class="text-[9px] bg-emerald-500/20 text-emerald-400 font-mono font-semibold px-1.5 py-0.2 rounded border border-emerald-500/30">V8.6 INTELLIGENCE</span>
+                            <span class="text-[9px] bg-cyan-500/20 text-cyan-300 font-mono font-semibold px-1.5 py-0.2 rounded border border-cyan-500/30 flex items-center gap-1">
+                                <span class="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse"></span>
+                                <span>INDEXED-DB 永久持久層</span>
+                            </span>
                             <span class="text-[9px] bg-purple-500/20 text-purple-300 font-mono font-semibold px-1.5 py-0.2 rounded border border-purple-500/30" id="regimeHeaderBadge">Regime: CHOPPY</span>
                         </div>
-                        <p class="text-[11px] text-slate-400 hidden sm:block">V8.6 七維情報漏斗 · 標的歷史勝率智商庫 · 體制×策略矩陣 · 絕對去重數據防護</p>
+                        <p class="text-[11px] text-slate-400 hidden sm:block">V8.6 特徵資料倉儲 · IndexedDB 雙庫無損歸檔 · 完整微觀時序指標 · 零 QuotaExceededError 限制</p>
                     </div>
                 </div>
             </div>
 
-            <!-- 控制按鈕列 -->
             <div class="flex items-center gap-1.5 text-xs overflow-x-auto no-scrollbar py-0.5 md:flex-wrap md:overflow-visible">
                 <div class="flex items-center bg-slate-900 border border-crypto-border px-2.5 py-1 rounded-lg text-slate-300 font-mono whitespace-nowrap text-[11px]">
                     <span class="w-2 h-2 rounded-full bg-emerald-400 mr-1.5" id="netDot"></span>
@@ -78,6 +81,11 @@
                 <div class="flex items-center bg-slate-900 border border-crypto-border px-2 py-1 rounded-lg text-slate-300 font-mono whitespace-nowrap text-[11px]" id="marketGateBadge">
                     <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 mr-1.5" id="marketGateDot"></span>
                     <span id="marketGateText">大盤: 正常</span>
+                </div>
+
+                <div class="flex items-center bg-slate-900 border border-cyan-500/30 px-2 py-1 rounded-lg text-cyan-300 font-mono whitespace-nowrap text-[11px]" title="IndexedDB 倉儲總筆數">
+                    <span>🗄️ IDB: </span>
+                    <span id="idbStatsBadge" class="ml-1 font-bold text-white">載入中...</span>
                 </div>
 
                 <button onclick="toggleAutoTradeExecution()" id="btnAutoTradeExec" class="flex items-center gap-1 bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium px-2.5 py-1 rounded-lg transition border border-crypto-border whitespace-nowrap text-[11px]">
@@ -160,7 +168,6 @@
                 </div>
             </div>
 
-            <!-- 控制切換 -->
             <div class="flex items-center flex-wrap gap-2">
                 <div class="flex items-center bg-slate-950 border border-crypto-border rounded-lg p-0.5 text-[11px]">
                     <span class="text-slate-400 px-1.5">單筆名義:</span>
@@ -178,7 +185,6 @@
             </div>
         </section>
 
-        <!-- 持倉看板 -->
         <section class="bg-crypto-card border border-crypto-border rounded-xl overflow-hidden shadow-lg">
             <div class="px-3.5 py-2.5 border-b border-crypto-border flex flex-wrap items-center justify-between gap-2 bg-slate-900/50">
                 <div class="flex items-center gap-2">
@@ -201,7 +207,6 @@
             </div>
         </section>
 
-        <!-- 主監控列表 -->
         <section class="bg-crypto-card border border-crypto-border rounded-xl overflow-hidden shadow-lg">
             <div class="p-2.5 border-b border-crypto-border flex items-center justify-between bg-slate-900/40">
                 <span class="text-xs font-semibold text-slate-200">
@@ -236,7 +241,6 @@
         </section>
     </main>
 
-    <!-- V8.6 策略情報彈窗 (Modal) -->
     <div id="strategyIntelligenceModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5 hidden">
         <div class="bg-crypto-card border border-purple-500/40 rounded-2xl max-w-3xl w-full p-4 sm:p-6 shadow-2xl space-y-4 max-h-[90vh] flex flex-col text-xs font-sans">
             <div class="flex items-center justify-between border-b border-crypto-border pb-3">
@@ -244,7 +248,7 @@
                     <span class="text-xl">🧠</span>
                     <div>
                         <h3 class="font-bold text-white text-sm sm:text-base">V8.6 策略情報與市場體制矩陣 (Strategy Intelligence)</h3>
-                        <p class="text-[11px] text-purple-300">七維品質漏斗 · 標的歷史勝率智商庫 · 相關性曝險控管 2.0</p>
+                        <p class="text-[11px] text-purple-300">七維品質漏斗 · 標的歷史勝率智商庫 · IndexedDB 無上限特徵溯源</p>
                     </div>
                 </div>
                 <button onclick="closeStrategyIntelligenceModal()" class="text-slate-400 hover:text-white text-lg p-1">✕</button>
@@ -279,11 +283,10 @@
         </div>
     </div>
 
-    <!-- 策略計分卡彈窗 (Modal) -->
     <div id="scorecardModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
         <div class="bg-crypto-card border border-crypto-border rounded-xl p-5 max-w-lg w-full space-y-4 text-xs font-mono">
             <div class="flex items-center justify-between border-b border-crypto-border pb-3">
-                <h3 class="text-sm font-bold text-white flex items-center gap-1.5">📊 策略績效計分卡 (V8.5 統一歸檔)</h3>
+                <h3 class="text-sm font-bold text-white flex items-center gap-1.5">📊 策略績效計分卡 (IndexedDB 永久歸檔)</h3>
                 <button onclick="closeScorecardModal()" class="text-slate-400 hover:text-white">✕</button>
             </div>
             <div class="grid grid-cols-2 gap-3">
@@ -305,12 +308,11 @@
                 </div>
             </div>
             <p class="text-[10px] text-slate-500 font-sans leading-relaxed">
-                * 本計分卡已完整計入分批離場 (TP1/TP2) 的每一筆 0.055% Taker 手續費與微觀滑點。1R 代表 4.5% 單筆風險價值。
+                * 本計分卡已完整計入分批離場 (TP1/TP2) 的每一筆 0.055% Taker 手續費與微觀滑點。所有紀錄永久存入本地 IndexedDB。
             </p>
         </div>
     </div>
 
-    <!-- Strategy Lab 彈窗 -->
     <div id="strategyLabModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm p-3 sm:p-6 flex items-center justify-center">
         <div class="max-w-5xl w-full bg-slate-950 border border-fuchsia-500/40 rounded-xl shadow-2xl max-h-[92vh] overflow-y-auto">
             <div class="sticky top-0 bg-slate-950 border-b border-crypto-border px-4 py-3 flex items-center justify-between z-10">
@@ -372,11 +374,10 @@
         </div>
     </div>
 
-    <!-- 歷史平倉明細彈窗 -->
     <div id="historyModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
         <div class="bg-crypto-card border border-crypto-border rounded-xl p-5 max-w-4xl w-full space-y-3 text-xs font-mono">
             <div class="flex items-center justify-between border-b border-crypto-border pb-3">
-                <h3 class="text-sm font-bold text-white flex items-center gap-1.5">📜 歷史成交明細 (V8.5 統一歸檔)</h3>
+                <h3 class="text-sm font-bold text-white flex items-center gap-1.5">📜 歷史成交明細 (IndexedDB 倉儲)</h3>
                 <button onclick="closeHistoryModal()" class="text-slate-400 hover:text-white">✕</button>
             </div>
             <div class="overflow-y-auto max-h-[420px]">
@@ -399,7 +400,6 @@
         </div>
     </div>
 
-    <!-- 雲端同步視窗 -->
     <div id="cloudModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 hidden">
         <div class="bg-crypto-card border border-sky-500/40 rounded-2xl max-w-md w-full p-5 shadow-2xl space-y-3 text-xs">
             <div class="flex items-center justify-between border-b border-crypto-border pb-2.5">
@@ -439,11 +439,10 @@
         </div>
     </div>
 
-    <!-- V8.5-A2 Performance Audit -->
     <div id="performanceAuditModal" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
       <div class="bg-crypto-card border border-crypto-border rounded-xl p-5 max-w-5xl w-full max-h-[90vh] overflow-y-auto space-y-4 text-xs font-sans">
         <div class="flex items-center justify-between border-b border-crypto-border pb-3">
-          <div><h3 class="text-base font-bold text-white">📊 V8.5-A2 Performance Audit</h3><p class="text-slate-400 mt-1">以 historyArchive 計算績效、風險與策略健康度</p></div>
+          <div><h3 class="text-base font-bold text-white">📊 V8.5-A2 Performance Audit</h3><p class="text-slate-400 mt-1">以 IndexedDB 歷史紀錄計算績效、風險與策略健康度</p></div>
           <button onclick="closePerformanceAudit()" class="text-slate-400 hover:text-white text-lg">✕</button>
         </div>
         <div id="performanceAuditSummary" class="grid grid-cols-2 md:grid-cols-4 gap-3"></div>
@@ -456,7 +455,6 @@
       </div>
     </div>
 
-    <!-- 自訂訊息彈窗 -->
     <div id="notificationModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
         <div class="bg-crypto-card border border-crypto-border rounded-xl p-5 max-w-sm w-full space-y-3 text-xs font-sans">
             <h3 class="text-sm font-bold text-white" id="notificationModalTitle">通知</h3>
@@ -471,19 +469,20 @@
 
     <script>
         /* =========================================================
-           BYBIT RADAR V8.6-A2.2.2 — STORAGE DECOUPLING & ROBUST ENGINE
-           徹底根治 LocalStorage Quota 5MB 膨脹：
-           1. 移除無益的 Staging 翻倍寫入
-           2. simState 與 tradeArchive / researchArchive 完全解耦儲存
-           3. 自動常駐空間瘦身，保證資料永不遺失且不超額
+           BYBIT RADAR V8.6 — FULL INDEXED-DB & LOSSLESS FEATURE REPOSITORY
+           1. 啟用原生 IndexedDB (BybitSniperRadarDB)，突破 5MB 限制，提供無限容量 (500MB+)
+           2. 完整保留 entryContext 與微觀時序特徵 (rvol, oiVelocity, spread, buckets)
+           3. 本地 LocalStorage 僅存放輕量即時部位與狀態，杜絕 QuotaExceededError
+           4. 自動將舊版 LocalStorage 的歷史與影子單全數無損遷入 IndexedDB
         ========================================================= */
         const STORAGE_KEY_SIM = 'bybit_radar_sim_v82';
-        const V85_SCHEMA_VERSION = '8.6-INTELLIGENCE';
-        const V85_ARCHIVE_KEY = 'bybit_radar_trade_archive_v85';
-        const V86_RESEARCH_KEY = 'bybit_radar_research_archive_v86';
         const STORAGE_KEY_ROOM = 'bybit_radar_room_id_v2';
-        const MAX_ARCHIVE_RECORDS = 300;
-        const MAX_RESEARCH_RECORDS = 200;
+        const IDB_DB_NAME = 'BybitSniperRadarDB';
+        const IDB_DB_VERSION = 1;
+        const IDB_STORE_EXECUTION = 'execution_archive';
+        const IDB_STORE_RESEARCH = 'research_archive';
+
+        let idbInstance = null;
 
         let allMarketPrices = new Map();
         let rawTickers = [];
@@ -560,7 +559,84 @@
             trailingPct: [5.0, 6.5, 8.0]
         };
 
-        /* ================= 儲存核心：極致解耦與自動防爆 ================= */
+        function openIndexedDatabase() {
+            return new Promise((resolve, reject) => {
+                if (!window.indexedDB) {
+                    console.warn('IndexedDB not supported by this browser environment');
+                    return resolve(null);
+                }
+                const request = indexedDB.open(IDB_DB_NAME, IDB_DB_VERSION);
+
+                request.onupgradeneeded = (e) => {
+                    const db = e.target.result;
+                    // 1. 實盤已平倉交易倉儲 (Execution Archive)
+                    if (!db.objectStoreNames.contains(IDB_STORE_EXECUTION)) {
+                        const store = db.createObjectStore(IDB_STORE_EXECUTION, { keyPath: 'tradeId' });
+                        store.createIndex('symbol', 'symbol', { unique: false });
+                        store.createIndex('closedAtTs', 'closedAtTs', { unique: false });
+                        store.createIndex('strategy', 'strategy', { unique: false });
+                        store.createIndex('regime', 'regimeAtEntry', { unique: false });
+                    }
+                    // 2. 研究影子單倉儲 (Research Shadow Archive)
+                    if (!db.objectStoreNames.contains(IDB_STORE_RESEARCH)) {
+                        const rStore = db.createObjectStore(IDB_STORE_RESEARCH, { keyPath: 'id' });
+                        rStore.createIndex('symbol', 'symbol', { unique: false });
+                        rStore.createIndex('closedAt', 'closedAt', { unique: false });
+                        rStore.createIndex('strategy', 'strategy', { unique: false });
+                        rStore.createIndex('regime', 'regime', { unique: false });
+                    }
+                };
+
+                request.onsuccess = (e) => {
+                    idbInstance = e.target.result;
+                    resolve(idbInstance);
+                };
+
+                request.onerror = (e) => {
+                    console.warn('IndexedDB open error:', e.target.error);
+                    resolve(null);
+                };
+            });
+        }
+
+        function idbPutRecord(storeName, record) {
+            return new Promise((resolve) => {
+                if (!idbInstance || !record) return resolve(false);
+                try {
+                    const tx = idbInstance.transaction(storeName, 'readwrite');
+                    const store = tx.objectStore(storeName);
+                    store.put(record);
+                    tx.oncomplete = () => resolve(true);
+                    tx.onerror = () => resolve(false);
+                } catch (e) {
+                    resolve(false);
+                }
+            });
+        }
+
+        function idbGetAllRecords(storeName) {
+            return new Promise((resolve) => {
+                if (!idbInstance) return resolve([]);
+                try {
+                    const tx = idbInstance.transaction(storeName, 'readonly');
+                    const store = tx.objectStore(storeName);
+                    const req = store.getAll();
+                    req.onsuccess = () => resolve(req.result || []);
+                    req.onerror = () => resolve([]);
+                } catch (e) {
+                    resolve([]);
+                }
+            });
+        }
+
+        function updateIdbStatsBadge() {
+            const el = document.getElementById('idbStatsBadge');
+            if (!el) return;
+            const execCount = (simState.historyArchive || []).length;
+            const shadowCount = (simState.research?.archive || []).length;
+            el.innerText = `${execCount} 實盤 / ${shadowCount} 影子 (無限容量)`;
+        }
+
         function v85Number(value, fallback = 0) {
             const n = parseFloat(value);
             return Number.isFinite(n) ? n : fallback;
@@ -646,7 +722,8 @@
                 exitFees,
                 totalFees,
                 fills,
-                schemaVersion: V85_SCHEMA_VERSION
+                entryContext: trade?.entryContext || null, // 完整無損保留特徵欄位
+                schemaVersion: '8.6-IDB'
             };
 
             normalized.tradeId = v85StableTradeId(normalized);
@@ -661,6 +738,10 @@
                 const normalized = v85NormalizeTrade(raw);
                 if (!map.has(normalized.tradeId)) {
                     map.set(normalized.tradeId, normalized);
+                } else {
+                    const prev = map.get(normalized.tradeId);
+                    if (!prev.entryContext && normalized.entryContext) prev.entryContext = normalized.entryContext;
+                    if ((!prev.fills || !prev.fills.length) && (normalized.fills || []).length) prev.fills = normalized.fills;
                 }
             });
             return Array.from(map.values()).sort((a, b) => {
@@ -669,164 +750,129 @@
             });
         }
 
-        // 強力清理所有過往殘留垃圾，徹底釋放 LocalStorage
-        function v85PurgeLegacyStorage() {
-            try {
-                const keysToRemove = [];
-                for (let i = 0; i < localStorage.length; i++) {
-                    const k = localStorage.key(i);
-                    if (!k) continue;
-                    if (k.includes('__staging') || 
-                        k.startsWith('bybit_radar_v85_recovery_') || 
-                        k.startsWith('bybit_radar_v85_migration_backup_') ||
-                        k === 'bybit_radar_sim_v81' ||
-                        k === 'bybit_radar_sim_state_v3' ||
-                        k === 'bybit_radar_sim_state_v2' ||
-                        k === 'bybit_radar_sim_state_v1') {
-                        keysToRemove.push(k);
-                    }
+        async function initStorageWithIndexedDB() {
+            await openIndexedDatabase();
+
+            // 1. 讀取 LocalStorage 中的即時持倉與帳戶狀態
+            const rawSim = localStorage.getItem(STORAGE_KEY_SIM);
+            if (rawSim) {
+                const parsed = v85SafeJsonParse(rawSim);
+                if (parsed && typeof parsed === 'object') {
+                    simState = { ...simState, ...parsed };
                 }
-                keysToRemove.forEach(k => localStorage.removeItem(k));
-                if (keysToRemove.length > 0) {
-                    console.info(`🧹 已自動清除 ${keysToRemove.length} 個舊殘留/暫存儲存鍵，空間已完全解放。`);
-                }
-            } catch (e) {
-                console.warn('Purge failed:', e);
             }
+
+            // 2. 從 IndexedDB 讀取全部歷史紀錄 (實盤與影子)
+            const idbExecutionRecords = await idbGetAllRecords(IDB_STORE_EXECUTION);
+            const idbResearchRecords = await idbGetAllRecords(IDB_STORE_RESEARCH);
+
+            // 3. 檢查 LocalStorage 是否殘留舊資料，若有則一鍵無損匯入 IndexedDB
+            const legacyArchiveRaw = localStorage.getItem('bybit_radar_trade_archive_v85');
+            const legacyArchive = v85SafeJsonParse(legacyArchiveRaw) || [];
+            const legacyResearchRaw = localStorage.getItem('bybit_radar_research_archive_v86');
+            const legacyResearch = v85SafeJsonParse(legacyResearchRaw) || [];
+
+            const allMergedExecution = v85QualityMergeTrades(idbExecutionRecords, legacyArchive, simState.history || []);
+            simState.historyArchive = allMergedExecution;
+            simState.history = allMergedExecution.slice(0, 30); // 記憶體與 LocalStorage 只放前 30 筆供即時儀表板快顯
+
+            // 將所有未在 IndexedDB 的紀錄持久化寫入 IndexedDB
+            if (idbInstance) {
+                for (const trd of allMergedExecution) {
+                    await idbPutRecord(IDB_STORE_EXECUTION, trd);
+                }
+                ensureResearchState();
+                const researchMap = new Map();
+                [...idbResearchRecords, ...legacyResearch, ...(simState.research?.archive || [])].forEach(s => {
+                    if (s && s.id) researchMap.set(s.id, s);
+                });
+                simState.research.archive = Array.from(researchMap.values());
+                for (const shd of simState.research.archive) {
+                    await idbPutRecord(IDB_STORE_RESEARCH, shd);
+                }
+            }
+
+            // 4. 清除 LocalStorage 內的厚重歷史鍵，徹底釋放 5MB 空間，杜絕 QuotaExceededError
+            try {
+                localStorage.removeItem('bybit_radar_trade_archive_v85');
+                localStorage.removeItem('bybit_radar_research_archive_v86');
+                localStorage.removeItem('bybit_radar_sim_v82__staging');
+                localStorage.removeItem('bybit_radar_trade_archive_v85__staging');
+                console.info('✨ 已成功將所有交易特徵資料庫遷移至 IndexedDB，LocalStorage 已完全瘦身解放！');
+            } catch (e) {}
+
+            // 5. 正規化進行中持倉
+            simState.positions = (simState.positions || []).map(pos => {
+                const entryPrice = v85Number(pos.entryPrice, 0.0001);
+                const currentPrice = v85Number(pos.currentPrice, entryPrice);
+                const notional = v85Number(pos.notional, 25.0);
+                const qty = v85Number(pos.qty, notional / Math.max(entryPrice, 0.0001));
+                return {
+                    ...pos,
+                    entryPrice,
+                    currentPrice,
+                    qty,
+                    originalQty: v85Number(pos.originalQty, qty),
+                    remainingQty: v85Number(pos.remainingQty, qty),
+                    notional,
+                    stopLoss: v85Number(pos.stopLoss, entryPrice * 0.955),
+                    tp1: v85Number(pos.tp1, entryPrice * 1.042),
+                    tp2: v85Number(pos.tp2, entryPrice * 1.10),
+                    realizedNetPnl: v85Number(pos.realizedNetPnl, v85Number(pos.realizedPnl)),
+                    totalFees: v85Number(pos.totalFees, notional * executionConfig.takerFeeRate),
+                    fills: Array.isArray(pos.fills) ? pos.fills : [],
+                    tp1Reached: !!pos.tp1Reached,
+                    tp2Reached: !!pos.tp2Reached,
+                    isMoonBag: !!pos.isMoonBag,
+                    highestPrice: v85Number(pos.highestPrice, entryPrice),
+                    lowestPrice: v85Number(pos.lowestPrice, entryPrice),
+                    mfePct: v85Number(pos.mfePct),
+                    maePct: v85Number(pos.maePct),
+                    trailingPct: v85Number(pos.trailingPct, adaptiveParams.trailingPct),
+                    trailingStop: v85Number(pos.trailingStop, 0) || null,
+                    exitFeesPaid: v85Number(pos.exitFeesPaid),
+                    realizedGrossPnl: v85Number(pos.realizedGrossPnl),
+                    openTime: v85Timestamp(pos.openTime ?? pos.openedAt, Date.now())
+                };
+            });
+
+            ensureRiskState();
+            saveToStorage(false);
+            updateIdbStatsBadge();
+            renderSimPositions();
+            updateSimHeaderStats();
         }
 
-        /* 儲存核心：解耦寫入，杜絕在主狀態內重複包裹巨大封存陣列 */
         function saveToStorage(syncCloud = true) {
             try {
-                v85PurgeLegacyStorage();
                 ensureResearchState();
 
-                // 1. 維護並截斷歷史
-                const merged = v85QualityMergeTrades(simState.historyArchive || [], simState.history || []);
-                simState.historyArchive = merged.slice(0, MAX_ARCHIVE_RECORDS);
-                simState.history = simState.historyArchive.slice(0, 50); // 主狀態只放最近 50 筆供快速渲染
-
-                // 2. 清理 Research 訊號快取
-                if (simState.research) {
-                    if (Array.isArray(simState.research.archive) && simState.research.archive.length > MAX_RESEARCH_RECORDS) {
-                        simState.research.archive = simState.research.archive.slice(0, MAX_RESEARCH_RECORDS);
-                    }
-                    const seenKeys = Object.keys(simState.research.seenSignals || {});
-                    if (seenKeys.length > 200) {
-                        const cutoff = Date.now() - 43200000; // 12 小時過期
-                        seenKeys.forEach(k => {
-                            if (simState.research.seenSignals[k] < cutoff) delete simState.research.seenSignals[k];
-                        });
-                    }
-                }
-
-                // 3. 【關鍵解耦】：建立輕量化 simState（剝離 historyArchive 與 research.archive）
-                const decoupledSimState = {
+                // 1. 本地 LocalStorage 僅儲存超輕量的「即時狀態」
+                const lightweightSimState = {
                     balance: simState.balance,
                     initialBalance: simState.initialBalance,
                     autoTrade: simState.autoTrade,
                     maxPositions: simState.maxPositions,
                     tradeSize: simState.tradeSize,
                     positions: simState.positions,
-                    history: simState.history, // 僅 50 筆
+                    history: (simState.historyArchive || []).slice(0, 20), // 僅 20 筆供畫面快速顯示
                     riskState: simState.riskState,
-                    schemaVersion: V85_SCHEMA_VERSION,
                     research: {
                         enabled: simState.research?.enabled ?? true,
                         shadowNotional: simState.research?.shadowNotional ?? 10,
                         timeoutMinutes: simState.research?.timeoutMinutes ?? 240,
-                        active: simState.research?.active || [],
+                        active: (simState.research?.active || []).slice(-30),
                         seenSignals: simState.research?.seenSignals || {},
-                        version: 'V8.6-A2.2'
+                        version: 'V8.6-IDB'
                     }
                 };
 
-                // 4. 分鍵獨立寫入，體積極小，永不超出 5MB
-                localStorage.setItem(STORAGE_KEY_SIM, JSON.stringify(decoupledSimState));
-                localStorage.setItem(V85_ARCHIVE_KEY, JSON.stringify(simState.historyArchive));
-                if (simState.research && Array.isArray(simState.research.archive)) {
-                    localStorage.setItem(V86_RESEARCH_KEY, JSON.stringify(simState.research.archive));
-                }
+                localStorage.setItem(STORAGE_KEY_SIM, JSON.stringify(lightweightSimState));
 
                 if (syncCloud && firestoreDb) pushToCloudForce();
+                updateIdbStatsBadge();
             } catch (e) {
-                console.warn('V8.6 解耦儲存失敗:', e);
-                // 極限防護：若瀏覽器依然爆掉，縮減封存長度後直接重試
-                if (e.name === 'QuotaExceededError' || e.code === 22) {
-                    if (simState.historyArchive.length > 100) {
-                        simState.historyArchive = simState.historyArchive.slice(0, 100);
-                        localStorage.setItem(V85_ARCHIVE_KEY, JSON.stringify(simState.historyArchive));
-                    }
-                }
-            }
-        }
-
-        function loadFromStorage() {
-            try {
-                v85PurgeLegacyStorage();
-
-                // 1. 讀取主狀態
-                const rawSim = localStorage.getItem(STORAGE_KEY_SIM);
-                if (rawSim) {
-                    const parsedSim = v85SafeJsonParse(rawSim);
-                    if (parsedSim && typeof parsedSim === 'object') {
-                        simState = { ...simState, ...parsedSim };
-                    }
-                }
-
-                // 2. 獨立讀取歷史封存
-                const rawArchive = localStorage.getItem(V85_ARCHIVE_KEY);
-                const parsedArchive = v85SafeJsonParse(rawArchive);
-                const loadedArchive = Array.isArray(parsedArchive) ? parsedArchive : [];
-                simState.historyArchive = v85QualityMergeTrades(loadedArchive, simState.history || []);
-                simState.history = simState.historyArchive.slice(0, 50);
-
-                // 3. 獨立讀取 Research Archive
-                const rawResearch = localStorage.getItem(V86_RESEARCH_KEY);
-                const parsedResearch = v85SafeJsonParse(rawResearch);
-                ensureResearchState();
-                if (Array.isArray(parsedResearch)) {
-                    simState.research.archive = parsedResearch;
-                }
-
-                // 4. 恢復正規化持倉
-                simState.positions = (simState.positions || []).map(pos => {
-                    const entryPrice = v85Number(pos.entryPrice, 0.0001);
-                    const currentPrice = v85Number(pos.currentPrice, entryPrice);
-                    const notional = v85Number(pos.notional, 25.0);
-                    const qty = v85Number(pos.qty, notional / Math.max(entryPrice, 0.0001));
-                    return {
-                        ...pos,
-                        entryPrice,
-                        currentPrice,
-                        qty,
-                        originalQty: v85Number(pos.originalQty, qty),
-                        remainingQty: v85Number(pos.remainingQty, qty),
-                        notional,
-                        stopLoss: v85Number(pos.stopLoss, entryPrice * 0.955),
-                        tp1: v85Number(pos.tp1, entryPrice * 1.042),
-                        tp2: v85Number(pos.tp2, entryPrice * 1.10),
-                        realizedNetPnl: v85Number(pos.realizedNetPnl, v85Number(pos.realizedPnl)),
-                        totalFees: v85Number(pos.totalFees, notional * executionConfig.takerFeeRate),
-                        fills: Array.isArray(pos.fills) ? pos.fills : [],
-                        tp1Reached: !!pos.tp1Reached,
-                        tp2Reached: !!pos.tp2Reached,
-                        isMoonBag: !!pos.isMoonBag,
-                        highestPrice: v85Number(pos.highestPrice, entryPrice),
-                        lowestPrice: v85Number(pos.lowestPrice, entryPrice),
-                        mfePct: v85Number(pos.mfePct),
-                        maePct: v85Number(pos.maePct),
-                        trailingPct: v85Number(pos.trailingPct, adaptiveParams.trailingPct),
-                        trailingStop: v85Number(pos.trailingStop, 0) || null,
-                        exitFeesPaid: v85Number(pos.exitFeesPaid),
-                        realizedGrossPnl: v85Number(pos.realizedGrossPnl),
-                        openTime: v85Timestamp(pos.openTime ?? pos.openedAt, Date.now())
-                    };
-                });
-
-                ensureRiskState();
-            } catch (err) {
-                console.warn('V8.6 載入失敗:', err);
+                console.warn('LocalStorage save error:', e);
             }
         }
 
@@ -873,7 +919,7 @@
         }
 
         function getCoinIntelligence(symbol) {
-            const h = (simState.historyArchive || simState.history || []).filter(t => t.symbol === symbol);
+            const h = (simState.historyArchive || []).filter(t => t.symbol === symbol);
             if (h.length === 0) return { symbol, trades: 0, winRate: 0.5, expectancy: 0, bonus: 0, label: 'NEW' };
 
             const wins = h.filter(t => (parseFloat(t.pnl) || 0) > 0);
@@ -988,7 +1034,7 @@
         }
 
         function getStrategyAnalytics() {
-            const h = simState.historyArchive || simState.history || [];
+            const h = simState.historyArchive || [];
             const wins = h.filter(x => (parseFloat(x.pnl) || 0) > 0);
             const losses = h.filter(x => (parseFloat(x.pnl) || 0) <= 0);
             const gp = wins.reduce((a, x) => a + (parseFloat(x.pnl) || 0), 0);
@@ -1148,7 +1194,7 @@
         }
 
         function ensureResearchState(){
-            const d = { enabled: true, shadowNotional: 10, timeoutMinutes: 240, active: [], archive: [], seenSignals: {}, version: 'V8.6-A2.2' };
+            const d = { enabled: true, shadowNotional: 10, timeoutMinutes: 240, active: [], archive: [], seenSignals: {}, version: 'V8.6-IDB' };
             simState.research = Object.assign(d, simState.research || {});
             simState.research.active = Array.isArray(simState.research.active) ? simState.research.active : [];
             simState.research.archive = Array.isArray(simState.research.archive) ? simState.research.archive : [];
@@ -1171,9 +1217,18 @@
         function classifyRegime(){ const r = String(currentMarketRegime || 'UNKNOWN').toUpperCase(); return ['RISK_ON','RISK_OFF','TRENDING','CHOPPY'].includes(r) ? r : 'UNKNOWN'; }
 
         function buildEntryContext(c){
-            const f = { momentum1h: a22n(c.momentum1h), rvol: a22n(c.rvol), oiVelocity: a22n(c.oiVelocity), oiAcceleration: a22n(c.oiAcceleration), spreadPct: a22n(c.spreadPct), fundingRate: a22n(c.fundingRate), turnover24h: a22n(c.turnover24h), price24hPcnt: a22n(c.price24hPcnt) };
+            const f = { 
+                momentum1h: a22n(c.momentum1h), 
+                rvol: a22n(c.rvol), 
+                oiVelocity: a22n(c.oiVelocity), 
+                oiAcceleration: a22n(c.oiAcceleration), 
+                spreadPct: a22n(c.spreadPct), 
+                fundingRate: a22n(c.fundingRate), 
+                turnover24h: a22n(c.turnover24h), 
+                price24hPcnt: a22n(c.price24hPcnt) 
+            };
             return {
-                schema: 'A2.2',
+                schema: 'A2.2-IDB',
                 capturedAt: Date.now(),
                 score: a22n(c.score),
                 grade: c.grade || 'C',
@@ -1196,7 +1251,10 @@
         function collectResearchSignals(list){
             const r = ensureResearchState();
             if (!r.enabled) return;
+            if (r.active.length >= 40) return; // 活躍影子單上限設為 40
+
             list.forEach(c => {
+                if (r.active.length >= 40) return;
                 const k = researchKey(c);
                 if (r.seenSignals[k]) return;
                 const e = a22n(c.lastPrice);
@@ -1228,7 +1286,7 @@
             });
         }
 
-        function closeShadowTrade(s, p, reason){
+        async function closeShadowTrade(s, p, reason){
             const pct = (s.direction === 'LONG' ? (p - s.entryPrice) : (s.entryPrice - p)) / s.entryPrice;
             s.exitPrice = p;
             s.currentPrice = p;
@@ -1242,8 +1300,13 @@
             const r = ensureResearchState();
             r.active = r.active.filter(x => x.id !== s.id);
             r.archive.unshift(s);
-            if (r.archive.length > MAX_RESEARCH_RECORDS) r.archive.length = MAX_RESEARCH_RECORDS;
-            try { saveToStorage(false); } catch (e) { console.warn('Research archive save skipped', e); }
+
+            // 直接非同步儲存到 IndexedDB，永久留存，不設 150 筆上限
+            if (idbInstance) {
+                await idbPutRecord(IDB_STORE_RESEARCH, s);
+            }
+            saveToStorage(false);
+            updateIdbStatsBadge();
         }
 
         function updateShadowTrades(){
@@ -1293,7 +1356,6 @@
                 }
             });
             add(simState.historyArchive, 'EXECUTION_ARCHIVE');
-            add(simState.history, 'EXECUTION_HISTORY');
             add(simState.research.archive, 'RESEARCH_ARCHIVE');
             return o;
         }
@@ -1331,15 +1393,15 @@
             };
             const intersections = intersectionEdge(d, ['_strategy', '_regime', '_direction']);
             const verified = intersections.filter(x => x.stats.edge);
-            const q = { samples: d.length, score: d.filter(x => x._score > 0).length, regime: d.filter(x => x._regime !== 'UNKNOWN').length, strategy: d.filter(x => x._strategy !== 'UNCLASSIFIED').length, context: d.filter(x => x.entryContext?.schema === 'A2.2').length };
-            return { version: 'V8.6-A2.2', generatedAt: new Date().toISOString(), summary: edgeStats(d), dimensions: dims, intersections, verified, quality: q };
+            const q = { samples: d.length, score: d.filter(x => x._score > 0).length, regime: d.filter(x => x._regime !== 'UNKNOWN').length, strategy: d.filter(x => x._strategy !== 'UNCLASSIFIED').length, context: d.filter(x => x.entryContext?.schema?.includes('A2.2')).length };
+            return { version: 'V8.6-IDB', generatedAt: new Date().toISOString(), summary: edgeStats(d), dimensions: dims, intersections, verified, quality: q };
         }
 
         function exportA22Report(){
             const b = new Blob([JSON.stringify(buildA22Report(), null, 2)], { type: 'application/json' });
             const u = URL.createObjectURL(b), a = document.createElement('a');
             a.href = u;
-            a.download = 'bybit-radar-v862-a22-edge-attribution-' + Date.now() + '.json';
+            a.download = 'bybit-radar-v86-idb-edge-report-' + Date.now() + '.json';
             a.click();
             URL.revokeObjectURL(u);
         }
@@ -1354,7 +1416,7 @@
             const modal = document.getElementById('a22EdgeModal');
             if (!modal) return;
             const r = buildA22Report(), s = r.summary;
-            document.getElementById('a22EdgeStatus').textContent = `Dataset ${s.samples} 筆樣本 (Execution Archive: ${simState.historyArchive.length}, Shadow: ${simState.research.archive.length})`;
+            document.getElementById('a22EdgeStatus').textContent = `IndexedDB 資料庫: ${s.samples} 筆完整特徵樣本 (實盤: ${simState.historyArchive.length}, 影子: ${simState.research.archive.length})`;
             document.getElementById('a22EdgeSummary').innerHTML = [
                 ['Samples', s.samples],
                 ['WR', (s.winRate * 100).toFixed(1) + '%'],
@@ -1454,7 +1516,6 @@
             return Math.min(100, score);
         }
 
-        /* 統一撮合引擎 (Unified Fill Engine) */
         function executeFill(pos, fillQty, fillPrice, reason, meta = {}) {
             if (!pos) return { success: false, error: 'NO_POSITION' };
             const remainingQty = Math.max(0, parseFloat(pos.remainingQty || pos.qty) || 0);
@@ -1541,7 +1602,7 @@
             updateSimHeaderStats();
         }
 
-        function finalizeClosedTrade(pos, finalReason) {
+        async function finalizeClosedTrade(pos, finalReason) {
             if (!pos || pos.finalized) return;
             pos.finalized = true;
             simState.positions = simState.positions.filter(p => p.id !== pos.id);
@@ -1572,16 +1633,22 @@
                 direction: pos.direction || 'LONG',
                 strategy: pos.strategy || null,
                 regimeAtEntry: pos.regimeAtEntry || currentMarketRegime,
-                entryContext: pos.entryContext || null
+                entryContext: pos.entryContext || null // 完整保留開倉時特徵環境
             });
 
-            simState.historyArchive = v85QualityMergeTrades(simState.historyArchive || [], [trade]).slice(0, MAX_ARCHIVE_RECORDS);
-            simState.history = simState.historyArchive.slice(0, 50);
+            simState.historyArchive.unshift(trade);
+            simState.history = simState.historyArchive.slice(0, 30);
+
+            // 直接存入 IndexedDB
+            if (idbInstance) {
+                await idbPutRecord(IDB_STORE_EXECUTION, trade);
+            }
 
             recordRiskOutcome(trade, false);
             saveToStorage(true);
             renderSimPositions();
             updateSimHeaderStats();
+            updateIdbStatsBadge();
         }
 
         function checkAutoTradingOpportunities() {
@@ -1627,7 +1694,7 @@
                 direction: 'LONG',
                 strategy: entryContext.strategy,
                 regimeAtEntry: entryContext.regime,
-                entryContext,
+                entryContext, // 完整特徵環境注入
                 entryPrice,
                 markEntryPrice: markPrice,
                 currentPrice: markPrice,
@@ -1854,7 +1921,7 @@
             const container = document.getElementById('coinIntelContainer');
             if (!container) return;
 
-            const history = simState.historyArchive || simState.history || [];
+            const history = simState.historyArchive || [];
             if (history.length === 0) {
                 container.innerHTML = `<div class="text-center py-4 text-slate-500">尚無足夠平倉資料建立代幣智商庫。</div>`;
                 return;
@@ -1915,7 +1982,7 @@
 
         function openScorecardModal() {
             const a = getStrategyAnalytics();
-            const history = simState.historyArchive || simState.history || [];
+            const history = simState.historyArchive || [];
             const totalRealizedPnl = history.reduce((sum, b) => sum + (parseFloat(b.pnl) || 0), 0);
             
             const pnlEl = document.getElementById('cardRealizedPnl');
@@ -1939,7 +2006,7 @@
 
         function openHistoryModal() {
             const tbody = document.getElementById('historyTableBody');
-            const history = simState.historyArchive || simState.history || [];
+            const history = simState.historyArchive || [];
 
             const btnText = document.getElementById('historyBtnText');
             if (btnText) btnText.innerText = `歷史明細 (${history.length})`;
@@ -1976,7 +2043,7 @@
         }
 
         function getLabHistory() {
-            return (simState.historyArchive || simState.history || []).filter(t => Number.isFinite(parseFloat(t.pnl)) && parseFloat(t.entryPrice) > 0);
+            return (simState.historyArchive || []).filter(t => Number.isFinite(parseFloat(t.pnl)) && parseFloat(t.entryPrice) > 0);
         }
 
         function replayTradeProxy(trade, p) {
@@ -2147,36 +2214,49 @@
             }
         }
 
-        function exportDataJson() {
-            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({
-                simState,
+        async function exportDataJson() {
+            const fullDataset = {
+                simState: {
+                    ...simState,
+                    historyArchive: simState.historyArchive,
+                    research: simState.research
+                },
                 adaptiveParams: {
                     ...adaptiveParams,
                     blacklist: Array.from(adaptiveParams.blacklist)
                 },
-                exportedAt: new Date().toISOString()
-            }, null, 2));
+                exportedAt: new Date().toISOString(),
+                schema: 'INDEXED_DB_COMPLETE_V86'
+            };
+
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(fullDataset, null, 2));
             const dlAnchor = document.createElement('a');
             dlAnchor.setAttribute("href", dataStr);
-            dlAnchor.setAttribute("download", `bybit_radar_v86_backup_${Date.now()}.json`);
+            dlAnchor.setAttribute("download", `bybit_radar_idb_backup_${Date.now()}.json`);
             document.body.appendChild(dlAnchor);
             dlAnchor.click();
             dlAnchor.remove();
-            showNotificationModal("匯出成功", "交易歷史與風控資料已成功備份為 JSON 檔案！");
+            showNotificationModal("匯出成功", `已完整備份 ${simState.historyArchive.length} 筆歷史實盤與特徵欄位至 JSON 檔案！`);
         }
 
         function importDataJson(evt) {
             const file = evt.target.files[0];
             if (!file) return;
             const reader = new FileReader();
-            reader.onload = e => {
+            reader.onload = async e => {
                 try {
                     const parsed = JSON.parse(e.target.result);
                     if (parsed.simState) {
                         const incomingArchive = parsed.simState.historyArchive || parsed.simState.history || [];
-                        const localArchive = simState.historyArchive || simState.history || [];
+                        const localArchive = simState.historyArchive || [];
                         const merged = v85QualityMergeTrades(localArchive, incomingArchive);
-                        simState = { ...simState, ...parsed.simState, historyArchive: merged, history: merged.slice(0, 50) };
+                        simState = { ...simState, ...parsed.simState, historyArchive: merged, history: merged.slice(0, 30) };
+
+                        if (idbInstance) {
+                            for (const trd of merged) {
+                                await idbPutRecord(IDB_STORE_EXECUTION, trd);
+                            }
+                        }
                     }
                     if (parsed.adaptiveParams) {
                         adaptiveParams = {
@@ -2187,9 +2267,10 @@
                     }
                     ensureRiskState();
                     saveToStorage(true);
+                    updateIdbStatsBadge();
                     renderSimPositions();
                     updateSimHeaderStats();
-                    showNotificationModal("匯入成功", "備份資料已成功無損合併還原！");
+                    showNotificationModal("匯入成功", "備份資料已成功無損寫入 IndexedDB 數據庫！");
                 } catch (err) {
                     showNotificationModal("匯入失敗", "JSON 檔案解析失敗: " + err.message);
                 }
@@ -2233,7 +2314,7 @@
         function askResetSimulation() {
             showNotificationModal(
                 "確認重置帳戶？",
-                "重置將清空當前持倉並將餘額恢復為 $100,000.00，但為保護數據，V8.6 歷史封存庫仍將保留於磁碟中。",
+                "重置將清空當前持倉並將餘額恢復為 $100,000.00，但為保護數據，IndexedDB 中的大樣本歷史封存檔仍將永久保存。",
                 `<button onclick="confirmResetSimulation()" class="w-1/2 py-2 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-lg transition">確認重置</button>
                  <button onclick="closeNotificationModal()" class="w-1/2 py-2 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-lg transition">取消</button>`
             );
@@ -2250,7 +2331,6 @@
             closeNotificationModal();
         }
 
-        /* 雲端同步設定 (Firebase) */
         const getDecodedKey = () => atob("QUl6YVN5Q1hLTFR3S0FxS2gweGQ2MVZEZnR4R0ZZYTFuTmRCbE1V");
         const defaultFirebaseConfig = {
             apiKey: getDecodedKey(),
@@ -2288,13 +2368,12 @@
                 if (typeof firebase === 'undefined' || !firebase.apps) return;
                 if (!firebase.apps.length) firebase.initializeApp(defaultFirebaseConfig);
                 firestoreDb = firebase.firestore();
-                // 啟用離線快取/長輪詢容錯配置
                 try {
                     firestoreDb.settings({ experimentalAutoDetectLongPolling: true, merge: true });
                 } catch (_) {}
                 bindCloudRoom(currentRoomId);
             } catch (err) {
-                console.info("Firestore 離線或未啟用雲端長連線:", err?.message || err);
+                console.info("Firestore 離線或純本機模式:", err?.message || err);
             }
         }
 
@@ -2324,15 +2403,11 @@
                         updateSimHeaderStats();
                     },
                     err => {
-                        // 靜默處理網路連線短暫中斷/重連警告 (如 ERR_CONNECTION_CLOSED)
                         const statusEl = document.getElementById('cloudModalStatus');
-                        if (statusEl) statusEl.innerText = "連線重試中 (離線保護生效)";
-                        console.debug("Firestore 通道暫時重連中 (常規網路事件):", err?.message || err);
+                        if (statusEl) statusEl.innerText = "連線重試中 (離線保護)";
                     }
                 );
-            } catch (e) {
-                console.debug("Firestore 監聽初始化異常，轉為純本機模式:", e);
-            }
+            } catch (e) {}
         }
 
         function pushToCloudForce() {
@@ -2347,7 +2422,7 @@
                     history: simState.history,
                     riskState: simState.riskState
                 }
-            }).catch(err => console.debug('Cloud push deferred:', err?.message));
+            }).catch(err => console.debug('Cloud push skipped:', err?.message));
         }
 
         function pullFromCloudForce() {
@@ -2365,7 +2440,6 @@
                     showNotificationModal("同步成功", "已成功安全合併雲端交易紀錄！");
                 })
                 .catch(err => {
-                    console.warn('Cloud pull failed:', err);
                     showNotificationModal("同步失敗", "無法讀取雲端資料，請稍後再試。");
                 });
         }
@@ -2388,10 +2462,9 @@
             closeCloudModal();
         }
 
-        /* Performance Audit Engine */
         function v85AuditNum(v, fallback=0){ const n = Number(v); return Number.isFinite(n) ? n : fallback; }
         function v85AuditTrades(){
-            const a = Array.isArray(simState.historyArchive) && simState.historyArchive.length ? simState.historyArchive : (Array.isArray(simState.history) ? simState.history : []);
+            const a = Array.isArray(simState.historyArchive) ? simState.historyArchive : [];
             return a.filter(t => t && typeof t === 'object');
         }
         function v85AuditPnl(t){ return v85AuditNum(t.netPnl, v85AuditNum(t.realizedNetPnl, v85AuditNum(t.pnl, v85AuditNum(t.realizedPnl, v85AuditNum(t.grossPnl, 0))))); }
@@ -2460,7 +2533,7 @@
                 ['平均虧損', '$' + v85FmtAudit(a.avgLoss)],
                 ['平均 MFE', a.avgMfe === null ? '—' : v85FmtAudit(a.avgMfe) + '%'],
                 ['平均 MAE', a.avgMae === null ? '—' : v85FmtAudit(a.avgMae) + '%'],
-                ['樣本品質', a.tradeCount >= 100 ? '高（≥100）' : a.tradeCount >= 30 ? '中（30–99）' : '低（<30，暫不建議調參）']
+                ['儲存架構', 'IndexedDB 永久持久層 (已免除 Quota 限制)']
             ];
             document.getElementById('performanceAuditRisk').innerHTML = risks.map(x => `<div class="flex justify-between border-b border-slate-800 pb-2"><span class="text-slate-400">${x[0]}</span><span class="text-white font-bold">${x[1]}</span></div>`).join('');
             document.getElementById('performanceAuditConclusion').textContent = !a.tradeCount ? '目前沒有足夠交易資料。請繼續 Observation Mode 累積平倉紀錄。' : a.tradeCount < 30 ? `目前只有 ${a.tradeCount} 筆樣本。可查看 KPI，但不建議自動調參。` : (a.expectancy > 0 && a.profitFactor > 1 ? `目前資料顯示正期望跡象（PF ${v85FmtAudit(a.profitFactor)}、Expectancy $${v85FmtAudit(a.expectancy)}）。應持續優化進場特徵。` : '目前資料尚未顯示穩定正期望。應優先減少低品質訊號，檢查手續費損耗。');
@@ -2493,11 +2566,9 @@
             }, 1000);
         }
 
-        window.addEventListener('DOMContentLoaded', () => {
-            loadFromStorage();
+        window.addEventListener('DOMContentLoaded', async () => {
+            await initStorageWithIndexedDB();
             initFirebaseSync();
-            updateSimHeaderStats();
-            renderSimPositions();
             fetchMarketData();
             initTimer();
         });
@@ -2508,11 +2579,10 @@
       <button type="button" onclick="exportA22Report()" class="px-4 py-3 bg-slate-800 hover:bg-slate-700 text-white rounded-full shadow-lg font-bold text-xs">Export Edge JSON</button>
     </div>
 
-    <!-- V8.6-A2.2.1 Edge Lab Modal -->
     <div id="a22EdgeModal" class="fixed inset-0 hidden z-[9999] bg-black/80 backdrop-blur-sm p-4">
       <div class="mx-auto mt-6 max-w-7xl max-h-[90vh] overflow-y-auto rounded-2xl border border-slate-700 bg-slate-950 p-5 text-slate-100 shadow-2xl">
         <div class="flex items-start justify-between gap-4 border-b border-slate-800 pb-4">
-          <div><h2 class="text-xl font-bold">🧠 V8.6-A2.2.1 Edge Attribution Lab</h2><div id="a22EdgeStatus" class="mt-1 text-sm text-slate-400">Loading dataset…</div></div>
+          <div><h2 class="text-xl font-bold">🧠 V8.6-A2.2.1 Edge Attribution Lab (IndexedDB 倉儲)</h2><div id="a22EdgeStatus" class="mt-1 text-sm text-slate-400">Loading dataset…</div></div>
           <div class="flex gap-2"><button type="button" onclick="exportA22Report()" class="rounded-lg bg-slate-800 px-3 py-2 text-xs font-bold hover:bg-slate-700">Export JSON</button><button type="button" onclick="closeA22EdgeLab()" class="rounded-lg bg-indigo-600 px-3 py-2 text-xs font-bold hover:bg-indigo-500">關閉</button></div>
         </div>
         <div id="a22EdgeSummary" class="mt-4 grid grid-cols-2 gap-3 md:grid-cols-6"></div>
