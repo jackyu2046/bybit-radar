@@ -60,7 +60,7 @@
                             <span class="text-[9px] bg-emerald-500/20 text-emerald-400 font-mono font-semibold px-1.5 py-0.2 rounded border border-emerald-500/30">V8.2 CORE ENGINE</span>
                             <span class="text-[9px] bg-purple-500/20 text-purple-300 font-mono font-semibold px-1.5 py-0.2 rounded border border-purple-500/30" id="regimeHeaderBadge">Regime: CHOPPY</span>
                         </div>
-                        <p class="text-[11px] text-slate-400 hidden sm:block">統一撮合管道 · 精準分批扣費帳務 · 5-10U 5x 槓桿模擬 · 尾倉高點回撤 6.5%</p>
+                        <p class="text-[11px] text-slate-400 hidden sm:block">統一搓合管道 · 真正時序 RVOL & OI 加速度 · 盤口點差防滑點 · 5-10U 5x 扣費實撮模擬</p>
                     </div>
                 </div>
             </div>
@@ -97,6 +97,17 @@
                     <span>Gemini 體檢</span>
                 </button>
 
+                <button onclick="exportDataJson()" class="flex items-center gap-1 bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium px-2 py-1 rounded-lg transition border border-crypto-border whitespace-nowrap text-[11px]">
+                    <span>📥</span>
+                    <span>匯出</span>
+                </button>
+
+                <label class="flex items-center gap-1 bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium px-2 py-1 rounded-lg transition border border-crypto-border cursor-pointer whitespace-nowrap text-[11px]">
+                    <span>📤</span>
+                    <span>匯入</span>
+                    <input type="file" id="importFileInput" onchange="importDataJson(event)" class="hidden" accept=".json">
+                </label>
+
                 <button onclick="fetchMarketData()" class="flex items-center gap-1 bg-amber-500 hover:bg-amber-400 text-black font-semibold px-2.5 py-1 rounded-lg transition shadow-md shadow-amber-500/10 active:scale-95 whitespace-nowrap text-[11px]">
                     <span>🔄 掃描</span>
                 </button>
@@ -105,7 +116,6 @@
     </header>
 
     <main class="flex-1 p-3 md:p-5 max-w-[1750px] mx-auto w-full space-y-4">
-
         <!-- 頂部動態權益儀表板 -->
         <section class="bg-gradient-to-r from-slate-900 via-crypto-card to-slate-900 border border-crypto-border rounded-xl p-3 flex flex-wrap items-center justify-between gap-3 text-xs">
             <div class="flex items-center flex-wrap gap-3 sm:gap-4">
@@ -191,8 +201,8 @@
                         <tr>
                             <th class="py-2 px-2.5">評級 / 幣種</th>
                             <th class="py-2 px-2.5 text-right">現價 (USDT)</th>
-                            <th class="py-2 px-2.5 text-right">5m RVOL / 1h 動態</th>
-                            <th class="py-2 px-2.5 text-right">OI 向量增速</th>
+                            <th class="py-2 px-2.5 text-right">時序 5m RVOL / 1h 動態</th>
+                            <th class="py-2 px-2.5 text-right">OI 向量增速 (加速度)</th>
                             <th class="py-2 px-2.5 text-right">盤口點差 (Spread)</th>
                             <th class="py-2 px-2.5 text-center">綜合特徵得分</th>
                             <th class="py-2 px-2.5 text-center">策略訊號</th>
@@ -293,9 +303,12 @@
         let countdown = 5;
         let timerInterval = null;
 
-        // 時間序列緩衝區
-        let volumeHistory = new Map();
-        let oiHistory = new Map();
+        // 時間序列滾動緩衝區 (Time-based Snapshots)
+        // 結構: symbol -> [ { timestamp, turnover, oi, price } ]
+        const timeSeriesBuffers = new Map();
+        const MAX_BUFFER_AGE_MS = 15 * 60 * 1000; // 最多保留 15 分鐘精確快照
+
+        let currentMarketRegime = 'CHOPPY';
 
         let simState = {
             balance: 100000.0,
@@ -316,7 +329,7 @@
             blacklist: new Set(['NIULAIUSDT'])
         };
 
-        // 全版本無縫資料救援與淨化
+        // 全版本無縫資料救援與淨化 (徹底解決 NaN 與遺失問題)
         function loadFromStorage() {
             try {
                 const legacyKeys = [
@@ -384,12 +397,129 @@
             } catch (e) {}
         }
 
+        // 精確時間點搜尋函式 (解決 P0 級時間錯位問題)
+        function findClosestHistoricalPoint(buffer, targetTime) {
+            if (!buffer || buffer.length === 0) return null;
+            let closest = null;
+            for (const pt of buffer) {
+                if (pt.timestamp <= targetTime) {
+                    closest = pt;
+                } else {
+                    break;
+                }
+            }
+            return closest || buffer[0];
+        }
+
+        // 時間驅動特徵引擎 (真正的 RVOL 與 OI 加速度)
+        function computeTimeDrivenMetrics(symbol, curTurnover, curOi, curPrice) {
+            const now = Date.now();
+            let buf = timeSeriesBuffers.get(symbol);
+            if (!buf) {
+                buf = [];
+                timeSeriesBuffers.set(symbol, buf);
+            }
+
+            // 推入最新快照
+            buf.push({ timestamp: now, turnover: curTurnover, oi: curOi, price: curPrice });
+
+            // 修復 P0：時間驅動清理，移除超過 15 分鐘前的舊點
+            while (buf.length > 0 && (now - buf[0].timestamp) > MAX_BUFFER_AGE_MS) {
+                buf.shift();
+            }
+
+            const fiveMinAgo = now - (5 * 60 * 1000);
+            const tenMinAgo = now - (10 * 60 * 1000);
+
+            const pt5m = findClosestHistoricalPoint(buf, fiveMinAgo);
+            const pt10m = findClosestHistoricalPoint(buf, tenMinAgo);
+
+            // 1. 真實滾動 RVOL 計算
+            let rvol = 1.0;
+            if (pt5m && pt5m !== buf[buf.length - 1]) {
+                const cur5mDelta = Math.max(0, curTurnover - pt5m.turnover);
+                const prev5mDelta = (pt10m && pt10m !== pt5m) ? Math.max(0, pt5m.turnover - pt10m.turnover) : 0;
+                const baseline = prev5mDelta > 0 ? prev5mDelta : (curTurnover / 288);
+                if (baseline > 0) {
+                    rvol = Math.max(0.5, Math.min(20.0, cur5mDelta / baseline));
+                }
+            }
+
+            // 2. 真實 OI Velocity 與 OI Acceleration
+            let oiVelocity5m = 0.0;
+            let oiAcceleration = 0.0;
+
+            if (pt5m && pt5m.oi > 0) {
+                oiVelocity5m = ((curOi - pt5m.oi) / pt5m.oi) * 100;
+            }
+
+            if (pt10m && pt10m.oi > 0 && pt5m && pt5m.oi > 0) {
+                const prevVelocity5m = ((pt5m.oi - pt10m.oi) / pt10m.oi) * 100;
+                oiAcceleration = oiVelocity5m - prevVelocity5m; // 速度差 = 加速度
+            }
+
+            return { rvol, oiVelocity: oiVelocity5m, oiAcceleration };
+        }
+
+        // 大盤市場體制偵測
+        function detectMarketRegime(list) {
+            const btc = list.find(i => i.symbol === "BTCUSDT");
+            let btc1h = 0;
+            let btc24h = 0;
+            if (btc) {
+                const last = parseFloat(btc.lastPrice) || 0;
+                const p1h = parseFloat(btc.prevPrice1h) || last;
+                btc1h = p1h > 0 ? ((last - p1h) / p1h) * 100 : 0;
+                btc24h = (parseFloat(btc.price24hPcnt) || 0) * 100;
+            }
+
+            const altGains = list.filter(i => i.symbol.endsWith("USDT") && parseFloat(i.price24hPcnt) > 0).length;
+            const totalAlts = list.filter(i => i.symbol.endsWith("USDT")).length;
+            const breadthRatio = totalAlts > 0 ? altGains / totalAlts : 0.5;
+
+            let regime = 'CHOPPY';
+            if (btc1h <= -1.2 || btc24h <= -3.5) {
+                regime = 'RISK_OFF';
+            } else if (breadthRatio >= 0.55 && btc1h >= 0.2) {
+                regime = 'RISK_ON';
+            } else {
+                regime = 'CHOPPY';
+            }
+
+            currentMarketRegime = regime;
+
+            const badge = document.getElementById('regimeHeaderBadge');
+            if (badge) {
+                badge.innerText = `Regime: ${regime}`;
+                badge.className = `text-[9px] font-mono font-semibold px-1.5 py-0.2 rounded border ${
+                    regime === 'RISK_ON' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' :
+                    regime === 'RISK_OFF' ? 'bg-rose-500/20 text-rose-400 border-rose-500/30' :
+                    'bg-purple-500/20 text-purple-300 border-purple-500/30'
+                }`;
+            }
+
+            const gateDot = document.getElementById('marketGateDot');
+            const gateText = document.getElementById('marketGateText');
+            if (gateDot && gateText) {
+                if (regime === 'RISK_OFF') {
+                    gateDot.className = "w-1.5 h-1.5 rounded-full bg-rose-500 animate-ping mr-1.5";
+                    gateText.innerText = "大盤: RISK_OFF 避險";
+                } else {
+                    gateDot.className = "w-1.5 h-1.5 rounded-full bg-emerald-400 mr-1.5";
+                    gateText.innerText = `大盤: 正常 (${btc1h >= 0 ? '+' : ''}${btc1h.toFixed(1)}%)`;
+                }
+            }
+
+            return regime;
+        }
+
         // Bybit API 請求與數據計算
         async function fetchMarketData() {
             try {
                 const res = await fetch("https://api.bybit.com/v5/market/tickers?category=linear");
                 const json = await res.json();
                 if (json.retCode === 0 && json.result && json.result.list) {
+                    detectMarketRegime(json.result.list);
                     processTickersV82(json.result.list);
                 }
             } catch (err) {
@@ -401,7 +531,6 @@
 
         function processTickersV82(list) {
             const newTickers = [];
-            const timestamp = Date.now();
 
             list.forEach(item => {
                 const symbol = item.symbol;
@@ -416,40 +545,13 @@
                 const bid1Price = parseFloat(item.bid1Price) || lastPrice;
                 const ask1Price = parseFloat(item.ask1Price) || lastPrice;
 
-                // 盤口點差
+                // 盤口點差 Spread %
                 const spreadPct = ask1Price > 0 ? ((ask1Price - bid1Price) / ask1Price) * 100 : 0.05;
 
-                // 歷史緩衝
-                if (!volumeHistory.has(symbol)) volumeHistory.set(symbol, []);
-                if (!oiHistory.has(symbol)) oiHistory.set(symbol, []);
-
-                const vHist = volumeHistory.get(symbol);
-                const oHist = oiHistory.get(symbol);
-
-                vHist.push({ time: timestamp, vol: turnover24h });
-                oHist.push({ time: timestamp, oi: openInterestValue });
-
-                if (vHist.length > 12) vHist.shift();
-                if (oHist.length > 12) oHist.shift();
-
-                let rvol = 1.0;
-                if (vHist.length >= 2) {
-                    const latestDelta = Math.max(0, vHist[vHist.length - 1].vol - vHist[vHist.length - 2].vol);
-                    const prevDeltas = [];
-                    for (let i = 1; i < vHist.length - 1; i++) {
-                        prevDeltas.push(Math.max(0, vHist[i].vol - vHist[i - 1].vol));
-                    }
-                    const avgDelta = prevDeltas.length > 0 ? (prevDeltas.reduce((a, b) => a + b, 0) / prevDeltas.length) : latestDelta;
-                    rvol = avgDelta > 0 ? (latestDelta / avgDelta) : 1.0;
-                }
-
-                let oiVelocity = 0.0;
-                if (oHist.length >= 2) {
-                    const prevOi = oHist[oHist.length - 2].oi;
-                    if (prevOi > 0) {
-                        oiVelocity = ((oHist[oHist.length - 1].oi - prevOi) / prevOi) * 100;
-                    }
-                }
+                // 時間序列指標運算
+                const { rvol, oiVelocity, oiAcceleration } = computeTimeDrivenMetrics(
+                    symbol, turnover24h, openInterestValue, lastPrice
+                );
 
                 const price24hPcnt = (parseFloat(item.price24hPcnt) || 0) * 100;
                 const prevPrice1h = parseFloat(item.prevPrice1h) || lastPrice;
@@ -457,17 +559,17 @@
                 const fundingRate = (parseFloat(item.fundingRate) || 0) * 100;
 
                 const featureScore = calculateFeatureGroupScoreV82({
-                    momentum1h, rvol, oiVelocity, turnover24h, spreadPct, fundingRate, price24hPcnt
+                    momentum1h, rvol, oiVelocity, oiAcceleration, turnover24h, spreadPct, fundingRate, price24hPcnt
                 });
 
                 let grade = 'C';
-                if (featureScore >= 85 && spreadPct <= 0.10 && rvol >= 2.0) grade = 'A+';
+                if (featureScore >= 85 && spreadPct <= 0.10 && rvol >= 2.0 && oiVelocity > 0.5) grade = 'A+';
                 else if (featureScore >= 75) grade = 'A';
                 else if (featureScore >= 65) grade = 'B';
 
                 const record = {
                     symbol, lastPrice, price24hPcnt, momentum1h, turnover24h,
-                    openInterestValue, rvol, oiVelocity, spreadPct, fundingRate,
+                    openInterestValue, rvol, oiVelocity, oiAcceleration, spreadPct, fundingRate,
                     score: featureScore, grade
                 };
 
@@ -479,26 +581,32 @@
             updateSimPositions();
             updateSimHeaderStats();
 
-            if (simState.autoTrade) {
+            // 自動開倉驗證：僅在 A+ 且非避險環境下觸發
+            if (simState.autoTrade && currentMarketRegime !== 'RISK_OFF') {
                 checkAutoTradingOpportunities();
             }
         }
 
         function calculateFeatureGroupScoreV82(f) {
             let score = 0;
+            // A. Price Action (Max 25)
             if (f.momentum1h >= 3.0 && f.momentum1h <= 12.0) score += 25;
             else if (f.momentum1h >= 1.5) score += 15;
 
+            // B. Volume & Acceleration (Max 20)
             if (f.rvol >= 3.0) score += 20;
             else if (f.rvol >= 1.8) score += 12;
 
-            if (f.oiVelocity >= 2.0) score += 20;
-            else if (f.oiVelocity >= 0.5) score += 10;
-            if (f.fundingRate <= -0.05) score += 10;
+            // C. Derivatives & OI (Max 30)
+            if (f.oiVelocity >= 2.0 && f.oiAcceleration > 0) score += 25; // 加速度加分
+            else if (f.oiVelocity >= 0.8) score += 15;
+            if (f.fundingRate <= -0.05) score += 5;
 
+            // D. Tradeability & Spread (Max 15)
             if (f.spreadPct <= 0.05) score += 15;
             else if (f.spreadPct <= 0.12) score += 8;
 
+            // E. Market Context (Max 10)
             if (f.turnover24h >= 2500000) score += 10;
 
             return Math.min(100, score);
@@ -516,7 +624,7 @@
             pos.qty -= fillQty;
             pos.realizedNetPnl += netPnl;
             pos.totalFees += exitFee;
-            simState.balance += netPnl; // 純利寫入帳戶餘額
+            simState.balance += netPnl; // 純利寫入可用餘額
 
             pos.fills.push({
                 timestamp: Date.now(),
@@ -531,7 +639,7 @@
             return netPnl;
         }
 
-        // 模擬持倉精算與出場排程
+        // 模擬持倉精算與出場排程 (TP1 / TP2 / Trailing Stop 完整管線)
         function updateSimPositions() {
             if (!simState.positions || simState.positions.length === 0) {
                 renderSimPositions();
@@ -549,7 +657,7 @@
                 // 1. 觸發硬止損 (Full SL Exit)
                 if (curPrice <= pos.stopLoss) {
                     executeFill(pos, pos.qty, pos.stopLoss, "🔴 觸發防守止損 (SL)");
-                    positionsToFinalize.push({ pos, finalReason: "🔴 觸發防守止損 (SL)" });
+                    positionsToFinalize.push({ pos, finalReason: pos.tp1Reached ? "🛡️ 觸發保本損離場" : "🔴 觸發防守止損 (SL)" });
                     return;
                 }
 
@@ -809,7 +917,10 @@
                         <span class="font-bold ${coin.rvol >= 2 ? 'text-amber-400' : 'text-slate-300'}">${coin.rvol.toFixed(1)}x</span>
                         <span class="block text-[10px] text-slate-400">1h: +${coin.momentum1h.toFixed(1)}%</span>
                     </td>
-                    <td class="py-2 px-2.5 text-right ${coin.oiVelocity >= 1 ? 'text-emerald-400 font-bold' : 'text-slate-400'}">+${coin.oiVelocity.toFixed(2)}%</td>
+                    <td class="py-2 px-2.5 text-right ${coin.oiVelocity >= 1 ? 'text-emerald-400 font-bold' : 'text-slate-400'}">
+                        +${coin.oiVelocity.toFixed(2)}%
+                        <span class="block text-[9px] text-slate-500">acc: ${coin.oiAcceleration >= 0 ? '+' : ''}${coin.oiAcceleration.toFixed(1)}%</span>
+                    </td>
                     <td class="py-2 px-2.5 text-right text-slate-300">${coin.spreadPct.toFixed(3)}%</td>
                     <td class="py-2 px-2.5 text-center font-bold text-amber-400">${coin.score}</td>
                     <td class="py-2 px-2.5 text-center text-slate-300">${coin.grade === 'A+' ? '🟢 A+ 狙擊' : '💤 觀察'}</td>
@@ -885,6 +996,49 @@
             if (el) {
                 el.textContent = "Gemini AI 體檢完成：V8.2 統一帳務引擎運作正常，手續費損耗已精確扣除，期望值 (+0.32R) 計算真實有效！建議維持現行風控。";
             }
+        }
+
+        function exportDataJson() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({
+                simState,
+                adaptiveParams: {
+                    ...adaptiveParams,
+                    blacklist: Array.from(adaptiveParams.blacklist)
+                },
+                exportedAt: new Date().toISOString()
+            }, null, 2));
+            const dlAnchor = document.createElement('a');
+            dlAnchor.setAttribute("href", dataStr);
+            dlAnchor.setAttribute("download", `bybit_radar_v82_backup_${Date.now()}.json`);
+            document.body.appendChild(dlAnchor);
+            dlAnchor.click();
+            dlAnchor.remove();
+        }
+
+        function importDataJson(evt) {
+            const file = evt.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = e => {
+                try {
+                    const parsed = JSON.parse(e.target.result);
+                    if (parsed.simState) simState = { ...simState, ...parsed.simState };
+                    if (parsed.adaptiveParams) {
+                        adaptiveParams = {
+                            ...adaptiveParams,
+                            ...parsed.adaptiveParams,
+                            blacklist: new Set(parsed.adaptiveParams.blacklist || [])
+                        };
+                    }
+                    saveToStorage();
+                    renderSimPositions();
+                    updateSimHeaderStats();
+                    alert("備份資料已成功匯入！");
+                } catch (err) {
+                    alert("JSON 檔案解析失敗: " + err.message);
+                }
+            };
+            reader.readAsText(file);
         }
 
         function closePositionManually(id) {
