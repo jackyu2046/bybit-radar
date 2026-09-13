@@ -487,7 +487,7 @@
 
     <script>
         /* =========================================================
-           BYBIT RADAR V8.6-A2.2 — DATA SEGMENTATION & EDGE ATTRIBUTION
+           BYBIT RADAR V8.6-A2.2.1 — DATA SEGMENTATION & EDGE ATTRIBUTION
            整合: 資料防護 + 統一撮合 (TP1/TP2/Trailing) + 幣種智商庫 + Strategy Lab
         ========================================================= */
         const STORAGE_KEY_SIM = 'bybit_radar_sim_v82';
@@ -1400,7 +1400,7 @@
         function buildEntryContext(c){const f={momentum1h:a22n(c.momentum1h),rvol:a22n(c.rvol),oiVelocity:a22n(c.oiVelocity),oiAcceleration:a22n(c.oiAcceleration),spreadPct:a22n(c.spreadPct),fundingRate:a22n(c.fundingRate),turnover24h:a22n(c.turnover24h),price24hPcnt:a22n(c.price24hPcnt)};return{schema:'A2.2',capturedAt:Date.now(),score:a22n(c.score),grade:c.grade||'C',direction:classifyDirection(c),regime:classifyRegime(),strategy:classifyStrategy(c),volatility:classifyVolatility(c),liquidity:classifyLiquidity(c),scoreBucket:a22Bucket(a22n(c.score),[['<50',-Infinity,50],['50-59',50,60],['60-69',60,70],['70-79',70,80],['80-89',80,90],['90-100',90,Infinity]]),momentumBucket:a22Bucket(Math.abs(f.momentum1h),[['LOW',0,1],['MED',1,3],['HIGH',3,Infinity]]),rvolBucket:a22Bucket(f.rvol,[['LOW',-Infinity,1],['NORMAL',1,1.5],['HIGH',1.5,3],['EXTREME',3,Infinity]]),oiBucket:a22Bucket(f.oiVelocity,[['NEGATIVE',-Infinity,0],['POSITIVE',0,.5],['STRONG',.5,Infinity]]),spreadBucket:a22Bucket(f.spreadPct,[['TIGHT',-Infinity,.03],['NORMAL',.03,.08],['WIDE',.08,Infinity]]),features:f}}
         function researchKey(c){return `${c.symbol}|${Math.floor(Date.now()/900000)}|${Math.floor(a22n(c.score)/5)*5}|${classifyDirection(c)}`}
         function collectResearchSignals(list){const r=ensureResearchState();if(!r.enabled)return;list.forEach(c=>{const k=researchKey(c);if(r.seenSignals[k])return;const e=a22n(c.lastPrice);if(e<=0)return;const x=buildEntryContext(c),d=x.direction,sl=a22n(adaptiveParams.stopLossPct,4.5),tp=a22n(adaptiveParams.tp2Pct,10),now=Date.now(),s={id:'shadow_'+now+'_'+Math.random().toString(36).slice(2,7),source:'RESEARCH_SHADOW',lifecycle:'ACTIVE',openedAt:now,symbol:c.symbol,direction:d,entryPrice:e,currentPrice:e,notional:a22n(r.shadowNotional,10),score:x.score,grade:x.grade,strategy:x.strategy,regime:x.regime,entryContext:x,tp2:d==='LONG'?e*(1+tp/100):e*(1-tp/100),stopLoss:d==='LONG'?e*(1-sl/100):e*(1+sl/100),timeoutAt:now+a22n(r.timeoutMinutes,240)*60000,mfePct:0,maePct:0};r.active.push(s);r.seenSignals[k]=now});Object.keys(r.seenSignals).forEach(k=>{if(Date.now()-r.seenSignals[k]>86400000)delete r.seenSignals[k]})}
-        function closeShadowTrade(s,p,reason){const pct=(s.direction==='LONG'?(p-s.entryPrice):(s.entryPrice-p))/s.entryPrice;s.exitPrice=p;s.currentPrice=p;s.closeReason=reason;s.closedAt=Date.now();s.grossPnl=pct*s.notional;s.fees=0;s.netPnl=s.grossPnl;s.pnl=s.netPnl;s.lifecycle='CLOSED';const r=ensureResearchState();r.active=r.active.filter(x=>x.id!==s.id);r.archive.unshift(s);if(r.archive.length>5000)r.archive.length=5000}
+        function closeShadowTrade(s,p,reason){const pct=(s.direction==='LONG'?(p-s.entryPrice):(s.entryPrice-p))/s.entryPrice;s.exitPrice=p;s.currentPrice=p;s.closeReason=reason;s.closedAt=Date.now();s.grossPnl=pct*s.notional;s.fees=0;s.netPnl=s.grossPnl;s.pnl=s.netPnl;s.lifecycle='CLOSED';const r=ensureResearchState();r.active=r.active.filter(x=>x.id!==s.id);r.archive.unshift(s);if(r.archive.length>5000)r.archive.length=5000; try{saveToStorage(false,false)}catch(e){console.warn('Research archive save failed',e)}}
         function updateShadowTrades(){const r=ensureResearchState();[...r.active].forEach(s=>{const p=a22n(allMarketPrices.get(s.symbol));if(p<=0)return;s.currentPrice=p;const m=(s.direction==='LONG'?(p-s.entryPrice):(s.entryPrice-p))/s.entryPrice*100;s.mfePct=Math.max(s.mfePct||0,m);s.maePct=Math.min(s.maePct||0,m);if(Date.now()>=s.timeoutAt)return closeShadowTrade(s,p,'TIMEOUT');if(s.direction==='LONG'?(p<=s.stopLoss||p>=s.tp2):(p>=s.stopLoss||p<=s.tp2))return closeShadowTrade(s,p,p===s.stopLoss?'SL':'TP2')})}
         function a22Normalize(t){const c=t.entryContext||{};return{...t,_pnl:a22n(t.netPnl,a22n(t.pnl)),_score:a22n(t.score,t.signalScore||c.score),_direction:t.direction||c.direction||'UNKNOWN',_regime:t.regimeAtEntry||t.regime||c.regime||'UNKNOWN',_strategy:t.strategy||t.strategyName||c.strategy||'UNCLASSIFIED',_volatility:c.volatility||'UNKNOWN',_liquidity:c.liquidity||'UNKNOWN',_rvolBucket:c.rvolBucket||'UNKNOWN',_oiBucket:c.oiBucket||'UNKNOWN',_spreadBucket:c.spreadBucket||'UNKNOWN'}}
         function buildA22Dataset(){ensureResearchState();const o=[],seen=new Set(),add=(a,src)=>(Array.isArray(a)?a:[]).forEach(t=>{if(!t||t.lifecycle==='ACTIVE'||t.status==='OPEN')return;const n=a22Normalize(t),k=src+'|'+(t.id||`${t.symbol}|${t.closedAt||t.closeTime||''}|${n._pnl}`);if(!seen.has(k)){seen.add(k);n._source=src;o.push(n)}});add(simState.historyArchive,'EXECUTION_ARCHIVE');add(simState.history,'EXECUTION_HISTORY');add(simState.research.archive,'RESEARCH_ARCHIVE');return o}
@@ -1409,7 +1409,57 @@
         function intersectionEdge(data,fields,min=30){const m={};data.forEach(x=>{const k=fields.map(f=>x[f]||'UNKNOWN').join(' × ');(m[k]||(m[k]=[])).push(x)});return Object.entries(m).map(([key,a])=>({key,stats:edgeStats(a)})).filter(x=>x.stats.samples>=min).sort((a,b)=>b.stats.expectancy-a.stats.expectancy)}
         function buildA22Report(){const d=buildA22Dataset(),dims={direction:groupEdge(d,'_direction'),regime:groupEdge(d,'_regime'),strategy:groupEdge(d,'_strategy'),volatility:groupEdge(d,'_volatility'),liquidity:groupEdge(d,'_liquidity'),rvol:groupEdge(d,'_rvolBucket'),oi:groupEdge(d,'_oiBucket'),spread:groupEdge(d,'_spreadBucket')},intersections=intersectionEdge(d,['_strategy','_regime','_direction']),verified=intersections.filter(x=>x.stats.edge),q={samples:d.length,score:d.filter(x=>x._score>0).length,regime:d.filter(x=>x._regime!=='UNKNOWN').length,strategy:d.filter(x=>x._strategy!=='UNCLASSIFIED').length,context:d.filter(x=>x.entryContext?.schema==='A2.2').length};return{version:'V8.6-A2.2',generatedAt:new Date().toISOString(),summary:edgeStats(d),dimensions:dims,intersections,verified,quality:q}}
         function exportA22Report(){const b=new Blob([JSON.stringify(buildA22Report(),null,2)],{type:'application/json'}),u=URL.createObjectURL(b),a=document.createElement('a');a.href=u;a.download='bybit-radar-v862-a22-edge-attribution-'+Date.now()+'.json';a.click();URL.revokeObjectURL(u)}
-        function openA22EdgeLab(){const r=buildA22Report(),w=window.open('','_blank');if(!w)return;const rows=a=>a.map(x=>`<tr><td>${x.key}</td><td>${x.stats.samples}</td><td>${(x.stats.winRate*100).toFixed(1)}%</td><td>${x.stats.pf===Infinity?'∞':x.stats.pf.toFixed(2)}</td><td>${x.stats.expectancy.toFixed(3)}</td><td>${x.stats.edge?'VERIFIED':'RESEARCH'}</td></tr>`).join('');w.document.write(`<html><head><title>V8.6-A2.2 Edge Attribution</title><style>body{font-family:Arial;background:#0b1020;color:#e5e7eb;padding:20px}table{width:100%;border-collapse:collapse;margin:8px 0 24px}td,th{padding:8px;border-bottom:1px solid #334155;text-align:left}h2{color:#a5b4fc}</style></head><body><h1>🧠 V8.6-A2.2 Edge Attribution</h1><h2>${r.verified.length?'VERIFIED CONTEXTUAL EDGE FOUND':'NO VERIFIED CONTEXTUAL EDGE'}</h2><p>Samples ${r.summary.samples} · WR ${(r.summary.winRate*100).toFixed(1)}% · PF ${r.summary.pf.toFixed(2)} · Expectancy ${r.summary.expectancy.toFixed(3)}</p>${Object.entries(r.dimensions).map(([k,v])=>`<h2>${k}</h2><table><tr><th>Segment</th><th>N</th><th>WR</th><th>PF</th><th>Exp</th><th>Status</th></tr>${rows(v)}</table>`).join('')}<h2>Strategy × Regime × Direction</h2><table><tr><th>Context</th><th>N</th><th>WR</th><th>PF</th><th>Exp</th><th>Status</th></tr>${rows(r.intersections)}</table></body></html>`);w.document.close()}
+        
+        function a22Esc(v){return String(v??'').replace(/[&<>"']/g,s=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]))}
+        function a22Rows(a){
+          if(!a?.length) return '<div class="text-slate-500 text-sm">暫時沒有可用資料</div>';
+          return `<div class="overflow-x-auto"><table class="w-full text-xs"><thead><tr class="text-slate-400 border-b border-slate-800"><th class="p-2 text-left">Segment</th><th class="p-2">N</th><th class="p-2">WR</th><th class="p-2">PF</th><th class="p-2">Exp</th><th class="p-2">Status</th></tr></thead><tbody>${a.map(x=>`<tr class="border-b border-slate-900"><td class="p-2 font-bold">${a22Esc(x.key)}</td><td class="p-2 text-center">${x.stats.samples}</td><td class="p-2 text-center">${(x.stats.winRate*100).toFixed(1)}%</td><td class="p-2 text-center">${x.stats.pf===Infinity?'∞':x.stats.pf.toFixed(2)}</td><td class="p-2 text-center ${x.stats.expectancy>0?'text-emerald-400':x.stats.expectancy<0?'text-rose-400':'text-slate-400'}">${x.stats.expectancy.toFixed(3)}</td><td class="p-2 text-center">${x.stats.edge?'🟢 VERIFIED':'🔬 RESEARCH'}</td></tr>`).join('')}</tbody></table></div>`;
+        }
+        function a22RepairResearchPersistence(){
+          ensureResearchState();
+          try {
+            const primary = localStorage.getItem(STORAGE_KEY_SIM);
+            if (primary) {
+              const parsed = v85SafeJsonParse(primary);
+              if (parsed && typeof parsed === 'object' && parsed.research && !simState.research?.archive?.length) {
+                simState.research = Object.assign({}, simState.research, parsed.research);
+              }
+            }
+          } catch(e) { console.warn('A2.2 research persistence repair skipped', e); }
+        }
+        function a22DatasetDiagnostics(){
+          ensureResearchState(); a22RepairResearchPersistence();
+          return {
+            archive: Array.isArray(simState.historyArchive)?simState.historyArchive.length:0,
+            history: Array.isArray(simState.history)?simState.history.length:0,
+            researchArchive: Array.isArray(simState.research?.archive)?simState.research.archive.length:0,
+            activeResearch: Array.isArray(simState.research?.active)?simState.research.active.length:0,
+            localKeys: (()=>{try{return Object.keys(localStorage).filter(k=>/bybit|v85|sim/i.test(k)).length}catch(e){return 0}})()
+          };
+        }
+        function openA22EdgeLab(){
+          const modal=document.getElementById('a22EdgeModal');
+          if(!modal){ alert('A2.2 Edge Lab UI missing'); return; }
+          const d=a22DatasetDiagnostics(), r=buildA22Report();
+          const s=r.summary;
+          document.getElementById('a22EdgeStatus').textContent =
+            `Dataset ${s.samples} · Execution Archive ${d.archive} · History ${d.history} · Research Archive ${d.researchArchive} · Active Shadow ${d.activeResearch}`;
+          document.getElementById('a22EdgeSummary').innerHTML = [
+            ['Samples',s.samples],['WR',(s.winRate*100).toFixed(1)+'%'],['PF',s.pf===Infinity?'∞':s.pf.toFixed(2)],
+            ['Expectancy',s.expectancy.toFixed(3)],['Net',s.net.toFixed(2)],['Edge',r.verified.length?'VERIFIED':'NO EDGE']
+          ].map(([k,v])=>`<div class="rounded-xl border border-slate-800 bg-slate-900/70 p-3"><div class="text-xs text-slate-400">${k}</div><div class="mt-1 text-lg font-bold ${v==='NO EDGE'?'text-rose-400':'text-white'}">${v}</div></div>`).join('');
+          const warning=document.getElementById('a22EdgeWarning');
+          if(!s.samples){
+            warning.classList.remove('hidden');
+            warning.innerHTML=`<b>目前 Dataset 是 0。</b><br>這不是 Edge Lab 計算錯誤，而是目前這個版本沒有讀到任何已關閉交易資料。請確認你是從原本有資料的同一個網站/Storage 環境開啟，或先讓 V8.6-A2.2 累積並保存 Research / Shadow Archive。`;
+          }else warning.classList.add('hidden');
+          const sections=document.getElementById('a22EdgeSections');
+          sections.innerHTML=Object.entries(r.dimensions).map(([k,v])=>`<section class="rounded-xl border border-slate-800 bg-slate-900/50 p-4"><h3 class="mb-3 font-bold capitalize">${a22Esc(k)}</h3>${a22Rows(v)}</section>`).join('');
+          document.getElementById('a22EdgeIntersections').innerHTML=a22Rows(r.intersections);
+          modal.classList.remove('hidden');
+        }
+        function closeA22EdgeLab(){document.getElementById('a22EdgeModal')?.classList.add('hidden')}
+
 
         function processTickersV85(list) {
             const newTickers = [];
@@ -2544,6 +2594,8 @@
         window.addEventListener('DOMContentLoaded', () => {
             loadFromStorage();
             ensureResearchState();
+            a22RepairResearchPersistence?.();
+            ensureResearchState();
             initFirebaseSync();
             ensureRiskState();
             updateSimHeaderStats();
@@ -2555,8 +2607,23 @@
     <button id="performanceAuditLauncher" onclick="openPerformanceAudit()" title="Performance Audit" class="fixed bottom-4 right-4 z-40 px-4 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-full shadow-lg font-bold text-xs">📊 Performance Audit</button>
 
     <div id="a22EdgeLabLauncher" class="fixed bottom-4 right-4 z-[70] flex gap-2">
-      <button type="button" onclick="openA22EdgeLab()" class="px-4 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-full shadow-lg font-bold text-xs">🧠 A2.2 Edge Lab</button>
+      <button type="button" onclick="openA22EdgeLab()" class="px-4 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-full shadow-lg font-bold text-xs">🧠 A2.2.1 Edge Lab</button>
       <button type="button" onclick="exportA22Report()" class="px-4 py-3 bg-slate-800 hover:bg-slate-700 text-white rounded-full shadow-lg font-bold text-xs">Export Edge JSON</button>
     </div>
+
+<!-- V8.6-A2.2.1 Edge Lab Modal -->
+<div id="a22EdgeModal" class="fixed inset-0 hidden z-[9999] bg-black/80 backdrop-blur-sm p-4">
+  <div class="mx-auto mt-6 max-w-7xl max-h-[90vh] overflow-y-auto rounded-2xl border border-slate-700 bg-slate-950 p-5 text-slate-100 shadow-2xl">
+    <div class="flex items-start justify-between gap-4 border-b border-slate-800 pb-4">
+      <div><h2 class="text-xl font-bold">🧠 V8.6-A2.2.1 Edge Attribution Lab</h2><div id="a22EdgeStatus" class="mt-1 text-sm text-slate-400">Loading dataset…</div></div>
+      <div class="flex gap-2"><button type="button" onclick="exportA22Report()" class="rounded-lg bg-slate-800 px-3 py-2 text-xs font-bold hover:bg-slate-700">Export JSON</button><button type="button" onclick="closeA22EdgeLab()" class="rounded-lg bg-indigo-600 px-3 py-2 text-xs font-bold hover:bg-indigo-500">關閉</button></div>
+    </div>
+    <div id="a22EdgeSummary" class="mt-4 grid grid-cols-2 gap-3 md:grid-cols-6"></div>
+    <div id="a22EdgeWarning" class="mt-4 hidden rounded-xl border border-amber-700 bg-amber-950/40 p-4 text-sm text-amber-200"></div>
+    <div id="a22EdgeSections" class="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-2"></div>
+    <div class="mt-4 rounded-xl border border-slate-800 bg-slate-900/50 p-4"><h3 class="font-bold">Strategy × Regime × Direction</h3><div id="a22EdgeIntersections" class="mt-3 overflow-x-auto"></div></div>
+  </div>
+</div>
+
 </body>
 </html>
