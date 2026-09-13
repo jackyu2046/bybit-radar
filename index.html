@@ -1653,7 +1653,14 @@
                 fills,
                 intelligence: pos.intelligence || null,
                 scoreAtEntry: pos.score || null,
-                regimeAtEntry: currentMarketRegime
+                // A2.2 FIX: propagate the labels captured at open time (fallback to
+                // legacy behaviour if an older in-memory position lacks them, e.g.
+                // right after loading an old save before this patch existed).
+                side: pos.side || 'LONG',
+                direction: pos.direction || 'LONG',
+                strategy: pos.strategy || null,
+                regimeAtEntry: pos.regimeAtEntry || currentMarketRegime,
+                entryContext: pos.entryContext || null
             });
 
             simState.historyArchive = v85QualityMergeTrades(simState.historyArchive || [], [trade]);
@@ -1701,9 +1708,18 @@
 
             simState.balance -= entryFee;
             const now = Date.now();
+            // A2.2 FIX: capture the same entry-context labels used for research shadow
+            // signals onto REAL positions too, so closed trades can actually be
+            // attributed by direction/strategy/regime/volatility/liquidity later.
+            const entryContext = buildEntryContext(coin);
             const position = {
                 id: 'POS_' + now + '_' + coin.symbol,
                 symbol: coin.symbol,
+                side: 'LONG', // this engine only ever opens longs; kept explicit so it survives normalization
+                direction: 'LONG',
+                strategy: entryContext.strategy,
+                regimeAtEntry: entryContext.regime,
+                entryContext,
                 entryPrice,
                 markEntryPrice: markPrice,
                 currentPrice: markPrice,
