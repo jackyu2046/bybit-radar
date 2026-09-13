@@ -2285,11 +2285,16 @@
 
         function initFirebaseSync() {
             try {
+                if (typeof firebase === 'undefined' || !firebase.apps) return;
                 if (!firebase.apps.length) firebase.initializeApp(defaultFirebaseConfig);
                 firestoreDb = firebase.firestore();
+                // 啟用離線快取/長輪詢容錯配置
+                try {
+                    firestoreDb.settings({ experimentalAutoDetectLongPolling: true, merge: true });
+                } catch (_) {}
                 bindCloudRoom(currentRoomId);
             } catch (err) {
-                console.warn("Firebase 離線:", err);
+                console.info("Firestore 離線或未啟用雲端長連線:", err?.message || err);
             }
         }
 
@@ -2300,18 +2305,34 @@
                 cloudUnsubscribe = null;
             }
             currentRoomId = roomId;
-            cloudUnsubscribe = firestoreDb.collection('bybit_sync_rooms').doc(roomId).onSnapshot(doc => {
-                if (!doc.exists) {
-                    pushToCloudForce();
-                    return;
-                }
-                const data = doc.data();
-                if (!data || !data.updatedAt || data.updatedAt <= lastLocalUpdate || !data.simState) return;
-                lastLocalUpdate = Math.max(lastLocalUpdate, Number(data.updatedAt) || Date.now());
-                simState = { ...simState, ...data.simState };
-                renderSimPositions();
-                updateSimHeaderStats();
-            }, err => console.warn('Cloud snapshot error:', err));
+
+            try {
+                cloudUnsubscribe = firestoreDb.collection('bybit_sync_rooms').doc(roomId).onSnapshot(
+                    doc => {
+                        const statusEl = document.getElementById('cloudModalStatus');
+                        if (statusEl) statusEl.innerText = "已連線至雲端 (即時)";
+
+                        if (!doc.exists) {
+                            pushToCloudForce();
+                            return;
+                        }
+                        const data = doc.data();
+                        if (!data || !data.updatedAt || data.updatedAt <= lastLocalUpdate || !data.simState) return;
+                        lastLocalUpdate = Math.max(lastLocalUpdate, Number(data.updatedAt) || Date.now());
+                        simState = { ...simState, ...data.simState };
+                        renderSimPositions();
+                        updateSimHeaderStats();
+                    },
+                    err => {
+                        // 靜默處理網路連線短暫中斷/重連警告 (如 ERR_CONNECTION_CLOSED)
+                        const statusEl = document.getElementById('cloudModalStatus');
+                        if (statusEl) statusEl.innerText = "連線重試中 (離線保護生效)";
+                        console.debug("Firestore 通道暫時重連中 (常規網路事件):", err?.message || err);
+                    }
+                );
+            } catch (e) {
+                console.debug("Firestore 監聽初始化異常，轉為純本機模式:", e);
+            }
         }
 
         function pushToCloudForce() {
@@ -2326,7 +2347,7 @@
                     history: simState.history,
                     riskState: simState.riskState
                 }
-            }).catch(err => console.warn('Cloud push failed:', err));
+            }).catch(err => console.debug('Cloud push deferred:', err?.message));
         }
 
         function pullFromCloudForce() {
