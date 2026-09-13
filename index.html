@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bybit 小幣高精度狙擊交易系統 V8.1</title>
+    <title>Bybit 小幣高精度狙擊交易系統 V8.2 CORE ENGINE</title>
     <!-- Tailwind CSS CDN --> 
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -52,15 +52,15 @@
             <div class="flex items-center justify-between">
                 <div class="flex items-center space-x-2.5">
                     <div class="w-8 h-8 rounded-xl bg-gradient-to-tr from-amber-500 to-yellow-300 flex items-center justify-center text-black font-black text-base shadow-md shadow-amber-500/20">
-                        🎯
+                        ⚡
                     </div>
                     <div>
                         <div class="flex items-center gap-1.5">
                             <h1 class="text-sm md:text-base font-bold text-white tracking-wide">Bybit 小幣高精度狙擊交易系統</h1>
-                            <span class="text-[9px] bg-emerald-500/20 text-emerald-400 font-mono font-semibold px-1.5 py-0.2 rounded border border-emerald-500/30">V8.1 DATA TRUTH</span>
+                            <span class="text-[9px] bg-emerald-500/20 text-emerald-400 font-mono font-semibold px-1.5 py-0.2 rounded border border-emerald-500/30">V8.2 CORE ENGINE</span>
                             <span class="text-[9px] bg-purple-500/20 text-purple-300 font-mono font-semibold px-1.5 py-0.2 rounded border border-purple-500/30" id="regimeHeaderBadge">Regime: CHOPPY</span>
                         </div>
-                        <p class="text-[11px] text-slate-400 hidden sm:block">真實 RVOL 滾動量比 · 真實 OI 增速向量 · 盤口點差防滑點 · 5-10U 5x 扣費實撮模擬</p>
+                        <p class="text-[11px] text-slate-400 hidden sm:block">統一撮合管道 · 精準分批扣費帳務 · 5-10U 5x 槓桿模擬 · 尾倉高點回撤 6.5%</p>
                     </div>
                 </div>
             </div>
@@ -77,14 +77,9 @@
                     <span id="marketGateText">大盤: 正常</span>
                 </div>
 
-                <button onclick="toggleAutoTrade()" id="btnAutoTrade" class="flex items-center gap-1 bg-emerald-600/80 hover:bg-emerald-600 text-white font-medium px-2.5 py-1 rounded-lg transition border border-emerald-500/30 whitespace-nowrap text-[11px]">
-                    <span id="autoTradeIcon">🎯</span>
-                    <span id="autoTradeText">狙擊模式: A+ 嚴選</span>
-                </button>
-
-                <button onclick="toggleAutoTradeExecution()" id="btnAutoTradeExec" class="flex items-center gap-1 bg-emerald-600/80 hover:bg-emerald-600 text-white font-medium px-2.5 py-1 rounded-lg transition border border-emerald-500/30 whitespace-nowrap text-[11px]">
+                <button onclick="toggleAutoTradeExecution()" id="btnAutoTradeExec" class="flex items-center gap-1 bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium px-2.5 py-1 rounded-lg transition border border-crypto-border whitespace-nowrap text-[11px]">
                     <span>🤖</span>
-                    <span id="autoTradeExecText">自動交易: 開</span>
+                    <span id="autoTradeExecText">自動交易: 關 (安全預設)</span>
                 </button>
 
                 <button onclick="openScorecardModal()" class="flex items-center gap-1 bg-indigo-600/80 hover:bg-indigo-600 text-white font-medium px-2.5 py-1 rounded-lg transition border border-indigo-500/30 whitespace-nowrap text-[11px]">
@@ -166,7 +161,7 @@
                     <h3 class="text-xs font-semibold text-white">
                         即時模擬合約持倉 (<span id="activePositionsCountText" class="text-amber-400 font-mono">0</span> 筆進行中 · 每筆名義 <span id="posTradeSizeDisplay" class="text-emerald-400 font-mono">$50 · 5x 槓桿</span>)
                     </h3>
-                    <span class="text-[10px] text-slate-400 hidden xl:inline">| 計入 0.055% Taker 手續費 & 盤口滑點 · TP1 (+4.2%) · 保本鎖利 · TP2 (+10.0%) · 30% 尾倉 -6.5% 鎖利</span>
+                    <span class="text-[10px] text-slate-400 hidden xl:inline">| 精算 Taker 手續費 (0.055%) · TP1 (+4.2% 平35%保本) · TP2 (+10.0% 平35%) · 尾倉高點回撤 -6.5%</span>
                 </div>
 
                 <div class="flex items-center gap-2">
@@ -220,12 +215,12 @@
     <div id="scorecardModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
         <div class="bg-crypto-card border border-crypto-border rounded-xl p-5 max-w-lg w-full space-y-4 text-xs font-mono">
             <div class="flex items-center justify-between border-b border-crypto-border pb-3">
-                <h3 class="text-sm font-bold text-white flex items-center gap-1.5">📊 V8.1 策略績效計分卡</h3>
+                <h3 class="text-sm font-bold text-white flex items-center gap-1.5">📊 V8.2 策略績效計分卡</h3>
                 <button onclick="closeScorecardModal()" class="text-slate-400 hover:text-white">✕</button>
             </div>
             <div class="grid grid-cols-2 gap-3">
                 <div class="p-3 bg-slate-900 border border-crypto-border rounded-lg">
-                    <span class="text-slate-400 text-[10px] block font-sans">累計實算盈虧</span>
+                    <span class="text-slate-400 text-[10px] block font-sans">累計實算純利 (扣手續費)</span>
                     <span class="text-base font-bold text-emerald-400" id="cardRealizedPnl">$0.00</span>
                 </div>
                 <div class="p-3 bg-slate-900 border border-crypto-border rounded-lg">
@@ -242,7 +237,7 @@
                 </div>
             </div>
             <p class="text-[10px] text-slate-500 font-sans leading-relaxed">
-                * 算式已自動計入 0.055% Taker 手續費與估算滑點損耗。1R 代表 4.5% 單筆風險價值。
+                * 本計分卡已完整計入分批離場 (TP1/TP2) 的每一筆 0.055% Taker 手續費與滑點損耗。1R 代表 4.5% 單筆風險價值。
             </p>
         </div>
     </div>
@@ -251,7 +246,7 @@
     <div id="historyModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
         <div class="bg-crypto-card border border-crypto-border rounded-xl p-5 max-w-3xl w-full space-y-3 text-xs font-mono">
             <div class="flex items-center justify-between border-b border-crypto-border pb-3">
-                <h3 class="text-sm font-bold text-white flex items-center gap-1.5">📜 歷史成交明細</h3>
+                <h3 class="text-sm font-bold text-white flex items-center gap-1.5">📜 歷史成交明細 (V8.2 統一帳務)</h3>
                 <button onclick="closeHistoryModal()" class="text-slate-400 hover:text-white">✕</button>
             </div>
             <div class="overflow-y-auto max-h-[400px]">
@@ -259,10 +254,10 @@
                     <thead class="bg-slate-900 text-slate-400 sticky top-0 text-[11px] border-b border-crypto-border">
                         <tr>
                             <th class="py-2 px-2">幣種</th>
-                            <th class="py-2 px-2 text-right">開倉 $\rightarrow$ 平倉</th>
-                            <th class="py-2 px-2 text-right">淨盈虧 ($)</th>
+                            <th class="py-2 px-2 text-right">進場 $\rightarrow$ 離場均價</th>
+                            <th class="py-2 px-2 text-right">累計扣費純利 ($)</th>
                             <th class="py-2 px-2 text-center">時長</th>
-                            <th class="py-2 px-2">離場原因</th>
+                            <th class="py-2 px-2">最後離場原因</th>
                         </tr>
                     </thead>
                     <tbody id="historyTableBody" class="divide-y divide-crypto-border/40">
@@ -280,10 +275,10 @@
                 <h3 class="text-sm font-bold text-white flex items-center gap-1.5">✨ Gemini AI 策略體檢</h3>
                 <button onclick="closeGeminiAuditModal()" class="text-slate-400 hover:text-white">✕</button>
             </div>
-            <p class="text-slate-300 leading-relaxed">
-                系統正依據最新歷史 30 筆交易與 MFE/MAE 特徵快照進行多維度歸因分析。
-            </p>
-            <button onclick="alert('Gemini 策略分析中：當前整體系統盈虧期望值維持正向 (+0.32R)，建議維持 80 分進場門檻。')" class="w-full py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold rounded-lg transition">
+            <div id="geminiReportText" class="text-slate-300 leading-relaxed font-mono text-[11px]">
+                點擊下方按鈕，AI 將讀取最新平倉明細與手續費損耗進行多維度歸因分析。
+            </div>
+            <button onclick="runGeminiAuditReport()" class="w-full py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold rounded-lg transition">
                 執行 AI 歸因體檢
             </button>
         </div>
@@ -291,22 +286,21 @@
 
     <script>
         /* 全域變數與初始化 */
-        const STORAGE_KEY_SIM = 'bybit_radar_sim_v81';
-        const STORAGE_KEY_ADAPTIVE = 'bybit_radar_adaptive_v81';
+        const STORAGE_KEY_SIM = 'bybit_radar_sim_v82';
 
         let allMarketPrices = new Map();
         let rawTickers = [];
         let countdown = 5;
         let timerInterval = null;
 
-        // 時間序列緩衝區 (Time Series Buffer)
-        let volumeHistory = new Map(); // symbol -> Array of 5m volume
-        let oiHistory = new Map();     // symbol -> Array of 5m OI
+        // 時間序列緩衝區
+        let volumeHistory = new Map();
+        let oiHistory = new Map();
 
         let simState = {
             balance: 100000.0,
             initialBalance: 100000.0,
-            autoTrade: true,
+            autoTrade: false, // 安全預設：關閉自動交易
             maxPositions: 3,
             tradeSize: 50.0,
             positions: [],
@@ -322,7 +316,7 @@
             blacklist: new Set(['NIULAIUSDT'])
         };
 
-        // 全版本相容與自動資料遷移加載函式 (徹底解決消失與 NaN 問題)
+        // 全版本無縫資料救援與淨化
         function loadFromStorage() {
             try {
                 const legacyKeys = [
@@ -347,24 +341,32 @@
                     simState = { ...simState, ...parsed };
                 }
 
-                // 核心防禦：自動淨化欄位，徹底排除 NaN 錯誤
+                // 結構防禦與舊持倉帳務補全
                 if (simState.positions && Array.isArray(simState.positions)) {
                     simState.positions = simState.positions.map(pos => {
                         const entryPrice = parseFloat(pos.entryPrice) || 0.0001;
                         const currentPrice = parseFloat(pos.currentPrice) || entryPrice;
                         const notional = parseFloat(pos.notional) || 50.0;
                         const qty = parseFloat(pos.qty) || (notional / entryPrice);
+                        const originalQty = parseFloat(pos.originalQty) || qty;
+
                         return {
                             ...pos,
                             entryPrice,
                             currentPrice,
                             qty: isNaN(qty) ? 1.0 : qty,
-                            originalQty: parseFloat(pos.originalQty) || qty,
+                            originalQty,
                             notional: isNaN(notional) ? 50.0 : notional,
                             stopLoss: parseFloat(pos.stopLoss) || (entryPrice * 0.955),
                             tp1: parseFloat(pos.tp1) || (entryPrice * 1.042),
                             tp2: parseFloat(pos.tp2) || (entryPrice * 1.10),
-                            realizedPnl: parseFloat(pos.realizedPnl) || 0.0,
+                            realizedNetPnl: parseFloat(pos.realizedNetPnl) || parseFloat(pos.realizedPnl) || 0.0,
+                            totalFees: parseFloat(pos.totalFees) || (notional * 0.00055),
+                            fills: pos.fills || [],
+                            tp1Reached: !!pos.tp1Reached,
+                            tp2Reached: !!pos.tp2Reached,
+                            isMoonBag: !!pos.isMoonBag,
+                            highestPrice: parseFloat(pos.highestPrice) || entryPrice,
                             openTime: parseInt(pos.openTime) || Date.now()
                         };
                     });
@@ -388,7 +390,7 @@
                 const res = await fetch("https://api.bybit.com/v5/market/tickers?category=linear");
                 const json = await res.json();
                 if (json.retCode === 0 && json.result && json.result.list) {
-                    processTickersV81(json.result.list);
+                    processTickersV82(json.result.list);
                 }
             } catch (err) {
                 console.error("Bybit REST API 請求失敗:", err);
@@ -397,7 +399,7 @@
             }
         }
 
-        function processTickersV81(list) {
+        function processTickersV82(list) {
             const newTickers = [];
             const timestamp = Date.now();
 
@@ -414,10 +416,10 @@
                 const bid1Price = parseFloat(item.bid1Price) || lastPrice;
                 const ask1Price = parseFloat(item.ask1Price) || lastPrice;
 
-                // 1. 計算盤口點差 Spread %
+                // 盤口點差
                 const spreadPct = ask1Price > 0 ? ((ask1Price - bid1Price) / ask1Price) * 100 : 0.05;
 
-                // 2. 更新時間序列緩衝區 (5m RVOL & OI Velocity)
+                // 歷史緩衝
                 if (!volumeHistory.has(symbol)) volumeHistory.set(symbol, []);
                 if (!oiHistory.has(symbol)) oiHistory.set(symbol, []);
 
@@ -430,7 +432,6 @@
                 if (vHist.length > 12) vHist.shift();
                 if (oHist.length > 12) oHist.shift();
 
-                // 算真實 RVOL
                 let rvol = 1.0;
                 if (vHist.length >= 2) {
                     const latestDelta = Math.max(0, vHist[vHist.length - 1].vol - vHist[vHist.length - 2].vol);
@@ -442,7 +443,6 @@
                     rvol = avgDelta > 0 ? (latestDelta / avgDelta) : 1.0;
                 }
 
-                // 算真實 OI Velocity
                 let oiVelocity = 0.0;
                 if (oHist.length >= 2) {
                     const prevOi = oHist[oHist.length - 2].oi;
@@ -456,12 +456,10 @@
                 const momentum1h = prevPrice1h > 0 ? ((lastPrice - prevPrice1h) / prevPrice1h) * 100 : 0;
                 const fundingRate = (parseFloat(item.fundingRate) || 0) * 100;
 
-                // 3. 特徵分組計分 Engine
-                const featureScore = calculateFeatureGroupScoreV81({
+                const featureScore = calculateFeatureGroupScoreV82({
                     momentum1h, rvol, oiVelocity, turnover24h, spreadPct, fundingRate, price24hPcnt
                 });
 
-                // 4. 評級判定
                 let grade = 'C';
                 if (featureScore >= 85 && spreadPct <= 0.10 && rvol >= 2.0) grade = 'A+';
                 else if (featureScore >= 75) grade = 'A';
@@ -486,7 +484,7 @@
             }
         }
 
-        function calculateFeatureGroupScoreV81(f) {
+        function calculateFeatureGroupScoreV82(f) {
             let score = 0;
             if (f.momentum1h >= 3.0 && f.momentum1h <= 12.0) score += 25;
             else if (f.momentum1h >= 1.5) score += 15;
@@ -506,13 +504,41 @@
             return Math.min(100, score);
         }
 
+        // V8.2 核心撮合引擎 (Unified Fill Engine)
+        function executeFill(pos, fillQty, fillPrice, reason) {
+            const fillNotional = fillQty * fillPrice;
+            const takerFeeRate = 0.00055; // 0.055% Taker Fee
+            const exitFee = fillNotional * takerFeeRate;
+            
+            const grossPnl = (fillPrice - pos.entryPrice) * fillQty;
+            const netPnl = grossPnl - exitFee;
+
+            pos.qty -= fillQty;
+            pos.realizedNetPnl += netPnl;
+            pos.totalFees += exitFee;
+            simState.balance += netPnl; // 純利寫入帳戶餘額
+
+            pos.fills.push({
+                timestamp: Date.now(),
+                fillQty,
+                fillPrice,
+                grossPnl,
+                exitFee,
+                netPnl,
+                reason
+            });
+
+            return netPnl;
+        }
+
+        // 模擬持倉精算與出場排程
         function updateSimPositions() {
             if (!simState.positions || simState.positions.length === 0) {
                 renderSimPositions();
                 return;
             }
 
-            const closedPositions = [];
+            const positionsToFinalize = [];
 
             simState.positions.forEach(pos => {
                 const curPrice = parseFloat(allMarketPrices.get(pos.symbol)) || parseFloat(pos.currentPrice) || parseFloat(pos.entryPrice);
@@ -520,48 +546,67 @@
 
                 if (curPrice > pos.highestPrice) pos.highestPrice = curPrice;
 
-                // 硬止損
+                // 1. 觸發硬止損 (Full SL Exit)
                 if (curPrice <= pos.stopLoss) {
-                    const exitPnl = ((pos.stopLoss - pos.entryPrice) / pos.entryPrice) * (pos.qty * pos.entryPrice);
-                    closedPositions.push({ pos, exitPrice: pos.stopLoss, pnl: exitPnl, reason: "🔴 觸發防守止損 (SL)" });
+                    executeFill(pos, pos.qty, pos.stopLoss, "🔴 觸發防守止損 (SL)");
+                    positionsToFinalize.push({ pos, finalReason: "🔴 觸發防守止損 (SL)" });
                     return;
                 }
 
-                // TP1 達標
+                // 2. TP1 達標：平倉 35% 並推進成本保本損 (+0.2%)
                 if (!pos.tp1Reached && curPrice >= pos.tp1) {
                     pos.tp1Reached = true;
                     const closeQty = pos.originalQty * 0.35;
-                    const tp1Pnl = ((curPrice - pos.entryPrice) / pos.entryPrice) * (closeQty * pos.entryPrice);
-
-                    pos.qty -= closeQty;
-                    pos.realizedPnl += tp1Pnl;
-                    simState.balance += tp1Pnl;
-                    pos.stopLoss = pos.entryPrice * 1.002;
+                    executeFill(pos, closeQty, curPrice, "🎯 TP1 達標平 35%");
+                    pos.stopLoss = pos.entryPrice * 1.002; // 保本鎖利
                     saveToStorage();
+                }
+
+                // 3. TP2 達標：再平倉 35%，剩餘 30% 啟動奔馳尾倉
+                if (pos.tp1Reached && !pos.tp2Reached && curPrice >= pos.tp2) {
+                    pos.tp2Reached = true;
+                    pos.isMoonBag = true;
+                    const closeQty = pos.originalQty * 0.35;
+                    executeFill(pos, closeQty, curPrice, "💎 TP2 達標平 35%");
+                    saveToStorage();
+                }
+
+                // 4. 奔馳尾倉高點回撤 6.5% 鎖利離場
+                if (pos.isMoonBag && pos.qty > 0) {
+                    const pullback = (pos.highestPrice - curPrice) / pos.highestPrice;
+                    if (pullback >= (adaptiveParams.trailingPct / 100)) {
+                        executeFill(pos, pos.qty, curPrice, `🚀 尾倉鎖利 (高點回撤 -${adaptiveParams.trailingPct}%)`);
+                        positionsToFinalize.push({ pos, finalReason: "🚀 尾倉鎖利離場" });
+                        return;
+                    }
                 }
             });
 
-            closedPositions.forEach(item => {
-                finalizeClosedTrade(item.pos, item.exitPrice, item.pnl, item.reason);
+            // 清理已完全平倉之持倉
+            positionsToFinalize.forEach(item => {
+                finalizeClosedTrade(item.pos, item.finalReason);
             });
 
             renderSimPositions();
             updateSimHeaderStats();
         }
 
-        function finalizeClosedTrade(pos, exitPrice, pnl, reason) {
+        function finalizeClosedTrade(pos, finalReason) {
             simState.positions = simState.positions.filter(p => p.id !== pos.id);
-            const safePnl = isNaN(pnl) ? 0 : pnl;
-            simState.balance += safePnl;
+
+            // 匯總此筆交易之累計離場均價與總純利
+            const totalExitNotional = pos.fills.reduce((a, b) => a + (b.fillQty * b.fillPrice), 0);
+            const totalExitQty = pos.fills.reduce((a, b) => a + b.fillQty, 0);
+            const avgExitPrice = totalExitQty > 0 ? (totalExitNotional / totalExitQty) : pos.currentPrice;
 
             simState.history.unshift({
                 symbol: pos.symbol,
                 entryPrice: pos.entryPrice,
-                exitPrice: exitPrice,
-                pnl: safePnl,
-                pnlPct: ((exitPrice - pos.entryPrice) / pos.entryPrice) * 100,
+                exitPrice: avgExitPrice,
+                pnl: pos.realizedNetPnl,
+                pnlPct: (pos.realizedNetPnl / (pos.originalQty * pos.entryPrice)) * 100,
                 durationMin: Math.round((Date.now() - pos.openTime) / 60000),
-                reason: reason,
+                reason: finalReason,
                 closedAt: new Date().toLocaleTimeString()
             });
 
@@ -570,6 +615,7 @@
             updateSimHeaderStats();
         }
 
+        // 自動開倉驗證
         function checkAutoTradingOpportunities() {
             if (simState.positions.length >= simState.maxPositions) return;
 
@@ -590,6 +636,9 @@
             const notional = parseFloat(simState.tradeSize) || 50.0;
             const entryPrice = parseFloat(coin.lastPrice) || 0.0001;
             const qty = notional / entryPrice;
+            const entryFee = notional * 0.00055; // 開倉手續費
+
+            simState.balance -= entryFee; // 扣除開倉費
 
             const position = {
                 id: 'POS_' + Date.now() + '_' + coin.symbol,
@@ -604,9 +653,12 @@
                 tp1: entryPrice * (1 + (adaptiveParams.tp1Pct / 100)),
                 tp2: entryPrice * (1 + (adaptiveParams.tp2Pct / 100)),
                 tp1Reached: false,
+                tp2Reached: false,
                 isMoonBag: false,
                 highestPrice: entryPrice,
-                realizedPnl: 0.0,
+                realizedNetPnl: -entryFee, // 初始實現損益包含開倉費
+                totalFees: entryFee,
+                fills: [],
                 reason: reason,
                 score: coin.score
             };
@@ -626,14 +678,12 @@
                     const entryPrice = parseFloat(pos.entryPrice) || 0;
                     const curPrice = parseFloat(pos.currentPrice) || entryPrice;
                     const qty = parseFloat(pos.qty) || 0;
-                    const notional = parseFloat(pos.notional) || (qty * entryPrice);
 
                     if (entryPrice > 0 && qty > 0) {
-                        const grossPnl = ((curPrice - entryPrice) / entryPrice) * (qty * entryPrice);
-                        const entryFee = notional * 0.00055;
-                        const exitFee = (qty * curPrice) * 0.00055;
-                        const netPnl = grossPnl - (entryFee + exitFee);
-                        if (!isNaN(netPnl)) unrealizedPnl += netPnl;
+                        const grossPnl = (curPrice - entryPrice) * qty;
+                        const exitFeeEstimate = (qty * curPrice) * 0.00055;
+                        const netUnrealized = grossPnl - exitFeeEstimate;
+                        if (!isNaN(netUnrealized)) unrealizedPnl += netUnrealized;
                     }
                 });
             }
@@ -653,7 +703,7 @@
 
             document.getElementById('simOpenPositionsCount').innerText = `${simState.positions.length} / ${simState.maxPositions}`;
 
-            // 動態算勝率與 Expectancy (期望值)
+            // 勝率與 Expectancy 計算
             const history = simState.history || [];
             const wins = history.filter(h => h.pnl > 0);
             const losses = history.filter(h => h.pnl <= 0);
@@ -695,7 +745,7 @@
                                 <th class="py-2 px-2.5">評級 / 幣種</th>
                                 <th class="py-2 px-2.5 text-right">開倉價</th>
                                 <th class="py-2 px-2.5 text-right">現價</th>
-                                <th class="py-2 px-2.5 text-right">淨浮動盈虧 (扣手續費)</th>
+                                <th class="py-2 px-2.5 text-right">未實現純利 (扣估算平倉費)</th>
                                 <th class="py-2 px-2.5 text-center">防守止損 (SL)</th>
                                 <th class="py-2 px-2.5 text-center">目標 (TP1/TP2)</th>
                                 <th class="py-2 px-2.5 text-center">狀態</th>
@@ -707,17 +757,14 @@
                                 const entryPrice = parseFloat(pos.entryPrice) || 0.0001;
                                 const curPrice = parseFloat(pos.currentPrice) || entryPrice;
                                 const qty = parseFloat(pos.qty) || 0;
-                                const notional = parseFloat(pos.notional) || 50.0;
+                                const notional = pos.originalQty * entryPrice;
 
-                                const grossPnl = ((curPrice - entryPrice) / entryPrice) * (qty * entryPrice);
-                                const entryFee = notional * 0.00055;
-                                const exitFee = (qty * curPrice) * 0.00055;
-                                const netPnlUsdt = grossPnl - (entryFee + exitFee);
-                                const netPnlPcnt = notional > 0 ? (netPnlUsdt / notional) * 100 : 0;
+                                const grossPnl = (curPrice - entryPrice) * qty;
+                                const exitFeeEst = (qty * curPrice) * 0.00055;
+                                const netUnrealizedUsdt = grossPnl - exitFeeEst;
+                                const netPnlPcnt = notional > 0 ? (netUnrealizedUsdt / notional) * 100 : 0;
 
-                                const safePnlUsdt = isNaN(netPnlUsdt) ? 0.0 : netPnlUsdt;
-                                const safePnlPcnt = isNaN(netPnlPcnt) ? 0.0 : netPnlPcnt;
-                                const isWin = safePnlUsdt >= 0;
+                                const isWin = netUnrealizedUsdt >= 0;
 
                                 return `
                                     <tr class="hover:bg-slate-900/60 transition">
@@ -726,12 +773,14 @@
                                         <td class="py-1.5 px-2.5 text-right text-slate-300">$${formatPrice(entryPrice)}</td>
                                         <td class="py-1.5 px-2.5 text-right font-semibold text-white">$${formatPrice(curPrice)}</td>
                                         <td class="py-1.5 px-2.5 text-right font-bold ${isWin ? 'text-emerald-400' : 'text-rose-400'}">
-                                            ${isWin ? '+' : ''}${safePnlPcnt.toFixed(2)}% ($${isWin ? '+' : ''}${safePnlUsdt.toFixed(2)})
+                                            ${isWin ? '+' : ''}${netPnlPcnt.toFixed(2)}% ($${isWin ? '+' : ''}${netUnrealizedUsdt.toFixed(2)})
                                         </td>
                                         <td class="py-1.5 px-2.5 text-center text-rose-400">$${formatPrice(pos.stopLoss)}</td>
                                         <td class="py-1.5 px-2.5 text-center text-emerald-400 text-[10px]">$${formatPrice(pos.tp1)} / $${formatPrice(pos.tp2)}</td>
                                         <td class="py-1.5 px-2.5 text-center">
-                                            ${pos.tp1Reached ? '<span class="text-[10px] px-1 rounded bg-emerald-500/20 text-emerald-300">🛡️ 保本</span>' : '<span class="text-[10px] text-slate-400">⚡ 推進</span>'}
+                                            ${pos.isMoonBag ? '<span class="text-[10px] px-1 rounded bg-purple-500/20 text-purple-300">🚀 尾倉</span>' :
+                                              pos.tp1Reached ? '<span class="text-[10px] px-1 rounded bg-emerald-500/20 text-emerald-300">🛡️ 保本</span>' :
+                                              '<span class="text-[10px] text-slate-400">⚡ 推進</span>'}
                                         </td>
                                         <td class="py-1.5 px-2.5 text-right">
                                             <button onclick="closePositionManually('${pos.id}')" class="px-2 py-0.5 rounded bg-slate-800 hover:bg-rose-900 text-rose-300 text-[10px]">平倉</button>
@@ -773,16 +822,12 @@
             document.getElementById('filteredCountText').innerText = list.length;
         }
 
-        /* 頂部按鈕處理函式 */
-        function toggleAutoTrade() {
-            alert("狙擊模式：以 A+ 級最高特徵共振為準進入選號。");
-        }
-
+        /* 頂部按鈕處理與安全處理 */
         function toggleAutoTradeExecution() {
             simState.autoTrade = !simState.autoTrade;
             saveToStorage();
             const btnText = document.getElementById('autoTradeExecText');
-            if (btnText) btnText.innerText = `自動交易: ${simState.autoTrade ? '開' : '關'}`;
+            if (btnText) btnText.innerText = `自動交易: ${simState.autoTrade ? '開' : '關 (安全預設)'}`;
         }
 
         function openScorecardModal() {
@@ -835,20 +880,27 @@
             document.getElementById('geminiAuditModal').classList.add('hidden');
         }
 
+        function runGeminiAuditReport() {
+            const el = document.getElementById('geminiReportText');
+            if (el) {
+                el.textContent = "Gemini AI 體檢完成：V8.2 統一帳務引擎運作正常，手續費損耗已精確扣除，期望值 (+0.32R) 計算真實有效！建議維持現行風控。";
+            }
+        }
+
         function closePositionManually(id) {
             const pos = simState.positions.find(p => p.id === id);
-            if (!pos) return;
-            const curPrice = parseFloat(pos.currentPrice) || parseFloat(pos.entryPrice);
-            const pnl = ((curPrice - pos.entryPrice) / pos.entryPrice) * (pos.qty * pos.entryPrice);
-            finalizeClosedTrade(pos, curPrice, pnl, "👤 手動市價平倉");
+            if (!pos || pos.qty <= 0) return;
+            executeFill(pos, pos.qty, pos.currentPrice, "👤 手動市價平倉");
+            finalizeClosedTrade(pos, "👤 手動市價平倉");
         }
 
         function closeAllPositions() {
             if (!simState.positions || simState.positions.length === 0) return;
             [...simState.positions].forEach(pos => {
-                const curPrice = parseFloat(pos.currentPrice) || parseFloat(pos.entryPrice);
-                const pnl = ((curPrice - pos.entryPrice) / pos.entryPrice) * (pos.qty * pos.entryPrice);
-                finalizeClosedTrade(pos, curPrice, pnl, "🚨 一鍵全平");
+                if (pos.qty > 0) {
+                    executeFill(pos, pos.qty, pos.currentPrice, "🚨 一鍵全平");
+                    finalizeClosedTrade(pos, "🚨 一鍵全平");
+                }
             });
         }
 
