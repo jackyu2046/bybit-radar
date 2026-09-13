@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bybit 全市場小幣異常監測雷達 & AI 高精度狙擊交易系統 V8.1</title>
+    <title>Bybit 小幣高精度狙擊交易系統 V8.1</title>
     <!-- Tailwind CSS CDN --> 
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-    <!-- Firebase SDK (v8 相容版) -->
+    <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 
@@ -30,11 +30,7 @@
                             bull: '#10b981',
                             bear: '#ef4444',
                             gold: '#f59e0b',
-                            purple: '#8b5cf6',
-                            cyan: '#06b6d4',
-                            gradeA: '#10b981',
-                            gradeB: '#f59e0b',
-                            gradeC: '#64748b'
+                            purple: '#8b5cf6'
                         }
                     }
                 }
@@ -43,50 +39,31 @@
     </script>
 
     <style>
-        body {
-            background-color: #080b11;
-            color: #f1f5f9;
-        }
-        ::-webkit-scrollbar {
-            width: 5px;
-            height: 5px;
-        }
-        ::-webkit-scrollbar-track {
-            background: #080b11;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #1e293b;
-            border-radius: 4px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: #334155;
-        }
-        .no-scrollbar::-webkit-scrollbar {
-            display: none;
-        }
-        .no-scrollbar {
-            -ms-overflow-style: none;
-            scrollbar-width: none;
-        }
+        body { background-color: #080b11; color: #f1f5f9; }
+        ::-webkit-scrollbar { width: 5px; height: 5px; }
+        ::-webkit-scrollbar-track { background: #080b11; }
+        ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #334155; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
 </head>
 <body class="font-sans min-h-screen flex flex-col antialiased selection:bg-amber-500 selection:text-black">
 
-    <!-- 頂部導覽列 -->
     <header class="border-b border-crypto-border bg-slate-950/90 backdrop-blur sticky top-0 z-40 px-3 py-2.5">
         <div class="max-w-[1750px] mx-auto flex flex-col md:flex-row items-stretch md:items-center justify-between gap-2.5">
             <div class="flex items-center justify-between">
                 <div class="flex items-center space-x-2.5">
-                    <div class="w-8 h-8 rounded-xl bg-gradient-to-tr from-amber-500 to-emerald-400 flex items-center justify-center text-black font-black text-base shadow-md shadow-amber-500/20">
+                    <div class="w-8 h-8 rounded-xl bg-gradient-to-tr from-amber-500 to-yellow-300 flex items-center justify-center text-black font-black text-base shadow-md shadow-amber-500/20">
                         🎯
                     </div>
                     <div>
                         <div class="flex items-center gap-1.5">
                             <h1 class="text-sm md:text-base font-bold text-white tracking-wide">Bybit 小幣高精度狙擊交易系統</h1>
                             <span class="text-[9px] bg-emerald-500/20 text-emerald-400 font-mono font-semibold px-1.5 py-0.2 rounded border border-emerald-500/30">V8.1 DATA TRUTH</span>
-                            <span class="text-[9px] bg-purple-500/20 text-purple-300 font-mono font-semibold px-1.5 py-0.2 rounded border border-purple-500/30" id="regimeBadgeText">Regime: 檢測中</span>
+                            <span class="text-[9px] bg-purple-500/20 text-purple-300 font-mono font-semibold px-1.5 py-0.2 rounded border border-purple-500/30" id="regimeHeaderBadge">Regime: CHOPPY</span>
                         </div>
-                        <p class="text-[11px] text-slate-400 hidden sm:block">真實 RVOL 滾動量比 · 真實 OI 增速向量 · 盤口點差防滑點 · 5-10U 5x 扣費實擬撮合 (Max 3倉)</p>
+                        <p class="text-[11px] text-slate-400 hidden sm:block">真實 RVOL 滾動量比 · 真實 OI 增速向量 · 盤口點差防滑點 · 5-10U 5x 扣費實撮模擬</p>
                     </div>
                 </div>
             </div>
@@ -98,21 +75,19 @@
                     <span id="updateTimer">下次刷新: 5s</span>
                 </div>
 
-                <!-- WebSocket 毫秒流 -->
-                <div class="flex items-center bg-slate-900 border border-crypto-border px-2 py-1 rounded-lg text-slate-300 font-mono whitespace-nowrap text-[11px]" id="wsBadge" title="Bybit 官方公共 WebSocket 毫秒級插針監聽流">
-                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse mr-1.5" id="wsDot"></span>
-                    <span id="wsStatusText">WS: 毫秒即時流</span>
+                <div class="flex items-center bg-slate-900 border border-crypto-border px-2 py-1 rounded-lg text-slate-300 font-mono whitespace-nowrap text-[11px]" id="marketGateBadge">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 mr-1.5" id="marketGateDot"></span>
+                    <span id="marketGateText">大盤: 正常</span>
                 </div>
 
-                <!-- 模式切換：精準狙擊 vs 全部監測 -->
-                <button onclick="togglePrecisionMode()" id="btnPrecisionMode" class="flex items-center gap-1 bg-amber-500 text-black font-bold px-2.5 py-1 rounded-lg transition border border-amber-400 shadow-md shadow-amber-500/20 whitespace-nowrap text-[11px]" title="精準模式：嚴格過濾低品質交易，只允許 A+ 訊號">
-                    <span>🎯</span>
-                    <span id="precisionModeText">狙擊模式: A+ 嚴選</span>
+                <button onclick="toggleAutoTrade()" id="btnAutoTrade" class="flex items-center gap-1 bg-emerald-600/80 hover:bg-emerald-600 text-white font-medium px-2.5 py-1 rounded-lg transition border border-emerald-500/30 whitespace-nowrap text-[11px]">
+                    <span id="autoTradeIcon">🎯</span>
+                    <span id="autoTradeText">狙擊模式: A+ 嚴選</span>
                 </button>
 
-                <button onclick="toggleAutoTrade()" id="btnAutoTrade" class="flex items-center gap-1 bg-emerald-600/80 hover:bg-emerald-600 text-white font-medium px-2.5 py-1 rounded-lg transition border border-emerald-500/30 whitespace-nowrap text-[11px]">
-                    <span id="autoTradeIcon">🤖</span>
-                    <span id="autoTradeText">自動交易: 開</span>
+                <button onclick="toggleAutoTradeExecution()" id="btnAutoTradeExec" class="flex items-center gap-1 bg-emerald-600/80 hover:bg-emerald-600 text-white font-medium px-2.5 py-1 rounded-lg transition border border-emerald-500/30 whitespace-nowrap text-[11px]">
+                    <span>🤖</span>
+                    <span id="autoTradeExecText">自動交易: 開</span>
                 </button>
 
                 <button onclick="openScorecardModal()" class="flex items-center gap-1 bg-indigo-600/80 hover:bg-indigo-600 text-white font-medium px-2.5 py-1 rounded-lg transition border border-indigo-500/30 whitespace-nowrap text-[11px]">
@@ -120,7 +95,7 @@
                     <span>策略計分卡</span>
                 </button>
 
-                <button onclick="openHistoryModal()" class="flex items-center gap-1 bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium px-2.5 py-1 rounded-lg transition border border-crypto-border whitespace-nowrap text-[11px]">
+                <button onclick="openHistoryModal()" class="flex items-center gap-1 bg-amber-600/80 hover:bg-amber-600 text-white font-medium px-2.5 py-1 rounded-lg transition border border-amber-500/30 whitespace-nowrap text-[11px]">
                     <span>📜</span>
                     <span id="historyBtnText">歷史明細 (0)</span>
                 </button>
@@ -128,32 +103,6 @@
                 <button onclick="openGeminiAuditModal()" class="flex items-center gap-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-medium px-2.5 py-1 rounded-lg transition border border-blue-400/40 shadow-md shadow-blue-500/20 whitespace-nowrap text-[11px]">
                     <span>✨</span>
                     <span>Gemini 體檢</span>
-                </button>
-
-                <button onclick="openCloudModal()" class="flex items-center gap-1 bg-sky-600/80 hover:bg-sky-600 text-white font-medium px-2.5 py-1 rounded-lg transition border border-sky-500/30 whitespace-nowrap text-[11px]">
-                    <span>☁️</span>
-                    <span>雲端同頻</span>
-                </button>
-
-                <button onclick="openPlaybookModal()" class="flex items-center gap-1 bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium px-2 py-1 rounded-lg transition border border-crypto-border whitespace-nowrap text-[11px]">
-                    <span>📖</span>
-                    <span>V8.1 指南</span>
-                </button>
-
-                <button onclick="exportDataJson()" class="flex items-center gap-1 bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium px-2 py-1 rounded-lg transition border border-crypto-border whitespace-nowrap text-[11px]">
-                    <span>📥</span>
-                    <span>匯出</span>
-                </button>
-
-                <label class="flex items-center gap-1 bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium px-2 py-1 rounded-lg transition border border-crypto-border cursor-pointer whitespace-nowrap text-[11px]">
-                    <span>📤</span>
-                    <span>匯入</span>
-                    <input type="file" id="importFileInput" onchange="importDataJson(event)" class="hidden" accept=".json">
-                </label>
-
-                <button id="soundToggle" onclick="toggleSound()" class="flex items-center gap-1 bg-slate-900 hover:bg-slate-800 border border-crypto-border px-2.5 py-1 rounded-lg text-slate-300 transition whitespace-nowrap text-[11px]">
-                    <span id="soundIcon">🔔</span>
-                    <span id="soundText">警報: 開</span>
                 </button>
 
                 <button onclick="fetchMarketData()" class="flex items-center gap-1 bg-amber-500 hover:bg-amber-400 text-black font-semibold px-2.5 py-1 rounded-lg transition shadow-md shadow-amber-500/10 active:scale-95 whitespace-nowrap text-[11px]">
@@ -164,19 +113,20 @@
     </header>
 
     <main class="flex-1 p-3 md:p-5 max-w-[1750px] mx-auto w-full space-y-4">
-        <!-- 總資產與 V8.1 核心狀態條 (真實扣手續費與滑點) -->
+
+        <!-- 頂部動態權益儀表板 -->
         <section class="bg-gradient-to-r from-slate-900 via-crypto-card to-slate-900 border border-crypto-border rounded-xl p-3 flex flex-wrap items-center justify-between gap-3 text-xs">
             <div class="flex items-center flex-wrap gap-3 sm:gap-4">
                 <div class="flex items-center gap-1.5">
                     <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
                     <span class="text-slate-400">總動態權益 (淨值):</span>
-                    <span class="text-sm sm:text-base font-bold font-mono text-white" id="simEquityDisplay">$1,000.00</span>
+                    <span class="text-sm sm:text-base font-bold font-mono text-white" id="simEquityDisplay">$100,000.00</span>
                     <span class="text-xs font-mono font-semibold text-emerald-400" id="simTotalPnlDisplay">(+0.00%)</span>
                 </div>
                 <div class="h-3 w-[1px] bg-crypto-border hidden sm:block"></div>
                 <div class="flex items-center gap-1.5 text-slate-300">
                     <span class="text-slate-400">可用餘額:</span>
-                    <span class="font-mono font-bold text-slate-200" id="simBalanceDisplay">$1,000.00</span>
+                    <span class="font-mono font-bold text-slate-200" id="simBalanceDisplay">$100,000.00</span>
                 </div>
                 <div class="h-3 w-[1px] bg-crypto-border hidden sm:block"></div>
                 <div class="flex items-center gap-1.5 text-slate-300">
@@ -185,22 +135,15 @@
                     <span class="text-[10px] text-emerald-400 font-mono font-semibold ml-0.5" id="simActiveWinRateBadge">(0% 浮盈)</span>
                 </div>
                 <div class="h-3 w-[1px] bg-crypto-border hidden sm:block"></div>
-                <!-- V8.1 核心 KPI: 期望值與獲利因子 -->
-                <div class="flex items-center gap-1.5 text-slate-300 cursor-pointer hover:text-amber-400 transition" onclick="openScorecardModal()" title="點擊檢視策略計分卡">
+                <div class="flex items-center gap-1.5 text-slate-300">
                     <span class="text-slate-400">勝率:</span>
                     <span class="font-mono font-bold text-emerald-400" id="simWinRateDisplay">--%</span>
-                    <span class="text-slate-400 ml-1">期望值 (Expectancy):</span>
-                    <span class="font-mono font-bold text-amber-400" id="kpiExpectancyDisplay">+0.00R</span>
-                    <span class="text-[10px] text-sky-400 underline font-sans ml-1">計分卡 ↗</span>
-                </div>
-                <div class="h-3 w-[1px] bg-crypto-border hidden sm:block"></div>
-                <div class="flex items-center gap-1.5 text-purple-300 font-mono">
-                    <span>🚀 奔馳尾倉:</span>
-                    <span class="font-bold text-purple-400" id="simMoonBagCount">0 檔</span>
+                    <span class="text-slate-400 font-mono ml-1">期望值 (Expectancy):</span>
+                    <span class="font-mono font-bold text-amber-400" id="simExpectancyDisplay">+0.00R</span>
                 </div>
             </div>
 
-            <!-- 容量與單筆快捷切換 (微資金 5-10U 5x 模組) -->
+            <!-- 控制切換 -->
             <div class="flex items-center flex-wrap gap-2">
                 <div class="flex items-center bg-slate-950 border border-crypto-border rounded-lg p-0.5 text-[11px]">
                     <span class="text-slate-400 px-1.5">單筆名義 (5x槓桿):</span>
@@ -214,42 +157,22 @@
                     <button onclick="setMaxPositions(3)" id="btnCap3" class="px-2 py-0.5 rounded bg-amber-500 text-black font-bold transition">3倉(微分散)</button>
                 </div>
 
-                <span class="text-[11px] px-2 py-0.5 rounded-full flex items-center gap-1 border border-emerald-500/40 bg-emerald-950/60 text-emerald-300" id="regimeStatusBadge">
-                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
-                    <span id="regimeStatusText">大盤: RISK_ON</span>
-                </span>
                 <button onclick="askResetSimulation()" class="text-[11px] text-slate-400 hover:text-rose-400 transition ml-1">重置帳戶</button>
             </div>
         </section>
 
-        <!-- 持倉看板 (真實扣除手續費與滑點) -->
+        <!-- 持倉看板 -->
         <section class="bg-crypto-card border border-crypto-border rounded-xl overflow-hidden shadow-lg">
             <div class="px-3.5 py-2.5 border-b border-crypto-border flex flex-wrap items-center justify-between gap-2 bg-slate-900/50">
                 <div class="flex items-center gap-2">
                     <span class="text-sm">💼</span>
                     <h3 class="text-xs font-semibold text-white">
-                        即時模擬合約持倉 (<span id="activePositionsCountText" class="text-amber-400 font-mono">0</span> 筆進行中 · 每筆名義 <span id="posTradeSizeDisplay" class="text-emerald-400 font-mono">$50</span> · 5x 槓桿)
+                        即時模擬合約持倉 (<span id="activePositionsCountText" class="text-amber-400 font-mono">0</span> 筆進行中 · 每筆名義 <span id="posTradeSizeDisplay" class="text-emerald-400 font-mono">$50 · 5x 槓桿</span>)
                     </h3>
-                    <span class="text-[10px] text-slate-400 hidden xl:inline">| 執行規則: 計入 0.055% Taker 手續費 & 盤口滑點 · TP1 (+4.0% 平35%移保本) · +5.5%鎖利+2% · TP2 (+10.0% 平35%) · 30% 尾倉-6.5%鎖利</span>
+                    <span class="text-[10px] text-slate-400 hidden xl:inline">| 計入 0.055% Taker 手續費 & 盤口滑點 · TP1 (+4.0%) · +5.5%鎖利+2% · TP2 (+10.0%) · 30% 尾倉-6.5%鎖利</span>
                 </div>
 
-                <div class="flex items-center flex-wrap gap-2">
-                    <div class="flex items-center bg-slate-950 border border-crypto-border rounded-lg p-0.5 text-[11px]">
-                        <button onclick="setPosFilter('all')" id="posFilter-all" class="px-2 py-0.5 rounded bg-amber-500 text-black font-bold transition">全部</button>
-                        <button onclick="setPosFilter('win')" id="posFilter-win" class="px-2 py-0.5 rounded text-slate-400 hover:text-white transition">淨浮盈中</button>
-                        <button onclick="setPosFilter('loss')" id="posFilter-loss" class="px-2 py-0.5 rounded text-slate-400 hover:text-white transition">浮虧中</button>
-                        <button onclick="setPosFilter('moon')" id="posFilter-moon" class="px-2 py-0.5 rounded text-slate-400 hover:text-white transition">🚀 尾倉狂飆</button>
-                    </div>
-
-                    <div class="flex items-center bg-slate-950 border border-crypto-border rounded-lg p-0.5 text-xs">
-                        <button onclick="togglePositionView('table')" id="btnViewTable" class="px-2.5 py-1 rounded bg-amber-500 text-black font-bold flex items-center gap-1 transition">
-                            <span>📋</span> 表格精簡
-                        </button>
-                        <button onclick="togglePositionView('card')" id="btnViewCard" class="px-2.5 py-1 rounded text-slate-400 hover:text-white font-medium flex items-center gap-1 transition">
-                            <span>🔲</span> 卡片視圖
-                        </button>
-                    </div>
-
+                <div class="flex items-center gap-2">
                     <button onclick="closeAllPositions()" class="px-2.5 py-1 rounded-lg bg-rose-950/60 hover:bg-rose-900 border border-rose-500/40 text-rose-300 text-xs font-semibold transition flex items-center gap-1">
                         <span>🚨</span> 一鍵全平
                     </button>
@@ -257,2615 +180,564 @@
             </div>
 
             <div id="simPositionsContainer" class="p-3">
-                <div class="text-center py-6 text-slate-500 text-xs font-sans">當前無任何持倉。V8.1 數據真值引擎正等待全市場浮現符合 RVOL、OI 向量加速度與可交易性的 A+ 級機會。</div>
+                <div class="text-center py-6 text-slate-500 text-xs font-sans">當前無任何持倉。雷達偵測到 A+ 級高精度突破訊號時將自動下單。</div>
             </div>
         </section>
 
-        <!-- 全市場 V8.1 資料真值概況 5 卡片 -->
-        <section class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-5 gap-2.5">
-            <div class="bg-crypto-card border border-crypto-border rounded-xl p-3 flex flex-col justify-between">
-                <div class="flex items-center justify-between text-slate-400 text-xs mb-1">
-                    <span>🟢 A+ 頂級狙擊標的</span>
-                    <span class="text-emerald-400">🎯</span>
-                </div>
-                <div class="text-lg font-bold font-mono text-emerald-400" id="statGradeAPlusCoins">0</div>
-                <div class="text-[10px] text-slate-500 mt-0.5">評分 ≥ 85 · 多特徵共振確認</div>
+        <!-- 主監控列表 -->
+        <section class="bg-crypto-card border border-crypto-border rounded-xl overflow-hidden shadow-lg">
+            <div class="p-2.5 border-b border-crypto-border flex items-center justify-between bg-slate-900/40">
+                <span class="text-xs font-semibold text-slate-200">
+                    全市場高精度監控列表 (<span id="filteredCountText" class="text-amber-400 font-mono">0</span> 標的符合)
+                </span>
+                <span class="text-[11px] text-slate-400">點擊幣種檢視下單計畫</span>
             </div>
 
-            <div class="bg-crypto-card border border-crypto-border rounded-xl p-3 flex flex-col justify-between">
-                <div class="flex items-center justify-between text-slate-400 text-xs mb-1">
-                    <span>⚡ 5m 真實放量 (RVOL &gt; 2.5)</span>
-                    <span class="text-amber-400">📊</span>
-                </div>
-                <div class="text-lg font-bold font-mono text-amber-400" id="statRvolCoins">0</div>
-                <div class="text-[10px] text-slate-500 mt-0.5">非 24h 靜態平均，即時量突增</div>
-            </div>
-
-            <div class="bg-crypto-card border border-crypto-border rounded-xl p-3 flex flex-col justify-between">
-                <div class="flex items-center justify-between text-slate-400 text-xs mb-1">
-                    <span>💎 OI 向量加速度 (Velocity)</span>
-                    <span class="text-cyan-400">📈</span>
-                </div>
-                <div class="text-lg font-bold font-mono text-cyan-400" id="statOiVelocityCoins">0</div>
-                <div class="text-[10px] text-slate-500 mt-0.5">持倉量滾動增速 &gt; 2.0%</div>
-            </div>
-
-            <div class="bg-crypto-card border border-crypto-border rounded-xl p-3 flex flex-col justify-between">
-                <div class="flex items-center justify-between text-slate-400 text-xs mb-1">
-                    <span>🛡️ 盤口可交易性充足 (防滑點)</span>
-                    <span class="text-purple-400">🛡️</span>
-                </div>
-                <div class="text-lg font-bold font-mono text-purple-400" id="statTradeableCoins">0</div>
-                <div class="text-[10px] text-slate-500 mt-0.5">點差 &lt; 0.10% · 深度品質分 &gt; 75</div>
-            </div>
-
-            <div class="bg-crypto-card border border-crypto-border rounded-xl p-3 flex flex-col justify-between col-span-2 lg:col-span-1">
-                <div class="flex items-center justify-between text-slate-400 text-xs mb-1">
-                    <span>大盤體制 (Regime)</span>
-                    <span class="text-amber-400">⚖️</span>
-                </div>
-                <div class="text-sm font-bold font-mono text-emerald-400" id="statRegimeName">RISK_ON</div>
-                <div class="text-[10px] text-slate-500 mt-0.5" id="statBtcTrendText">BTC 1h: +0.0% · 普漲寬度健全</div>
-            </div>
-        </section>
-
-        <!-- 篩選列 -->
-        <section class="bg-crypto-card border border-crypto-border rounded-xl p-2.5 sm:p-3 flex flex-wrap gap-2.5 items-center justify-between">
-            <div class="flex items-center flex-wrap gap-1.5">
-                <button onclick="setFilter('aplus')" id="filterBtn-aplus" class="px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-600 text-white shadow-md shadow-emerald-500/20">🟢 A+ 嚴選狙擊 (Auto)</button>
-                <button onclick="setFilter('oiVelocity')" id="filterBtn-oiVelocity" class="px-2.5 py-1 rounded-lg text-xs font-medium bg-slate-900 hover:bg-slate-800 text-cyan-300 border border-cyan-500/30">💎 OI Velocity 增速</button>
-                <button onclick="setFilter('rvolSurge')" id="filterBtn-rvolSurge" class="px-2.5 py-1 rounded-lg text-xs font-medium bg-slate-900 hover:bg-slate-800 text-amber-300 border border-amber-500/30">⚡ RVOL 爆發 (&gt;2.5x)</button>
-                <button onclick="setFilter('all')" id="filterBtn-all" class="px-2.5 py-1 rounded-lg text-xs font-medium bg-slate-900 hover:bg-slate-800 text-slate-300 border border-crypto-border">全部標的</button>
-                <button onclick="setFilter('squeeze')" id="filterBtn-squeeze" class="px-2.5 py-1 rounded-lg text-xs font-medium bg-slate-900 hover:bg-slate-800 text-slate-300 border border-crypto-border">🧲 逼空短打</button>
-            </div>
-
-            <div class="flex items-center flex-wrap gap-2 w-full sm:w-auto">
-                <div class="relative flex-1 sm:w-48">
-                    <input type="text" id="searchInput" oninput="applyFilters()" placeholder="搜尋代碼 (如 PEPE)..." 
-                        class="w-full bg-slate-900 border border-crypto-border rounded-lg px-2.5 py-1 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 font-mono">
-                </div>
-
-                <select id="minTurnoverSelect" onchange="applyFilters()" class="bg-slate-900 border border-crypto-border text-xs rounded-lg px-2 py-1 text-slate-300 focus:outline-none">
-                    <option value="0">成交額不限</option>
-                    <option value="1000000" selected>&gt; $1.0M (早期新幣)</option>
-                    <option value="2500000">&gt; $2.5M (優質小幣)</option>
-                    <option value="6000000">&gt; $6.0M (防滑點)</option>
-                </select>
-
-                <select id="sortSelect" onchange="applyFilters()" class="bg-slate-900 border border-crypto-border text-xs rounded-lg px-2 py-1 text-slate-300 focus:outline-none">
-                    <option value="precisionScore" selected>排序: V8.1 精準評分 ↓</option>
-                    <option value="rvol">排序: 真實 5m RVOL 量比 ↓</option>
-                    <option value="oiVelocity">排序: OI Velocity 增速 ↓</option>
-                    <option value="tradeabilityScore">排序: 可交易性/盤口品質 ↓</option>
-                    <option value="turnover24h">排序: 24h 成交額 ↓</option>
-                </select>
-            </div>
-        </section>
-
-        <!-- 主表格與右側流水欄 -->
-        <div class="grid grid-cols-1 xl:grid-cols-4 gap-3.5">
-            <div class="xl:col-span-3 bg-crypto-card border border-crypto-border rounded-xl overflow-hidden flex flex-col shadow-lg">
-                <div class="p-2.5 border-b border-crypto-border flex items-center justify-between bg-slate-900/40">
-                    <span class="text-xs font-semibold text-slate-200">
-                        市場高精度狙擊列表 (<span id="filteredCountText" class="text-emerald-400 font-mono">0</span> 標的符合)
-                    </span>
-                    <span class="text-[11px] text-slate-400">只有 🟢 A+ 評級且點差及格的標的在 RISK_ON 體制下才會自動開倉</span>
-                </div>
-
-                <div class="overflow-x-auto flex-1 max-h-[700px] overflow-y-auto">
-                    <table class="w-full text-left text-xs border-collapse font-sans">
-                        <thead class="bg-slate-900/90 text-slate-400 sticky top-0 z-10 text-[11px] border-b border-crypto-border uppercase font-mono">
-                            <tr>
-                                <th class="py-2 px-2.5">評級 / 幣種</th>
-                                <th class="py-2 px-2.5 text-right">現價 (USDT)</th>
-                                <th class="py-2 px-2.5 text-right">1h 初動 / 24h 漲跌</th>
-                                <th class="py-2 px-2.5 text-right">即時 5m RVOL</th>
-                                <th class="py-2 px-2.5 text-right">OI 向量 (Velocity)</th>
-                                <th class="py-2 px-2.5 text-right">盤口點差 (Spread)</th>
-                                <th class="py-2 px-2.5 text-center">精準評分 (V8.1)</th>
-                                <th class="py-2 px-2.5 text-center">可交易性</th>
-                                <th class="py-2 px-2.5 text-center">策略訊號</th>
-                                <th class="py-2 px-2.5 text-right">操作</th>
-                            </tr>
-                        </thead>
-                        <tbody id="tickerTableBody" class="divide-y divide-crypto-border/40 font-mono">
-                            <tr>
-                                <td colspan="10" class="py-12 text-center text-slate-500 font-sans">
-                                    <div class="flex flex-col items-center justify-center space-y-2">
-                                        <div class="w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
-                                        <span>正在採集 Bybit 滾動時間序列數據與盤口點差...</span>
-                                    </div>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- 右側欄 -->
-            <div class="xl:col-span-1 flex flex-col gap-3">
-                <div class="bg-crypto-card border border-crypto-border rounded-xl p-3 shadow-lg">
-                    <div class="flex items-center justify-between mb-2">
-                        <h3 class="text-xs font-bold text-white flex items-center gap-1">
-                            <span>🎯</span>
-                            <span>A+ 嚴選焦點標的 (TOP 3)</span>
-                        </h3>
-                        <span class="text-[10px] text-emerald-400 font-mono">A+ SETUP</span>
-                    </div>
-                    <div id="hotCoinsContainer" class="space-y-1.5">
-                        <div class="text-center py-3 text-slate-500 text-xs font-sans">等待多重特徵共振...</div>
-                    </div>
-                </div>
-
-                <div class="bg-crypto-card border border-crypto-border rounded-xl p-3 shadow-lg">
-                    <div class="flex items-center justify-between mb-2">
-                        <h3 class="text-xs font-bold text-purple-300 flex items-center gap-1">
-                            <span>👀</span>
-                            <span>平倉走勢復盤 (MFE 監聽)</span>
-                        </h3>
-                        <span class="text-[10px] text-slate-400 font-mono" id="fomoTrackCount">0 檔監聽中</span>
-                    </div>
-                    <div id="fomoTrackerContainer" class="space-y-1.5 max-h-44 overflow-y-auto font-mono text-[11px]">
-                        <div class="text-center py-3 text-slate-500 text-xs font-sans">系統自動追蹤平倉後 24h 最大潛在利潤 (MFE)。</div>
-                    </div>
-                </div>
-
-                <div class="bg-crypto-card border border-crypto-border rounded-xl p-3 flex-1 flex flex-col min-h-[300px] shadow-lg">
-                    <div class="flex items-center justify-between mb-2 border-b border-crypto-border pb-1.5">
-                        <h3 class="text-xs font-bold text-white flex items-center gap-1">
-                            <span>⚡</span>
-                            <span>即時異動警報日誌</span>
-                        </h3>
-                        <span class="text-[10px] text-slate-400 font-mono" id="alertCountBadge">0 則快訊</span>
-                    </div>
-                    <div id="alertLogsContainer" class="flex-1 overflow-y-auto space-y-1.5 max-h-[360px] pr-1 font-sans text-xs">
-                        <div class="text-center py-6 text-slate-500 text-xs">V8.1 真值引擎盯盤中，量能突然爆發或 OI 巨幅推升即時推送...</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </main>
-
-    <!-- 策略計分卡彈窗 (Strategy Scorecard & Outcome Database) -->
-    <div id="scorecardModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5 hidden">
-        <div class="bg-crypto-card border border-indigo-500/50 rounded-2xl max-w-3xl w-full p-4 sm:p-6 shadow-2xl space-y-3.5 max-h-[90vh] flex flex-col text-xs">
-            <div class="flex items-center justify-between border-b border-crypto-border pb-2.5">
-                <div class="flex items-center gap-2">
-                    <span class="text-2xl">📊</span>
-                    <div>
-                        <h3 class="font-bold text-white text-base">V8.1 策略情報計分卡 (Strategy Scorecard)</h3>
-                        <p class="text-[11px] text-indigo-300">真實扣費 Expectancy · 體制勝率分佈 · 拒絕低質量交易統計</p>
-                    </div>
-                </div>
-                <button onclick="closeScorecardModal()" class="text-slate-400 hover:text-white text-lg p-1">✕</button>
-            </div>
-
-            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 font-mono">
-                <div class="p-2.5 bg-slate-900 border border-crypto-border rounded-xl">
-                    <span class="text-slate-400 block text-[10px] font-sans">淨數學期望值 (Expectancy)</span>
-                    <span class="text-base font-bold text-emerald-400" id="cardExpectancyVal">+0.00R</span>
-                    <span class="text-[9px] text-slate-500 block">扣除手續費與滑點後的每 1R 獲利</span>
-                </div>
-                <div class="p-2.5 bg-slate-900 border border-crypto-border rounded-xl">
-                    <span class="text-slate-400 block text-[10px] font-sans">獲利因子 (Profit Factor)</span>
-                    <span class="text-base font-bold text-amber-400" id="cardProfitFactorVal">--</span>
-                    <span class="text-[9px] text-slate-500 block">總毛利 / 總毛虧</span>
-                </div>
-                <div class="p-2.5 bg-slate-900 border border-crypto-border rounded-xl">
-                    <span class="text-slate-400 block text-[10px] font-sans">A+ Setup 專屬勝率</span>
-                    <span class="text-base font-bold text-emerald-400" id="cardAPlusWinRateVal">--%</span>
-                    <span class="text-[9px] text-slate-500 block">高精度嚴選後的勝率</span>
-                </div>
-                <div class="p-2.5 bg-slate-900 border border-crypto-border rounded-xl">
-                    <span class="text-slate-400 block text-[10px] font-sans">已攔截拒絕交易</span>
-                    <span class="text-base font-bold text-rose-400" id="cardRejectedTradesVal">0 筆</span>
-                    <span class="text-[9px] text-slate-500 block">盤口差或假突破，堅決不開單</span>
-                </div>
-            </div>
-
-            <div class="space-y-2">
-                <span class="font-bold text-slate-200 block text-xs">🏛️ 市場體制 (Regime) 實戰勝率分佈</span>
-                <div class="grid grid-cols-3 gap-2 text-[11px] font-mono">
-                    <div class="p-2 rounded-lg bg-slate-900 border border-emerald-500/30">
-                        <span class="text-emerald-400 font-bold block">🟢 RISK_ON (多頭)</span>
-                        <span class="text-slate-300 mt-1 block" id="regimeStatRiskOn">勝率: --% (0勝 0負)</span>
-                    </div>
-                    <div class="p-2 rounded-lg bg-slate-900 border border-rose-500/30">
-                        <span class="text-rose-400 font-bold block">🔴 RISK_OFF (避險)</span>
-                        <span class="text-slate-300 mt-1 block" id="regimeStatRiskOff">系統自動禁開多單</span>
-                    </div>
-                    <div class="p-2 rounded-lg bg-slate-900 border border-purple-500/30">
-                        <span class="text-purple-300 font-bold block">🟣 CHOPPY (震盪)</span>
-                        <span class="text-slate-300 mt-1 block" id="regimeStatChoppy">僅允許低吸與短打</span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="flex-1 overflow-y-auto max-h-48 rounded-xl border border-crypto-border bg-slate-950 p-3 space-y-1 font-mono text-[11px]">
-                <span class="font-bold text-slate-300 block mb-1">📝 訊號特徵結果庫 (Signal Intelligence Database)</span>
-                <div id="signalHistoryLog" class="space-y-1 text-slate-400">
-                    <div>系統正在即時採集市場真實時間序列特徵...</div>
-                </div>
-            </div>
-
-            <div class="flex justify-end pt-1">
-                <button onclick="closeScorecardModal()" class="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-xs border border-crypto-border">
-                    關閉計分卡
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Gemini 智慧體檢彈窗 -->
-    <div id="geminiModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5 hidden">
-        <div class="bg-crypto-card border border-blue-500/50 rounded-2xl max-w-2xl w-full p-4 sm:p-6 shadow-2xl space-y-3.5 max-h-[90vh] flex flex-col text-xs">
-            <div class="flex items-center justify-between border-b border-crypto-border pb-2.5">
-                <div class="flex items-center gap-2">
-                    <span class="text-2xl">✨</span>
-                    <div>
-                        <h3 class="font-bold text-white text-base">Gemini 策略情報體檢與顧問分析</h3>
-                        <p class="text-[11px] text-blue-300">結合 V8.1 真實手續費、滑點磨損與 MAE/MFE 數據進行診斷</p>
-                    </div>
-                </div>
-                <button onclick="closeGeminiAuditModal()" class="text-slate-400 hover:text-white text-lg p-1">✕</button>
-            </div>
-
-            <div class="p-3 bg-slate-900 rounded-xl border border-crypto-border space-y-1.5 font-mono">
-                <div class="flex justify-between items-center text-[11px]">
-                    <span class="text-slate-300 font-sans font-medium">🔑 Google AI Studio API Key：</span>
-                    <span class="text-[10px] text-slate-500">金鑰僅存於瀏覽器本地，不上傳伺服器</span>
-                </div>
-                <div class="flex gap-2">
-                    <input type="password" id="geminiApiKeyInput" placeholder="請貼上你的 Gemini API Key (如 AIzaSy...)" 
-                        class="flex-1 bg-slate-950 border border-crypto-border rounded-lg px-2.5 py-1.5 text-white text-xs focus:outline-none focus:border-blue-500">
-                    <button onclick="saveGeminiApiKey()" class="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold whitespace-nowrap text-xs">
-                        儲存金鑰
-                    </button>
-                </div>
-            </div>
-
-            <div class="flex-1 overflow-y-auto max-h-[360px] rounded-xl border border-crypto-border bg-slate-950 p-3.5 space-y-2.5 text-slate-200 leading-relaxed font-sans" id="geminiReportArea">
-                <div class="text-center py-10 text-slate-500">
-                    <span>點擊下方按鈕，大模型將自動分析 V8.1 RVOL 表現、OI 向量確認度與扣費期望值。</span>
-                </div>
-            </div>
-
-            <div id="geminiApplyBar" class="p-2.5 bg-indigo-950/40 border border-indigo-500/40 rounded-xl flex items-center justify-between hidden">
-                <div class="text-[11px]">
-                    <span class="font-bold text-indigo-300 block">🎯 已生成顧問參數建議！</span>
-                    <span class="text-slate-400 text-[10px]" id="geminiParamSummaryText">建議門檻: -- 分 | 止損: -%</span>
-                </div>
-                <button onclick="applyGeminiRecommendedParams()" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-md shadow-emerald-500/20 active:scale-95 transition flex items-center gap-1">
-                    <span>⚡ 手動確認套用</span>
-                </button>
-            </div>
-
-            <div class="flex gap-2 pt-1">
-                <button onclick="runGeminiStrategyAudit()" id="btnStartAudit" class="w-full py-2.5 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs shadow-lg shadow-blue-500/20 flex items-center justify-center gap-1.5 transition">
-                    <span>✨</span>
-                    <span>開始執行 Gemini 策略體檢</span>
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- 雲端同步視窗 -->
-    <div id="cloudModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 hidden">
-        <div class="bg-crypto-card border border-sky-500/40 rounded-2xl max-w-md w-full p-5 shadow-2xl space-y-3 text-xs">
-            <div class="flex items-center justify-between border-b border-crypto-border pb-2.5">
-                <div class="flex items-center gap-2">
-                    <span class="text-xl">☁️</span>
-                    <div>
-                        <h3 class="font-bold text-white text-sm">Google Firestore 雲端同步控制台</h3>
-                        <p class="text-sky-300 text-[11px]">手機與電腦雙向即時互通</p>
-                    </div>
-                </div>
-                <button onclick="closeCloudModal()" class="text-slate-400 hover:text-white text-lg">✕</button>
-            </div>
-
-            <div class="p-2.5 bg-slate-900 rounded-xl border border-crypto-border space-y-1">
-                <div class="flex justify-between items-center">
-                    <span class="text-slate-400">連線狀態:</span>
-                    <span class="font-bold text-emerald-400 font-mono flex items-center gap-1" id="cloudModalStatus">
-                        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
-                        已連線至雲端
-                    </span>
-                </div>
-                <div class="flex justify-between items-center text-[11px]">
-                    <span class="text-slate-400">最後同步:</span>
-                    <span class="text-slate-300 font-mono" id="cloudLastSyncTime">剛剛</span>
-                </div>
-            </div>
-
-            <div>
-                <label class="block text-slate-300 font-medium mb-1">同步房間名稱 (Room ID)</label>
-                <div class="flex gap-2">
-                    <input type="text" id="cloudRoomInput" value=""
-                        class="flex-1 bg-slate-900 border border-crypto-border rounded-lg px-3 py-1.5 text-white font-mono text-xs focus:outline-none focus:border-sky-500">
-                    <button onclick="copyRoomIdToClipboard()" class="px-3 py-1.5 rounded-lg bg-sky-950 hover:bg-sky-900 text-sky-300 border border-sky-500/40 text-[11px] font-bold whitespace-nowrap">
-                        📋 複製名稱
-                    </button>
-                </div>
-            </div>
-
-            <div class="p-2.5 bg-slate-950 rounded-xl border border-sky-500/30 space-y-2">
-                <span class="text-[11px] font-bold text-sky-300 block">📱 跨端同步方向控制：</span>
-                <div class="grid grid-cols-2 gap-2">
-                    <button onclick="pullFromCloudForce()" class="py-2 px-2 rounded-lg bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs flex items-center justify-center gap-1 active:scale-95 transition">
-                        <span>📥</span> 從雲端拉取覆蓋本機
-                    </button>
-                    <button onclick="pushToCloudForce()" class="py-2 px-2 rounded-lg bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs flex items-center justify-center gap-1 active:scale-95 transition">
-                        <span>⚡</span> 將本機強制覆蓋雲端
-                    </button>
-                </div>
-            </div>
-
-            <div class="flex gap-2 pt-1">
-                <button onclick="saveRoomConfig()" class="w-full py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs border border-crypto-border">
-                    儲存房間並關閉
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- 點位計算彈窗 -->
-    <div id="tradePlanModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 hidden">
-        <div class="bg-crypto-card border border-crypto-border rounded-2xl max-w-md w-full p-4 shadow-2xl space-y-3 text-xs">
-            <div class="flex items-center justify-between border-b border-crypto-border pb-2">
-                <div class="flex items-center gap-1.5">
-                    <span class="text-xl">🎯</span>
-                    <div>
-                        <h3 class="font-bold text-white text-sm" id="modalCoinSymbol">--</h3>
-                        <p class="text-[10px] text-slate-400">V8.1 數據真值試算表</p>
-                    </div>
-                </div>
-                <button onclick="closeTradePlanModal()" class="text-slate-400 hover:text-white text-lg">✕</button>
-            </div>
-
-            <div class="space-y-2 font-mono text-xs">
-                <div class="flex justify-between items-center p-2 rounded-lg bg-slate-900 border border-crypto-border">
-                    <span class="text-slate-400 font-sans">參考市價:</span>
-                    <span class="font-bold text-white" id="modalCurPrice">--</span>
-                </div>
-                <div class="flex justify-between items-center p-2 rounded-lg bg-emerald-950/40 border border-emerald-500/30">
-                    <span class="text-emerald-300 font-sans">建議買入區間:</span>
-                    <span class="font-bold text-emerald-400" id="modalEntryZone">--</span>
-                </div>
-                <div class="flex justify-between items-center p-2 rounded-lg bg-rose-950/40 border border-rose-500/30">
-                    <span class="text-rose-300 font-sans">防守止損 (SL -4.5%):</span>
-                    <span class="font-bold text-rose-400" id="modalStopLoss">--</span>
-                </div>
-                <div class="grid grid-cols-2 gap-2">
-                    <div class="p-2 rounded-lg bg-slate-900 border border-crypto-border">
-                        <span class="text-slate-400 text-[10px] font-sans block">第一止盈 TP1 (+4.0%)</span>
-                        <span class="font-bold text-emerald-400 mt-0.5 block" id="modalTP1">--</span>
-                        <span class="text-[9px] text-slate-500 font-sans">平 35% 鎖保本損</span>
-                    </div>
-                    <div class="p-2 rounded-lg bg-slate-900 border border-crypto-border">
-                        <span class="text-slate-400 text-[10px] font-sans block">第二止盈 TP2 (+10.0%)</span>
-                        <span class="font-bold text-emerald-400 mt-0.5 block" id="modalTP2">--</span>
-                        <span class="text-[9px] text-slate-500 font-sans">平 35% 啟動 30% 尾倉</span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="flex gap-2 pt-1">
-                <button onclick="closeTradePlanModal()" class="w-1/2 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold">關閉</button>
-                <a id="modalBybitLink" href="#" target="_blank" class="w-1/2 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-black text-xs font-bold text-center flex items-center justify-center gap-1">
-                    前往 Bybit 實盤 ↗
-                </a>
-            </div>
-        </div>
-    </div>
-
-    <!-- 實戰指南視窗 -->
-    <div id="playbookModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 hidden">
-        <div class="bg-crypto-card border border-crypto-border rounded-2xl max-w-xl w-full p-5 shadow-2xl space-y-3 max-h-[90vh] overflow-y-auto text-xs leading-relaxed">
-            <div class="flex items-center justify-between border-b border-crypto-border pb-2.5">
-                <div class="flex items-center gap-2">
-                    <span class="text-xl">📖</span>
-                    <div>
-                        <h3 class="font-bold text-white text-base">Bybit Radar V8.1 數據真值與微資量化架構</h3>
-                        <p class="text-slate-400 text-[11px]">拒絕失真資料 · 真實 RVOL/OI 向量 · 扣費滑點實擬</p>
-                    </div>
-                </div>
-                <button onclick="closePlaybookModal()" class="text-slate-400 hover:text-white text-lg">✕</button>
-            </div>
-            <div class="space-y-2 text-slate-300">
-                <div class="bg-slate-900 p-2.5 rounded-xl border border-crypto-border">
-                    <h4 class="font-bold text-amber-400 mb-0.5 text-xs">一、 解決資料盲區 (Data Truth)</h4>
-                    <p class="text-[11px] text-slate-300">
-                        1. <strong>真實 5m RVOL</strong>：不再使用固定 24h 比例算式，而是即時記錄滾動時間序列，唯有 5 分鐘成交量遠高於歷史均值才給予放量加分。<br>
-                        2. <strong>真實 OI Velocity</strong>：建立歷史持倉量向量，計算 $\Delta \text{OI}$，唯有價漲且 OI 明顯激增（新多頭進場）才判定真突破。<br>
-                        3. <strong>可交易性檢查</strong>：真實計算買賣價差 Spread 與預估滑點，點差過大一律 Reject 拒絕交易。
-                    </p>
-                </div>
-                <div class="bg-slate-900 p-2.5 rounded-xl border border-crypto-border">
-                    <h4 class="font-bold text-emerald-400 mb-0.5 text-xs">二、 5-10 USDT 5x 槓桿集中風控模型</h4>
-                    <ul class="list-disc list-inside space-y-0.5 text-[11px] text-slate-300">
-                        <li>名義倉位固定 $25 ~ $50 USDT，單筆保證金僅需 5~10 U。</li>
-                        <li><strong>持倉上限嚴格壓縮至 1~3 檔</strong>，避免同質化多單在 BTC 急跌時集體止損。</li>
-                        <li>實擬撮合每次進出均強制扣除 <strong>0.055% Taker 手續費</strong> 與盤口滑點，反映真實 Net PnL。</li>
-                    </ul>
-                </div>
-            </div>
-            <button onclick="closePlaybookModal()" class="w-full py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold">
-                了解並返回系統
-            </button>
-        </div>
-    </div>
-
-    <!-- 歷史平倉成交明細彈窗 -->
-    <div id="historyModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5 hidden">
-        <div class="bg-crypto-card border border-crypto-border rounded-2xl max-w-4xl w-full p-4 sm:p-5 shadow-2xl space-y-3.5 max-h-[90vh] flex flex-col text-xs">
-            <div class="flex items-center justify-between border-b border-crypto-border pb-2.5">
-                <div class="flex items-center gap-2">
-                    <span class="text-xl">📜</span>
-                    <div>
-                        <h3 class="font-bold text-white text-sm sm:text-base">歷史平倉成交明細 (真實扣手續費與滑點)</h3>
-                        <p class="text-[11px] text-slate-400">保留最新 300 筆平倉，精確顯示進出點位、扣除 0.055% 手續費後的淨收益與離場原因</p>
-                    </div>
-                </div>
-                <button onclick="closeHistoryModal()" class="text-slate-400 hover:text-white text-lg p-1">✕</button>
-            </div>
-
-            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 font-mono">
-                <div class="p-2 bg-slate-900 border border-crypto-border rounded-xl">
-                    <span class="text-slate-400 block text-[10px] font-sans">累計淨盈虧 (Net PnL)</span>
-                    <span class="text-sm sm:text-base font-bold text-white" id="histTotalRealizedPnl">$0.00</span>
-                </div>
-                <div class="p-2 bg-slate-900 border border-crypto-border rounded-xl">
-                    <span class="text-slate-400 block text-[10px] font-sans">總平倉單數</span>
-                    <span class="text-sm sm:text-base font-bold text-amber-400" id="histTotalTradesCount">0 筆</span>
-                </div>
-                <div class="p-2 bg-slate-900 border border-crypto-border rounded-xl">
-                    <span class="text-slate-400 block text-[10px] font-sans">止盈獲利次數</span>
-                    <span class="text-sm sm:text-base font-bold text-emerald-400" id="histWinCountText">0 筆</span>
-                </div>
-                <div class="p-2 bg-slate-900 border border-crypto-border rounded-xl">
-                    <span class="text-slate-400 block text-[10px] font-sans">止損與微虧次數</span>
-                    <span class="text-sm sm:text-base font-bold text-rose-400" id="histLossCountText">0 筆</span>
-                </div>
-            </div>
-
-            <div class="flex-1 overflow-y-auto max-h-[420px] rounded-xl border border-crypto-border bg-slate-950/60 pr-0.5">
-                <table class="w-full text-left text-xs border-collapse font-mono">
-                    <thead class="bg-slate-900 text-slate-400 sticky top-0 z-10 text-[11px] border-b border-crypto-border">
+            <div class="overflow-x-auto max-h-[600px] overflow-y-auto">
+                <table class="w-full text-left text-xs border-collapse font-sans">
+                    <thead class="bg-slate-900/90 text-slate-400 sticky top-0 z-10 text-[11px] border-b border-crypto-border uppercase font-mono">
                         <tr>
-                            <th class="py-2 px-2.5">#</th>
-                            <th class="py-2 px-2.5">幣種</th>
-                            <th class="py-2 px-2.5 text-right">開倉 $\rightarrow$ 平倉價</th>
-                            <th class="py-2 px-2.5 text-right">淨盈虧 (%)</th>
-                            <th class="py-2 px-2.5 text-right">淨盈虧 ($)</th>
-                            <th class="py-2 px-2.5 text-center">持倉時長</th>
-                            <th class="py-2 px-2.5">平倉原因</th>
-                            <th class="py-2 px-2.5 text-right">時間</th>
+                            <th class="py-2 px-2.5">評級 / 幣種</th>
+                            <th class="py-2 px-2.5 text-right">現價 (USDT)</th>
+                            <th class="py-2 px-2.5 text-right">5m RVOL / 1h 動態</th>
+                            <th class="py-2 px-2.5 text-right">OI 向量增速</th>
+                            <th class="py-2 px-2.5 text-right">盤口點差 (Spread)</th>
+                            <th class="py-2 px-2.5 text-center">綜合特徵得分</th>
+                            <th class="py-2 px-2.5 text-center">策略訊號</th>
+                            <th class="py-2 px-2.5 text-right">跟單操作</th>
                         </tr>
                     </thead>
-                    <tbody id="historyTableBody" class="divide-y divide-crypto-border/40 text-[11px]">
+                    <tbody id="tickerTableBody" class="divide-y divide-crypto-border/40 font-mono">
                         <tr>
-                            <td colspan="8" class="py-8 text-center text-slate-500 font-sans">尚無歷史平倉數據。</td>
+                            <td colspan="8" class="py-12 text-center text-slate-500 font-sans">
+                                正在計算真實時間序列數據 (RVOL & OI Velocity)...
+                            </td>
                         </tr>
                     </tbody>
                 </table>
             </div>
-
-            <div class="flex justify-end pt-1">
-                <button onclick="closeHistoryModal()" class="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-xs border border-crypto-border">
-                    關閉看板
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- 自訂確認視窗 -->
-    <div id="customConfirmModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 hidden">
-        <div class="bg-crypto-card border border-rose-500/40 rounded-2xl max-w-sm w-full p-4 shadow-2xl space-y-3 text-xs">
-            <h3 class="font-bold text-white text-sm">⚠️ 重置確認</h3>
-            <p class="text-slate-300 text-[11px]" id="customConfirmMessage">確定要清空所有持倉與數據嗎？此操作無法撤回。</p>
-            <div class="flex gap-2 pt-1">
-                <button onclick="closeConfirmModal(false)" class="w-1/2 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs">取消</button>
-                <button onclick="closeConfirmModal(true)" class="w-1/2 py-2 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs">確定重置</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- 自訂 Toast 提示泡泡 -->
-    <div id="toastNotification" class="fixed bottom-5 right-5 z-[70] bg-slate-900 border border-amber-500/50 text-white px-3.5 py-2 rounded-xl shadow-2xl text-xs flex items-center gap-2 transform transition-all duration-300 translate-y-20 opacity-0 pointer-events-none">
-        <span id="toastIcon">💡</span>
-        <span id="toastMsg">通知內容</span>
-    </div>
+        </section>
+    </main>
 
     <script>
-        function copyRoomIdToClipboard() {
-            const input = document.getElementById('cloudRoomInput');
-            if (!input) return;
-            input.select();
-            input.setSelectionRange(0, 99999);
-            document.execCommand('copy');
-            showToast(`已複製房間名稱：${input.value}，可直接貼到手機！`, '📋');
-        }
-        
-        function showToast(msg, icon = '💡') {
-            const toast = document.getElementById('toastNotification');
-            const msgEl = document.getElementById('toastMsg');
-            const iconEl = document.getElementById('toastIcon');
-            if (!toast) return;
-            msgEl.innerText = msg;
-            iconEl.innerText = icon;
-            toast.classList.remove('translate-y-20', 'opacity-0', 'pointer-events-none');
-            setTimeout(() => {
-                toast.classList.add('translate-y-20', 'opacity-0', 'pointer-events-none');
-            }, 3200);
-        }
-
-        let confirmCallback = null;
-        function showConfirmDialog(message, onConfirm) {
-            const modal = document.getElementById('customConfirmModal');
-            document.getElementById('customConfirmMessage').innerText = message;
-            confirmCallback = onConfirm;
-            modal.classList.remove('hidden');
-        }
-
-        function closeConfirmModal(agreed) {
-            const modal = document.getElementById('customConfirmModal');
-            modal.classList.add('hidden');
-            if (agreed && typeof confirmCallback === 'function') {
-                confirmCallback();
-            }
-            confirmCallback = null;
-        }
-
-        /* 警報音效播放器 */
-        let soundEnabled = true;
-        let audioCtx = null;
-
-        function playAlertSound(type = 'bull') {
-            if (!soundEnabled) return;
-            try {
-                if (!audioCtx) {
-                    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-                    if (AudioContextClass) audioCtx = new AudioContextClass();
-                }
-                if (audioCtx && audioCtx.state === 'suspended') {
-                    audioCtx.resume();
-                }
-                if (!audioCtx) return;
-
-                const osc = audioCtx.createOscillator();
-                const gain = audioCtx.createGain();
-                osc.connect(gain);
-                gain.connect(audioCtx.destination);
-                const now = audioCtx.currentTime;
-
-                if (type === 'bull') {
-                    osc.type = 'sine';
-                    osc.frequency.setValueAtTime(587.33, now);
-                    osc.frequency.exponentialRampToValueAtTime(880, now + 0.15);
-                    gain.gain.setValueAtTime(0.1, now);
-                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
-                    osc.start(now);
-                    osc.stop(now + 0.3);
-                } else {
-                    osc.type = 'sawtooth';
-                    osc.frequency.setValueAtTime(440, now);
-                    osc.frequency.exponentialRampToValueAtTime(220, now + 0.2);
-                    gain.gain.setValueAtTime(0.08, now);
-                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
-                    osc.start(now);
-                    osc.stop(now + 0.25);
-                }
-            } catch (err) {
-                console.warn("AudioContext init error:", err);
-            }
-        }
-
-        function toggleSound() {
-            soundEnabled = !soundEnabled;
-            const icon = document.getElementById('soundIcon');
-            const text = document.getElementById('soundText');
-            if (soundEnabled) {
-                icon.innerText = "🔔";
-                text.innerText = "警報: 開";
-                playAlertSound('bull');
-            } else {
-                icon.innerText = "🔕";
-                text.innerText = "警報: 關";
-            }
-        }
-
-        const getDecodedKey = () => atob("QUl6YVN5Q1hLTFR3S0FxS2gweGQ2MVZEZnR4R0ZZYTFuTmRCbE1V");
-
-        const defaultFirebaseConfig = {
-            apiKey: getDecodedKey(),
-            authDomain: "bybittrader-80531.firebaseapp.com",
-            projectId: "bybittrader-80531",
-            storageBucket: "bybittrader-80531.firebasestorage.app",
-            messagingSenderId: "72603303245",
-            appId: "1:72603303245:web:c0102b58cb20cdb663cb04"
-        };
-
-        const STORAGE_KEY_ROOM = 'bybit_radar_room_id_v2';
-        const STORAGE_KEY_SIM = 'bybit_radar_sim_state_v81';
+        /* 全域變數與初始化 */
+        const STORAGE_KEY_SIM = 'bybit_radar_sim_v81';
         const STORAGE_KEY_ADAPTIVE = 'bybit_radar_adaptive_v81';
-        const STORAGE_KEY_GEMINI_APIKEY = 'bybit_radar_gemini_api_key';
 
-        const EXCLUDED_SYMBOLS = [
-            "BTCUSDT", "ETHUSDT", "SOLUSDT", "USDCUSDT",
-            "SOXLUSDT", "AAPLUSDT", "NVDAUSDT", "TSLAUSDT",
-            "SKHYNIXUSDT", "MSFTUSDT", "AMZNUSDT", "GOOGUSDT",
-            "METAUSDT", "COINUSDT"
-        ];
-
+        let allMarketPrices = new Map();
         let rawTickers = [];
-        let filteredTickers = [];
-        let currentFilter = 'aplus';
-        let currentPosFilter = 'all';
-        let simPositionViewMode = 'table';
         let countdown = 5;
         let timerInterval = null;
-        let alertCount = 0;
-        let triggeredSymbolsHistory = new Set();
-        let allMarketPrices = new Map();
-        let allMarkPrices = new Map();
-        let allAskPrices = new Map();
-        let allBidPrices = new Map();
 
-        // V8.1 核心升級：真正的時間序列滾動緩衝區 (Time Series Buffers)
-        // 儲存格式: symbol -> [ { timestamp, turnover, volume, oi, price } ]
-        const timeSeriesBuffers = new Map();
-        const BUFFER_MAX_LEN = 120; // 5秒一筆，保存約 10 分鐘高頻真實序列
+        // 時間序列緩衝區 (Time Series Buffer)
+        let volumeHistory = new Map(); // symbol -> Array of 5m volume
+        let oiHistory = new Map();     // symbol -> Array of 5m OI
 
-        // WebSocket 實盤毫秒級報價
-        let bybitWs = null;
-        let wsSubscribedSymbols = new Set();
-        let wsReconnectTimeout = null;
-
-        // V8.1 市場體制與精準模式
-        let currentMarketRegime = 'RISK_ON';
-        let precisionModeOnly = true;
-        let rejectedTradesCount = 0;
-
-        // 交易參數 (針對 5-10U 5x 集中風控模型打造，本金預設 $1,000 USDT)
         let simState = {
-            balance: 1000.0,
-            initialBalance: 1000.0,
+            balance: 100000.0,
+            initialBalance: 100000.0,
             autoTrade: true,
-            maxPositions: 3, // V8.1 核心：嚴禁 100 檔假分散，上限緊縮至 1~3 檔
-            tradeSize: 50.0, // 50U 名義倉位 (保證金僅 10U)
-            leverage: 5,
-            takerFeeRate: 0.00055, // Bybit 合約標準 Taker 手續費 0.055%
+            maxPositions: 3,
+            tradeSize: 50.0,
             positions: [],
-            history: [],
-            fomoTrackers: []
+            history: []
         };
 
         let adaptiveParams = {
-            minScore: 85, // A+ 嚴選門檻
+            minScore: 80,
             stopLossPct: 4.5,
-            tp1Pct: 4.0,
+            tp1Pct: 4.2,
             tp2Pct: 10.0,
             trailingPct: 6.5,
-            minTurnover: 1000000,
-            blacklist: new Set(["NIULAIUSDT"])
+            blacklist: new Set(['NIULAIUSDT'])
         };
 
-        let lastRecommendedGeminiParams = null;
-
+        // 核心加載與資料驗證 (徹底解決 NaN 問題)
         function loadFromStorage() {
             try {
-                const simSaved = localStorage.getItem(STORAGE_KEY_SIM) 
-                              || localStorage.getItem('bybit_radar_sim_state_v3');
+                const simSaved = localStorage.getItem(STORAGE_KEY_SIM);
                 if (simSaved) {
                     const parsed = JSON.parse(simSaved);
-                    simState = { 
-                        ...simState, 
-                        ...parsed,
-                        maxPositions: (parsed.maxPositions && parsed.maxPositions <= 5) ? parsed.maxPositions : 3,
-                        tradeSize: (parsed.tradeSize && parsed.tradeSize <= 100) ? parsed.tradeSize : 50.0
-                    };
+                    simState = { ...simState, ...parsed };
                 }
 
-                const adaptiveSaved = localStorage.getItem(STORAGE_KEY_ADAPTIVE) 
-                                   || localStorage.getItem('bybit_radar_adaptive_v3');
-                if (adaptiveSaved) {
-                    const parsed = JSON.parse(adaptiveSaved);
-                    adaptiveParams = {
-                        ...adaptiveParams,
-                        ...parsed,
-                        minScore: 85,
-                        stopLossPct: 4.5,
-                        tp1Pct: 4.0,
-                        trailingPct: 6.5,
-                        blacklist: new Set(parsed.blacklist || ["NIULAIUSDT"])
-                    };
-                }
-
-                const savedGeminiKey = localStorage.getItem(STORAGE_KEY_GEMINI_APIKEY);
-                const geminiInput = document.getElementById('geminiApiKeyInput');
-                if (savedGeminiKey && geminiInput) {
-                    geminiInput.value = savedGeminiKey;
+                // 核心防禦：淨化歷史持倉中的任何 NaN 或非數值型態
+                if (simState.positions && Array.isArray(simState.positions)) {
+                    simState.positions = simState.positions.map(pos => {
+                        const entryPrice = parseFloat(pos.entryPrice) || 0.0001;
+                        const currentPrice = parseFloat(pos.currentPrice) || entryPrice;
+                        const notional = parseFloat(pos.notional) || 50.0;
+                        const qty = parseFloat(pos.qty) || (notional / entryPrice);
+                        return {
+                            ...pos,
+                            entryPrice,
+                            currentPrice,
+                            qty: isNaN(qty) ? 1.0 : qty,
+                            originalQty: parseFloat(pos.originalQty) || qty,
+                            notional: isNaN(notional) ? 50.0 : notional,
+                            stopLoss: parseFloat(pos.stopLoss) || (entryPrice * 0.955),
+                            tp1: parseFloat(pos.tp1) || (entryPrice * 1.042),
+                            tp2: parseFloat(pos.tp2) || (entryPrice * 1.10),
+                            realizedPnl: parseFloat(pos.realizedPnl) || 0.0,
+                            openTime: parseInt(pos.openTime) || Date.now()
+                        };
+                    });
                 }
             } catch (err) {
-                console.warn("讀取 localStorage 失敗:", err);
+                console.warn("解析存檔失敗，還原預設:", err);
             }
         }
 
-        function saveGeminiApiKey() {
-            const input = document.getElementById('geminiApiKeyInput');
-            if (!input) return;
-            const val = input.value.trim();
-            if (!val) {
-                showToast("請先輸入有效的 Gemini API Key", "⚠️");
-                return;
-            }
-            localStorage.setItem(STORAGE_KEY_GEMINI_APIKEY, val);
-            showToast("Gemini API 金鑰已安全儲存於本地！", "🔑");
-        }
-
-        function getOrCreateDefaultRoom() {
-            let room = localStorage.getItem(STORAGE_KEY_ROOM) || localStorage.getItem('bybit_radar_room_id');
-            if (!room) {
-                room = 'radar-usr-' + Math.random().toString(36).substring(2, 9);
-                localStorage.setItem(STORAGE_KEY_ROOM, room);
-            }
-            return room;
-        }
-
-        let currentRoomId = getOrCreateDefaultRoom();
-        let firestoreDb = null;
-        let unsubscribeSnapshot = null;
-        let lastLocalUpdate = Date.now();
-        let isSyncingFromCloud = false;
-
-        function initFirebaseSync() {
-            try {
-                if (!firebase.apps.length) {
-                    firebase.initializeApp(defaultFirebaseConfig);
-                }
-                firestoreDb = firebase.firestore();
-                bindCloudRoom(currentRoomId);
-            } catch (err) {
-                console.warn("Firebase 初始化失敗:", err);
-                const statusEl = document.getElementById('cloudModalStatus');
-                if (statusEl) statusEl.innerHTML = `<span class="text-amber-400">離線模式 (本機正常儲存)</span>`;
-            }
-        }
-
-        function bindCloudRoom(roomId) {
-            if (!firestoreDb) return;
-            if (unsubscribeSnapshot) unsubscribeSnapshot();
-
-            const docRef = firestoreDb.collection('bybit_sync_rooms').doc(roomId);
-            unsubscribeSnapshot = docRef.onSnapshot(doc => {
-                if (!doc.exists) {
-                    pushToCloudForce();
-                    return;
-                }
-                const data = doc.data();
-                if (data && data.updatedAt && data.updatedAt > lastLocalUpdate) {
-                    applyCloudState(data);
-                }
-            }, err => {
-                console.warn("Firestore 監聽警告:", err);
-            });
-        }
-
-        function applyCloudState(data) {
-            if (isSyncingFromCloud) return;
-            isSyncingFromCloud = true;
-            try {
-                if (data.simState) {
-                    simState = { ...simState, ...data.simState };
-                    saveToStorage(false);
-                    renderSimPositions();
-                    updateSimHeaderStats();
-                    renderHistoryTable();
-                    renderFomoTrackers();
-                }
-                if (data.adaptiveParams) {
-                    adaptiveParams = {
-                        ...adaptiveParams,
-                        ...data.adaptiveParams,
-                        blacklist: new Set(data.adaptiveParams.blacklist || [])
-                    };
-                    saveToStorage(false);
-                }
-                const syncEl = document.getElementById('cloudLastSyncTime');
-                if (syncEl) syncEl.innerText = new Date().toLocaleTimeString();
-            } finally {
-                isSyncingFromCloud = false;
-            }
-        }
-
-        function pushToCloudForce() {
-            if (!firestoreDb) return;
-            lastLocalUpdate = Date.now();
-            const payload = {
-                updatedAt: lastLocalUpdate,
-                simState: {
-                    balance: simState.balance,
-                    initialBalance: simState.initialBalance,
-                    autoTrade: simState.autoTrade,
-                    maxPositions: simState.maxPositions,
-                    tradeSize: simState.tradeSize,
-                    positions: simState.positions,
-                    history: simState.history,
-                    fomoTrackers: simState.fomoTrackers
-                },
-                adaptiveParams: {
-                    minScore: adaptiveParams.minScore,
-                    stopLossPct: adaptiveParams.stopLossPct,
-                    tp1Pct: adaptiveParams.tp1Pct,
-                    tp2Pct: adaptiveParams.tp2Pct,
-                    trailingPct: adaptiveParams.trailingPct,
-                    minTurnover: adaptiveParams.minTurnover,
-                    blacklist: Array.from(adaptiveParams.blacklist)
-                }
-            };
-            firestoreDb.collection('bybit_sync_rooms').doc(currentRoomId).set(payload).catch(console.warn);
-        }
-
-        function pullFromCloudForce() {
-            if (!firestoreDb) return;
-            firestoreDb.collection('bybit_sync_rooms').doc(currentRoomId).get().then(doc => {
-                if (doc.exists) {
-                    applyCloudState(doc.data());
-                    showToast("已從雲端拉取最新資料！", "📥");
-                }
-            }).catch(err => showToast("拉取失敗: " + err.message, "❌"));
-        }
-
-        function saveToStorage(syncCloud = true) {
+        function saveToStorage() {
             try {
                 localStorage.setItem(STORAGE_KEY_SIM, JSON.stringify(simState));
-                localStorage.setItem(STORAGE_KEY_ADAPTIVE, JSON.stringify({
-                    ...adaptiveParams,
-                    blacklist: Array.from(adaptiveParams.blacklist)
-                }));
-                lastLocalUpdate = Date.now();
-                if (syncCloud && firestoreDb) {
-                    pushToCloudForce();
-                }
-            } catch (err) {
-                console.warn("寫入 localStorage 失敗:", err);
-            }
+            } catch (e) {}
         }
 
+        // Bybit API 請求與數據計算
         async function fetchMarketData() {
-            const netDot = document.getElementById('netDot');
-            if (netDot) netDot.className = "w-2 h-2 rounded-full bg-amber-400 animate-ping mr-1.5";
-
             try {
                 const res = await fetch("https://api.bybit.com/v5/market/tickers?category=linear");
                 const json = await res.json();
-
                 if (json.retCode === 0 && json.result && json.result.list) {
                     processTickersV81(json.result.list);
-                    if (netDot) netDot.className = "w-2 h-2 rounded-full bg-emerald-400 mr-1.5";
-                } else {
-                    if (netDot) netDot.className = "w-2 h-2 rounded-full bg-rose-500 mr-1.5";
                 }
             } catch (err) {
-                console.error("Bybit 請求錯誤:", err);
-                if (netDot) netDot.className = "w-2 h-2 rounded-full bg-rose-500 mr-1.5";
+                console.error("Bybit REST API 請求失敗:", err);
             } finally {
                 countdown = 5;
             }
         }
 
-        /* V8.1 模組 1：市場體制引擎 (Market Regime Engine) */
-        function detectMarketRegime(list) {
-            const btc = list.find(i => i.symbol === "BTCUSDT");
-            let btc1h = 0;
-            let btc24h = 0;
-            if (btc) {
-                const last = parseFloat(btc.lastPrice) || 0;
-                const p1h = parseFloat(btc.prevPrice1h) || last;
-                btc1h = p1h > 0 ? ((last - p1h) / p1h) * 100 : 0;
-                btc24h = (parseFloat(btc.price24hPcnt) || 0) * 100;
-            }
-
-            const altGains = list.filter(i => i.symbol.endsWith("USDT") && !EXCLUDED_SYMBOLS.includes(i.symbol) && parseFloat(i.price24hPcnt) > 0).length;
-            const totalAlts = list.filter(i => i.symbol.endsWith("USDT") && !EXCLUDED_SYMBOLS.includes(i.symbol)).length;
-            const breadthRatio = totalAlts > 0 ? altGains / totalAlts : 0.5;
-
-            let regime = 'RISK_ON';
-            if (btc1h <= -1.2 || btc24h <= -3.5) {
-                regime = 'RISK_OFF';
-            } else if (breadthRatio < 0.40 || Math.abs(btc1h) < 0.3) {
-                regime = 'CHOPPY';
-            } else {
-                regime = 'RISK_ON';
-            }
-
-            currentMarketRegime = regime;
-            const regimeBadge = document.getElementById('regimeBadgeText');
-            const regimeStatusText = document.getElementById('regimeStatusText');
-            const statRegimeName = document.getElementById('statRegimeName');
-            const statBtcTrendText = document.getElementById('statBtcTrendText');
-
-            if (regime === 'RISK_ON') {
-                if (regimeBadge) regimeBadge.innerText = "Regime: RISK_ON";
-                if (regimeStatusText) regimeStatusText.innerText = "大盤: RISK_ON";
-                if (statRegimeName) {
-                    statRegimeName.innerText = "🟢 RISK_ON (多頭動量)";
-                    statRegimeName.className = "text-sm font-bold font-mono text-emerald-400";
-                }
-            } else if (regime === 'RISK_OFF') {
-                if (regimeBadge) regimeBadge.innerText = "Regime: RISK_OFF";
-                if (regimeStatusText) regimeStatusText.innerText = "大盤: RISK_OFF (禁開多)";
-                if (statRegimeName) {
-                    statRegimeName.innerText = "🔴 RISK_OFF (避險防禦)";
-                    statRegimeName.className = "text-sm font-bold font-mono text-rose-400";
-                }
-            } else {
-                if (regimeBadge) regimeBadge.innerText = "Regime: CHOPPY";
-                if (regimeStatusText) regimeStatusText.innerText = "大盤: CHOPPY (震盪洗盤)";
-                if (statRegimeName) {
-                    statRegimeName.innerText = "🟣 CHOPPY (僅限低吸)";
-                    statRegimeName.className = "text-sm font-bold font-mono text-purple-400";
-                }
-            }
-
-            if (statBtcTrendText) {
-                statBtcTrendText.innerText = `BTC 1h: ${btc1h >= 0 ? '+' : ''}${btc1h.toFixed(2)}% · 普漲比: ${Math.round(breadthRatio * 100)}%`;
-            }
-
-            return { regime, btc1h, breadthRatio };
-        }
-
-        /* V8.1 模組 2：真實時間序列量化 (True RVOL & OI Velocity Engine) */
-        function computeTimeSeriesMetrics(symbol, curTurnover, curVolume, curOi, curPrice) {
-            const now = Date.now();
-            let buf = timeSeriesBuffers.get(symbol);
-            if (!buf) {
-                buf = [];
-                timeSeriesBuffers.set(symbol, buf);
-            }
-
-            // 推入最新數據點
-            buf.push({ timestamp: now, turnover: curTurnover, volume: curVolume, oi: curOi, price: curPrice });
-            if (buf.length > BUFFER_MAX_LEN) buf.shift();
-
-            // 1. 計算真實 5m 成交量增長 (Volume Delta)
-            const fiveMinAgo = now - (5 * 60 * 1000);
-            const oldestPoint = buf[0];
-            const fiveMinPoint = buf.find(p => p.timestamp >= fiveMinAgo) || oldestPoint;
-
-            // 5分鐘內的成交額增量
-            const turnover5mDelta = Math.max(0, curTurnover - fiveMinPoint.turnover);
-            // 估算預期 5 分鐘均量 (基於 24h 平均: 24h/288)
-            const expected5mTurnover = (curTurnover / 288) || 1;
-            
-            // 真實 RVOL: 當前5分鐘增量 / 預期5分鐘均量
-            let realRvol = expected5mTurnover > 0 ? (turnover5mDelta / expected5mTurnover) : 1.0;
-            // 限制合理顯示範圍
-            realRvol = Math.max(0.5, Math.min(20.0, realRvol));
-
-            // 2. 計算真實 OI 向量增速 (OI Velocity & Acceleration)
-            const oiStart = fiveMinPoint.oi || curOi;
-            let oiVelocity = 0;
-            if (oiStart > 0) {
-                oiVelocity = ((curOi - oiStart) / oiStart) * 100;
-            }
-
-            // 3. Price + OI 驗證矩陣 (新多頭 vs 空頭平倉)
-            const priceChange5m = fiveMinPoint.price > 0 ? ((curPrice - fiveMinPoint.price) / fiveMinPoint.price) * 100 : 0;
-            let oiMatrixInterpretation = "中性沉澱";
-            let isGenuineNewLong = false;
-
-            if (priceChange5m > 0.3 && oiVelocity > 1.0) {
-                oiMatrixInterpretation = "🟢 新多頭進場 (真突破)";
-                isGenuineNewLong = true;
-            } else if (priceChange5m > 0.3 && oiVelocity < -0.5) {
-                oiMatrixInterpretation = "⚠️ 空頭平倉 (短命反彈)";
-            } else if (priceChange5m < -0.3 && oiVelocity > 1.0) {
-                oiMatrixInterpretation = "🔴 新空頭進場 (多頭陷阱)";
-            } else if (priceChange5m < -0.3 && oiVelocity < -0.5) {
-                oiMatrixInterpretation = "🩸 多頭爆倉清算";
-            }
-
-            return { realRvol, oiVelocity, oiMatrixInterpretation, isGenuineNewLong };
-        }
-
-        /* V8.1 模組 3：盤口深度與可交易性引擎 (Orderbook Tradeability Engine) */
-        function evaluateTradeability(symbol, lastPrice, askPrice, bidPrice, turnover24h) {
-            let spreadPct = 0.05; // 預設 0.05%
-            if (askPrice > 0 && bidPrice > 0 && askPrice >= bidPrice) {
-                spreadPct = ((askPrice - bidPrice) / lastPrice) * 100;
-            }
-
-            let tradeQuality = 100;
-
-            // 點差懲罰 (Spread Penalty)
-            if (spreadPct > 0.25) tradeQuality -= 40; // 點差大於 0.25% 屬於高滑點垃圾標的
-            else if (spreadPct > 0.12) tradeQuality -= 20;
-            else if (spreadPct <= 0.04) tradeQuality += 5;
-
-            // 流動性厚度
-            if (turnover24h < 1500000) tradeQuality -= 25;
-            else if (turnover24h >= 6000000) tradeQuality += 10;
-
-            // 超微小幣報價不均懲罰
-            if (lastPrice <= 0.00005) tradeQuality -= 10;
-
-            const finalQuality = Math.max(10, Math.min(99, Math.round(tradeQuality)));
-            const estimatedSlippage = (spreadPct * 0.6) + 0.03; // 預估進場單邊滑點 %
-
-            return {
-                spreadPct,
-                tradeabilityScore: finalQuality,
-                estimatedSlippage: Math.min(1.0, estimatedSlippage)
-            };
-        }
-
-        /* V8.1 模組 4：特徵群獨立評分 (Feature Group Scoring - 杜絕同一件事重複加分) */
-        function calculateFeatureGroupScoreV81(coin) {
-            // A. Price Action (上限 25 分)
-            let priceScore = 0;
-            if (coin.momentum1h >= 2.5 && coin.momentum1h <= 8.5) priceScore += 16;
-            else if (coin.momentum1h >= 1.2) priceScore += 8;
-            if (coin.rangePercent >= 85 && coin.price24hPcnt <= 20) priceScore += 9;
-            if (coin.price24hPcnt > 22) priceScore -= 15; // 追高魚尾重罰
-            priceScore = Math.max(0, Math.min(25, priceScore));
-
-            // B. Volume & RVOL (上限 25 分 - 使用真值 RVOL)
-            let volumeScore = 0;
-            if (coin.rvol >= 3.5) volumeScore += 20;
-            else if (coin.rvol >= 2.0) volumeScore += 14;
-            else if (coin.rvol >= 1.2) volumeScore += 6;
-            if (coin.turnover24h >= 3000000) volumeScore += 5;
-            volumeScore = Math.max(0, Math.min(25, volumeScore));
-
-            // C. Derivatives & OI Velocity (上限 25 分 - 使用真值增速與矩陣)
-            let derivScore = 0;
-            if (coin.isGenuineNewLong) derivScore += 15; // 價量與 OI 同步增長
-            if (coin.oiVelocity >= 2.0) derivScore += 8;
-            else if (coin.oiVelocity >= 0.8) derivScore += 4;
-            // 逼空負費率
-            if (coin.fundingRate <= -0.08) derivScore += 7;
-            else if (coin.fundingRate <= -0.03) derivScore += 3;
-            derivScore = Math.max(0, Math.min(25, derivScore));
-
-            // D. Tradeability (上限 15 分 - 依據盤口點差)
-            let tradeScore = Math.round((coin.tradeabilityScore / 100) * 15);
-
-            // E. Context (上限 10 分)
-            let contextScore = 5;
-            if (currentMarketRegime === 'RISK_ON') contextScore += 5;
-            else if (currentMarketRegime === 'RISK_OFF') contextScore -= 5;
-            contextScore = Math.max(0, Math.min(10, contextScore));
-
-            const totalScore = priceScore + volumeScore + derivScore + tradeScore + contextScore;
-
-            // 嚴格分級：A+ 必須評分 ≥ 85 且可交易性 ≥ 75
-            let grade = 'C';
-            if (totalScore >= 85 && coin.tradeabilityScore >= 75) grade = 'A+';
-            else if (totalScore >= 75) grade = 'A';
-            else if (totalScore >= 65) grade = 'B';
-
-            return {
-                precisionScore: Math.min(99, Math.max(10, Math.round(totalScore))),
-                grade,
-                details: { priceScore, volumeScore, derivScore, tradeScore, contextScore }
-            };
-        }
-
         function processTickersV81(list) {
-            const { regime, btc1h } = detectMarketRegime(list);
             const newTickers = [];
+            const timestamp = Date.now();
 
             list.forEach(item => {
                 const symbol = item.symbol;
                 if (!symbol.endsWith("USDT")) return;
 
                 const lastPrice = parseFloat(item.lastPrice) || 0;
-                const markPrice = parseFloat(item.markPrice) || lastPrice;
-                const askPrice = parseFloat(item.ask1Price) || (lastPrice * 1.0005);
-                const bidPrice = parseFloat(item.bid1Price) || (lastPrice * 0.9995);
-
+                if (lastPrice <= 0) return;
                 allMarketPrices.set(symbol, lastPrice);
-                allMarkPrices.set(symbol, markPrice);
-                allAskPrices.set(symbol, askPrice);
-                allBidPrices.set(symbol, bidPrice);
 
-                if (EXCLUDED_SYMBOLS.includes(symbol)) return;
-
-                const price24hPcnt = (parseFloat(item.price24hPcnt) || 0) * 100;
                 const turnover24h = parseFloat(item.turnover24h) || 0;
-                const volume24h = parseFloat(item.volume24h) || 0;
-                const high24h = parseFloat(item.highPrice24h) || lastPrice;
-                const low24h = parseFloat(item.lowPrice24h) || lastPrice;
-                const fundingRate = (parseFloat(item.fundingRate) || 0) * 100;
-                const prevPrice1h = parseFloat(item.prevPrice1h) || lastPrice;
-                const momentum1h = prevPrice1h > 0 ? ((lastPrice - prevPrice1h) / prevPrice1h) * 100 : 0;
                 const openInterestValue = parseFloat(item.openInterestValue) || 0;
+                const bid1Price = parseFloat(item.bid1Price) || lastPrice;
+                const ask1Price = parseFloat(item.ask1Price) || lastPrice;
 
-                let rangePercent = 50;
-                if (high24h > low24h) {
-                    rangePercent = Math.min(100, Math.max(0, ((lastPrice - low24h) / (high24h - low24h)) * 100));
+                // 1. 計算盤口點差 Spread %
+                const spreadPct = ask1Price > 0 ? ((ask1Price - bid1Price) / ask1Price) * 100 : 0.05;
+
+                // 2. 更新時間序列緩衝區 (5m RVOL & OI Velocity)
+                if (!volumeHistory.has(symbol)) volumeHistory.set(symbol, []);
+                if (!oiHistory.has(symbol)) oiHistory.set(symbol, []);
+
+                const vHist = volumeHistory.get(symbol);
+                const oHist = oiHistory.get(symbol);
+
+                vHist.push({ time: timestamp, vol: turnover24h });
+                oHist.push({ time: timestamp, oi: openInterestValue });
+
+                if (vHist.length > 12) vHist.shift(); // 保留 12 個樣本
+                if (oHist.length > 12) oHist.shift();
+
+                // 算真正 RVOL (以近幾次抓取的增量為基準)
+                let rvol = 1.0;
+                if (vHist.length >= 2) {
+                    const latestDelta = Math.max(0, vHist[vHist.length - 1].vol - vHist[vHist.length - 2].vol);
+                    const prevDeltas = [];
+                    for (let i = 1; i < vHist.length - 1; i++) {
+                        prevDeltas.push(Math.max(0, vHist[i].vol - vHist[i - 1].vol));
+                    }
+                    const avgDelta = prevDeltas.length > 0 ? (prevDeltas.reduce((a, b) => a + b, 0) / prevDeltas.length) : latestDelta;
+                    rvol = avgDelta > 0 ? (latestDelta / avgDelta) : 1.0;
                 }
 
-                // 1. 執行真值時間序列運算 (True RVOL & OI Velocity)
-                const { realRvol, oiVelocity, oiMatrixInterpretation, isGenuineNewLong } = computeTimeSeriesMetrics(
-                    symbol, turnover24h, volume24h, openInterestValue, lastPrice
-                );
+                // 算真正 OI Velocity (持倉向量增速)
+                let oiVelocity = 0.0;
+                if (oHist.length >= 2) {
+                    const prevOi = oHist[oHist.length - 2].oi;
+                    if (prevOi > 0) {
+                        oiVelocity = ((oHist[oHist.length - 1].oi - prevOi) / prevOi) * 100;
+                    }
+                }
 
-                // 2. 評估可交易性與盤口點差
-                const { spreadPct, tradeabilityScore, estimatedSlippage } = evaluateTradeability(
-                    symbol, lastPrice, askPrice, bidPrice, turnover24h
-                );
+                const price24hPcnt = (parseFloat(item.price24hPcnt) || 0) * 100;
+                const prevPrice1h = parseFloat(item.prevPrice1h) || lastPrice;
+                const momentum1h = prevPrice1h > 0 ? ((lastPrice - prevPrice1h) / prevPrice1h) * 100 : 0;
+                const fundingRate = (parseFloat(item.fundingRate) || 0) * 100;
 
-                // 3. 特徵群獨立評分
-                const { precisionScore, grade, details } = calculateFeatureGroupScoreV81({
-                    momentum1h, price24hPcnt, rangePercent, turnover24h, openInterestValue,
-                    fundingRate, lastPrice, rvol: realRvol, oiVelocity, isGenuineNewLong, tradeabilityScore
+                // 3. 特徵分組計分 Engine
+                const featureScore = calculateFeatureGroupScoreV81({
+                    momentum1h, rvol, oiVelocity, turnover24h, spreadPct, fundingRate, price24hPcnt
                 });
 
-                // 4. 決策訊號
-                const { signalType, signalText, signalColor } = determineSignalV81(
-                    precisionScore, grade, momentum1h, price24hPcnt, fundingRate, regime, isGenuineNewLong
-                );
+                // 4. 評級判定
+                let grade = 'C';
+                if (featureScore >= 85 && spreadPct <= 0.10 && rvol >= 2.0) grade = 'A+';
+                else if (featureScore >= 75) grade = 'A';
+                else if (featureScore >= 65) grade = 'B';
 
                 const record = {
-                    symbol, lastPrice, markPrice, askPrice, bidPrice,
-                    price24hPcnt, momentum1h, turnover24h, openInterestValue,
-                    fundingRate, rangePercent, rvol: realRvol, oiVelocity,
-                    oiMatrixInterpretation, isGenuineNewLong,
-                    spreadPct, tradeabilityScore, estimatedSlippage,
-                    precisionScore, grade, details,
-                    signalType, signalText, signalColor
+                    symbol, lastPrice, price24hPcnt, momentum1h, turnover24h,
+                    openInterestValue, rvol, oiVelocity, spreadPct, fundingRate,
+                    score: featureScore, grade
                 };
 
                 newTickers.push(record);
-                checkAnomalyAlerts(record);
             });
 
             rawTickers = newTickers;
-            updateGlobalStatsV81();
-            applyFilters();
-            renderHotCoinsV81();
-            updateSimPositionsV81();
-            updateFomoTrackers();
-            syncWebSocketSubscriptions();
-
-            // 自動狙擊：只有 A+ Setup 且大盤非 RISK_OFF 時觸發
-            if (simState.autoTrade && currentMarketRegime !== 'RISK_OFF') {
-                checkPrecisionAutoTradingV81();
-            }
-        }
-
-        function determineSignalV81(score, grade, momentum1h, price24h, fundingRate, regime, isGenuineNewLong) {
-            if (regime === 'RISK_OFF') {
-                return { signalType: "REGIME_OFF", signalText: "⚠️ 大盤避險", signalColor: "bg-rose-950/60 text-rose-300 border-rose-500/40" };
-            }
-            if (price24h > 22) {
-                return { signalType: "HIGH_RISK", signalText: "⚠️ 魚尾出貨", signalColor: "bg-rose-500/20 text-rose-300 border-rose-500/40" };
-            }
-            if (grade === 'A+' && isGenuineNewLong) {
-                return { signalType: "APLUS_SNIPER", signalText: "🟢 A+ 頂級狙擊", signalColor: "bg-emerald-500/20 text-emerald-300 border-emerald-500/50" };
-            }
-            if (fundingRate <= -0.06 && price24h <= 15.0) {
-                return { signalType: "SQUEEZE_BUY", signalText: "🧲 極限逼空", signalColor: "bg-cyan-500/20 text-cyan-300 border-cyan-500/40" };
-            }
-            if (score >= 80 && momentum1h >= 2.5) {
-                return { signalType: "EARLY_MOMENTUM", signalText: "🚀 初動突圍", signalColor: "bg-amber-500/20 text-amber-300 border-amber-500/40" };
-            }
-            return { signalType: "CONSOLIDATION", signalText: "💤 震盪過濾", signalColor: "bg-slate-800 text-slate-400 border-slate-700" };
-        }
-
-        /* V8.1 模組 5：真實扣費撮合與嚴格風控開倉 (Realistic Execution & Risk Engine) */
-        function checkPrecisionAutoTradingV81() {
-            if (simState.positions.length >= simState.maxPositions) return;
-
-            const candidates = rawTickers.filter(coin => {
-                if (adaptiveParams.blacklist.has(coin.symbol)) return false;
-                if (coin.turnover24h < adaptiveParams.minTurnover) return false;
-                if (simState.positions.some(p => p.symbol === coin.symbol)) return false;
-
-                // 漏斗過濾 1：精準模式嚴格要求 A+ Setup
-                if (precisionModeOnly) {
-                    if (coin.grade !== 'A+' || coin.precisionScore < adaptiveParams.minScore) return false;
-                } else {
-                    if (coin.precisionScore < 80) return false;
-                }
-
-                // 漏斗過濾 2：可交易性與點差嚴格把關
-                if (coin.tradeabilityScore < 75 || coin.spreadPct > 0.15) {
-                    rejectedTradesCount++;
-                    return false;
-                }
-
-                return ["APLUS_SNIPER", "SQUEEZE_BUY", "EARLY_MOMENTUM"].includes(coin.signalType);
-            });
-
-            if (candidates.length > 0) {
-                candidates.sort((a, b) => b.precisionScore - a.precisionScore);
-                const availableSlots = simState.maxPositions - simState.positions.length;
-                const openCount = Math.min(availableSlots, 1); // 每次最多進 1 檔，極致風控
-
-                for (let i = 0; i < openCount; i++) {
-                    executeOpenPositionV81(candidates[i], `V8.1: ${candidates[i].signalText} (RVOL:${candidates[i].rvol.toFixed(1)}x, 評分:${candidates[i].precisionScore})`);
-                    recordSignalIntelligence(candidates[i]);
-                }
-            }
-        }
-
-        function executeOpenPositionV81(coin, reason) {
-            if (simState.positions.some(p => p.symbol === coin.symbol)) return;
-            if (simState.positions.length >= simState.maxPositions) return;
-
-            const notional = simState.tradeSize;
-            // 真實撮合：以 Ask 賣一價 + 預估滑點進場
-            const entryPrice = coin.askPrice * (1 + (coin.estimatedSlippage / 100));
-            if (entryPrice <= 0) return;
-            const qty = notional / entryPrice;
-
-            // 開倉手續費扣除 (0.055% Taker Fee)
-            const entryFee = notional * simState.takerFeeRate;
-            simState.balance -= entryFee;
-
-            const slPrice = entryPrice * (1 - (adaptiveParams.stopLossPct / 100));
-            const tp1Price = entryPrice * (1 + (adaptiveParams.tp1Pct / 100));
-            const tp2Price = entryPrice * (1 + (adaptiveParams.tp2Pct / 100));
-
-            const position = {
-                id: 'POS_' + Date.now() + '_' + coin.symbol,
-                symbol: coin.symbol,
-                entryPrice,
-                currentPrice: entryPrice,
-                qty,
-                originalQty: qty,
-                remainingRatio: 1.0,
-                notional,
-                openTime: Date.now(),
-                stopLoss: slPrice,
-                tp1: tp1Price,
-                tp2: tp2Price,
-                tp1Reached: false,
-                tp2Reached: false,
-                isMoonBag: false,
-                highestPrice: entryPrice,
-                lowestPrice: entryPrice,
-                feesPaid: entryFee,
-                realizedNetPnl: -entryFee,
-                reason,
-                score: coin.precisionScore,
-                grade: coin.grade,
-                rvolAtEntry: coin.rvol,
-                oiVelocityAtEntry: coin.oiVelocity
-            };
-
-            simState.positions.push(position);
-            saveToStorage();
-            pushAlertLog(coin.symbol, "🎯 V8.1 狙擊開倉", `${reason} | 入場 $${formatPrice(entryPrice)} | SL $${formatPrice(slPrice)} (手續費-$${entryFee.toFixed(3)})`, entryPrice, "bull");
-            playAlertSound("bull");
-            renderSimPositions();
+            renderMarketTable(newTickers);
+            updateSimPositions();
             updateSimHeaderStats();
-            syncWebSocketSubscriptions();
+
+            if (simState.autoTrade) {
+                checkAutoTradingOpportunities();
+            }
         }
 
-        function evaluateSinglePositionWickV81(pos, curLastPrice, curMarkPrice, curBidPrice) {
-            const effectivePrice = curBidPrice || curLastPrice || pos.currentPrice;
-            const testPrices = [effectivePrice];
-            if (curMarkPrice && curMarkPrice > 0) testPrices.push(curMarkPrice);
+        function calculateFeatureGroupScoreV81(f) {
+            let score = 0;
 
-            // 1. 硬止損防守
-            const isSlTriggered = testPrices.some(p => p <= pos.stopLoss);
-            if (isSlTriggered) {
-                const exitPrice = pos.stopLoss;
-                const exitNotional = pos.qty * exitPrice;
-                const exitFee = exitNotional * simState.takerFeeRate;
-                const grossPnl = ((exitPrice - pos.entryPrice) / pos.entryPrice) * (pos.qty * pos.entryPrice);
-                const netPnl = grossPnl - exitFee;
+            // A. Price Action (Max 25)
+            if (f.momentum1h >= 3.0 && f.momentum1h <= 12.0) score += 25;
+            else if (f.momentum1h >= 1.5) score += 15;
 
-                return {
-                    action: 'close',
-                    exitPrice,
-                    netPnl,
-                    fee: exitFee,
-                    reason: pos.tp1Reached ? "🛡️ 觸發保本/鎖利損離場" : "🔴 觸發防守止損 (SL)"
-                };
-            }
+            // B. Volume & Acceleration (Max 20)
+            if (f.rvol >= 3.0) score += 20;
+            else if (f.rvol >= 1.8) score += 12;
 
-            // 2. TP1 達標：平 35% 並推進保本損
-            const isTp1Triggered = testPrices.some(p => p >= pos.tp1);
-            if (!pos.tp1Reached && isTp1Triggered) {
-                pos.tp1Reached = true;
-                const closeQty = pos.originalQty * 0.35;
-                const closeNotional = closeQty * pos.tp1;
-                const closeFee = closeNotional * simState.takerFeeRate;
-                const tp1GrossPnl = ((pos.tp1 - pos.entryPrice) / pos.entryPrice) * (closeQty * pos.entryPrice);
-                const tp1NetPnl = tp1GrossPnl - closeFee;
+            // C. Derivatives & OI (Max 30)
+            if (f.oiVelocity >= 2.0) score += 20;
+            else if (f.oiVelocity >= 0.5) score += 10;
+            if (f.fundingRate <= -0.05) score += 10;
 
-                pos.qty -= closeQty;
-                pos.remainingRatio -= 0.35;
-                pos.feesPaid += closeFee;
-                pos.realizedNetPnl += tp1NetPnl;
-                simState.balance += tp1NetPnl;
-                pos.stopLoss = pos.entryPrice * 1.002; // 保本損
-                saveToStorage(true);
+            // D. Tradeability & Spread (Max 15)
+            if (f.spreadPct <= 0.05) score += 15;
+            else if (f.spreadPct <= 0.12) score += 8;
 
-                pushAlertLog(pos.symbol, "🎯 TP1 達標鎖利", `平倉 35% 鎖定 +${adaptiveParams.tp1Pct}% (淨賺+$${tp1NetPnl.toFixed(2)})，防守線已移至保本！`, pos.tp1, "bull");
-                playAlertSound("bull");
-            }
+            // E. Market Context (Max 10)
+            if (f.turnover24h >= 2500000) score += 10;
 
-            // 3. 階梯利潤防守：達 +5.5% 上移至 +2.0% 鎖利
-            if (!pos.tp2Reached && pos.highestPrice >= pos.entryPrice * 1.055) {
-                const lockProfitPrice = pos.entryPrice * 1.02;
-                if (pos.stopLoss < lockProfitPrice) {
-                    pos.stopLoss = lockProfitPrice;
-                }
-            }
-
-            // 4. TP2 達標：再平 35%，剩餘 30% 啟動奔馳尾倉
-            const isTp2Triggered = testPrices.some(p => p >= pos.tp2);
-            if (pos.tp1Reached && !pos.tp2Reached && isTp2Triggered) {
-                pos.tp2Reached = true;
-                const closeQty = pos.originalQty * 0.35;
-                const closeNotional = closeQty * pos.tp2;
-                const closeFee = closeNotional * simState.takerFeeRate;
-                const tp2GrossPnl = ((pos.tp2 - pos.entryPrice) / pos.entryPrice) * (closeQty * pos.entryPrice);
-                const tp2NetPnl = tp2GrossPnl - closeFee;
-
-                pos.qty -= closeQty;
-                pos.remainingRatio = 0.30;
-                pos.feesPaid += closeFee;
-                pos.realizedNetPnl += tp2NetPnl;
-                simState.balance += tp2NetPnl;
-                pos.isMoonBag = true;
-                saveToStorage(true);
-
-                pushAlertLog(pos.symbol, "💎 TP2 達標激活尾倉", `平倉 35% (淨賺+$${tp2NetPnl.toFixed(2)})，剩餘 30% 尾倉啟動無限奔馳！`, pos.tp2, "bull");
-                playAlertSound("bull");
-            }
-
-            // 5. 奔馳尾倉回撤鎖利
-            if (pos.isMoonBag) {
-                const pullback = (pos.highestPrice - effectivePrice) / pos.highestPrice;
-                if (pullback >= (adaptiveParams.trailingPct / 100)) {
-                    const exitNotional = pos.qty * effectivePrice;
-                    const exitFee = exitNotional * simState.takerFeeRate;
-                    const grossPnl = ((effectivePrice - pos.entryPrice) / pos.entryPrice) * (pos.qty * pos.entryPrice);
-                    const netPnl = grossPnl - exitFee;
-
-                    return {
-                        action: 'close',
-                        exitPrice: effectivePrice,
-                        netPnl,
-                        fee: exitFee,
-                        reason: `🚀 奔馳尾倉鎖利 (高點回撤 -${adaptiveParams.trailingPct}%)`
-                    };
-                }
-            }
-
-            return null;
+            return Math.min(100, score);
         }
 
-        function updateSimPositionsV81() {
-            if (simState.positions.length === 0) {
+        // 模擬搓合與浮動盈虧更新 (全面修復 NaN)
+        function updateSimPositions() {
+            if (!simState.positions || simState.positions.length === 0) {
                 renderSimPositions();
                 return;
             }
 
-            const now = Date.now();
             const closedPositions = [];
-            let priceChanged = false;
 
             simState.positions.forEach(pos => {
-                const curPrice = allMarketPrices.get(pos.symbol) || pos.currentPrice;
-                const curMark = allMarkPrices.get(pos.symbol) || curPrice;
-                const curBid = allBidPrices.get(pos.symbol) || curPrice;
-                if (!curPrice || curPrice <= 0) return;
+                const curPrice = parseFloat(allMarketPrices.get(pos.symbol)) || parseFloat(pos.currentPrice) || parseFloat(pos.entryPrice);
+                pos.currentPrice = curPrice;
 
-                if (pos.currentPrice !== curPrice) {
-                    pos.currentPrice = curPrice;
-                    priceChanged = true;
-                }
-                if (curPrice > pos.highestPrice) {
-                    pos.highestPrice = curPrice;
-                    priceChanged = true;
-                }
-                if (curPrice < pos.lowestPrice) {
-                    pos.lowestPrice = curPrice;
-                    priceChanged = true;
-                }
+                if (curPrice > pos.highestPrice) pos.highestPrice = curPrice;
 
-                const wickResult = evaluateSinglePositionWickV81(pos, curPrice, curMark, curBid);
-                if (wickResult && wickResult.action === 'close') {
-                    closedPositions.push({ pos, exitPrice: wickResult.exitPrice, netPnl: wickResult.netPnl, reason: wickResult.reason });
+                // 1. 硬止損防守
+                if (curPrice <= pos.stopLoss) {
+                    const exitPnl = ((pos.stopLoss - pos.entryPrice) / pos.entryPrice) * (pos.qty * pos.entryPrice);
+                    closedPositions.push({ pos, exitPrice: pos.stopLoss, pnl: exitPnl, reason: "🔴 觸發防守止損 (SL)" });
                     return;
                 }
 
-                // 橫盤保護放寬至 300 分鐘 (5小時)，且盈利或 TP1 通關絕不強制切倉
-                const pnlPcnt = ((curPrice - pos.entryPrice) / pos.entryPrice) * 100;
-                const holdingMinutes = (now - pos.openTime) / 60000;
-                if (!pos.tp1Reached && holdingMinutes >= 300 && pnlPcnt < 0 && pnlPcnt > -2.5) {
-                    const exitNotional = pos.qty * curPrice;
-                    const exitFee = exitNotional * simState.takerFeeRate;
-                    const grossPnl = ((curPrice - pos.entryPrice) / pos.entryPrice) * (pos.qty * pos.entryPrice);
-                    closedPositions.push({ pos, exitPrice: curPrice, netPnl: grossPnl - exitFee, reason: "⏱️ 5小時無動能微虧換幣" });
-                    return;
+                // 2. TP1 達標 (平 35% 鎖保本)
+                if (!pos.tp1Reached && curPrice >= pos.tp1) {
+                    pos.tp1Reached = true;
+                    const closeQty = pos.originalQty * 0.35;
+                    const tp1Pnl = ((curPrice - pos.entryPrice) / pos.entryPrice) * (closeQty * pos.entryPrice);
+
+                    pos.qty -= closeQty;
+                    pos.realizedPnl += tp1Pnl;
+                    simState.balance += tp1Pnl;
+                    pos.stopLoss = pos.entryPrice * 1.002; // 推進至保本
+                    saveToStorage();
                 }
             });
 
             closedPositions.forEach(item => {
-                finalizeClosedTradeV81(item.pos, item.exitPrice, item.netPnl, item.reason);
+                finalizeClosedTrade(item.pos, item.exitPrice, item.pnl, item.reason);
             });
-
-            if (priceChanged && closedPositions.length === 0) {
-                saveToStorage(false);
-            }
 
             renderSimPositions();
             updateSimHeaderStats();
         }
 
-        function finalizeClosedTradeV81(pos, exitPrice, netPnl, reason) {
+        function finalizeClosedTrade(pos, exitPrice, pnl, reason) {
             simState.positions = simState.positions.filter(p => p.id !== pos.id);
-            simState.balance += netPnl;
+            const safePnl = isNaN(pnl) ? 0 : pnl;
+            simState.balance += safePnl;
 
-            // 計算 MFE (最大盈利潛能) 與 MAE (最大不利回撤)
-            const mfe = ((pos.highestPrice - pos.entryPrice) / pos.entryPrice) * 100;
-            const mae = ((pos.lowestPrice - pos.entryPrice) / pos.entryPrice) * 100;
-
-            const record = {
+            simState.history.unshift({
                 symbol: pos.symbol,
                 entryPrice: pos.entryPrice,
                 exitPrice: exitPrice,
-                pnl: netPnl,
+                pnl: safePnl,
                 pnlPct: ((exitPrice - pos.entryPrice) / pos.entryPrice) * 100,
                 durationMin: Math.round((Date.now() - pos.openTime) / 60000),
                 reason: reason,
-                score: pos.score,
-                grade: pos.grade || 'A',
-                mfe: mfe.toFixed(2),
-                mae: mae.toFixed(2),
-                regime: currentMarketRegime,
                 closedAt: new Date().toLocaleTimeString()
+            });
+
+            saveToStorage();
+            renderSimPositions();
+            updateSimHeaderStats();
+        }
+
+        // 自動開倉驗證
+        function checkAutoTradingOpportunities() {
+            if (simState.positions.length >= simState.maxPositions) return;
+
+            const candidates = rawTickers.filter(c => {
+                if (adaptiveParams.blacklist.has(c.symbol)) return false;
+                if (simState.positions.some(p => p.symbol === c.symbol)) return false;
+                return c.grade === 'A+' && c.score >= adaptiveParams.minScore;
+            });
+
+            if (candidates.length > 0) {
+                executeOpenPosition(candidates[0], "🟢 A+ 頂級狙擊發射");
+            }
+        }
+
+        function executeOpenPosition(coin, reason) {
+            if (simState.positions.length >= simState.maxPositions) return;
+
+            const notional = parseFloat(simState.tradeSize) || 50.0;
+            const entryPrice = parseFloat(coin.lastPrice) || 0.0001;
+            const qty = notional / entryPrice;
+
+            const position = {
+                id: 'POS_' + Date.now() + '_' + coin.symbol,
+                symbol: coin.symbol,
+                entryPrice: entryPrice,
+                currentPrice: entryPrice,
+                qty: qty,
+                originalQty: qty,
+                notional: notional,
+                openTime: Date.now(),
+                stopLoss: entryPrice * (1 - (adaptiveParams.stopLossPct / 100)),
+                tp1: entryPrice * (1 + (adaptiveParams.tp1Pct / 100)),
+                tp2: entryPrice * (1 + (adaptiveParams.tp2Pct / 100)),
+                tp1Reached: false,
+                isMoonBag: false,
+                highestPrice: entryPrice,
+                realizedPnl: 0.0,
+                reason: reason,
+                score: coin.score
             };
 
-            simState.history.unshift(record);
-            if (simState.history.length > 300) simState.history.pop();
-
-            addFomoTracker(pos.symbol, pos.entryPrice, exitPrice);
+            simState.positions.push(position);
             saveToStorage();
-
-            const isWin = netPnl > 0;
-            pushAlertLog(pos.symbol, isWin ? "💰 模擬平倉淨盈利" : "🩸 模擬平倉止損", `${reason} | 淨盈虧: ${netPnl >= 0 ? '+' : ''}$${netPnl.toFixed(2)} (${record.pnlPct.toFixed(2)}%) | MFE:+${mfe.toFixed(1)}%`, exitPrice, isWin ? "bull" : "bear");
-            playAlertSound(isWin ? "bull" : "bear");
-
-            renderHistoryTable();
-            updateScorecardStats();
-            syncWebSocketSubscriptions();
+            renderSimPositions();
+            updateSimHeaderStats();
         }
 
-        function initBybitWebSocket() {
-            try {
-                if (bybitWs) {
-                    bybitWs.onclose = null;
-                    bybitWs.close();
-                }
-                bybitWs = new WebSocket("wss://stream.bybit.com/v5/public/linear");
+        // 頂部儀表板數據算式 (防禦 NaN)
+        function updateSimHeaderStats() {
+            let unrealizedPnl = 0.0;
 
-                bybitWs.onopen = () => {
-                    const wsDot = document.getElementById('wsDot');
-                    const wsText = document.getElementById('wsStatusText');
-                    if (wsDot) wsDot.className = "w-1.5 h-1.5 rounded-full bg-emerald-400 mr-1.5 animate-pulse";
-                    if (wsText) wsText.innerText = "WS: 毫秒即時流 (已連線)";
-                    wsSubscribedSymbols.clear();
-                    syncWebSocketSubscriptions();
-                };
+            if (simState.positions && Array.isArray(simState.positions)) {
+                simState.positions.forEach(pos => {
+                    const entryPrice = parseFloat(pos.entryPrice) || 0;
+                    const curPrice = parseFloat(pos.currentPrice) || entryPrice;
+                    const qty = parseFloat(pos.qty) || 0;
+                    const notional = parseFloat(pos.notional) || (qty * entryPrice);
 
-                bybitWs.onmessage = (event) => {
-                    try {
-                        const message = JSON.parse(event.data);
-                        if (message && message.topic && message.topic.startsWith("tickers.") && message.data) {
-                            const tick = message.data;
-                            const symbol = tick.symbol;
-                            if (!symbol) return;
-
-                            const lastPrice = parseFloat(tick.lastPrice);
-                            const markPrice = parseFloat(tick.markPrice);
-                            const bidPrice = parseFloat(tick.bid1Price);
-                            const askPrice = parseFloat(tick.ask1Price);
-
-                            if (!isNaN(lastPrice) && lastPrice > 0) allMarketPrices.set(symbol, lastPrice);
-                            if (!isNaN(markPrice) && markPrice > 0) allMarkPrices.set(symbol, markPrice);
-                            if (!isNaN(bidPrice) && bidPrice > 0) allBidPrices.set(symbol, bidPrice);
-                            if (!isNaN(askPrice) && askPrice > 0) allAskPrices.set(symbol, askPrice);
-
-                            const pos = simState.positions.find(p => p.symbol === symbol);
-                            if (pos) {
-                                if (lastPrice > 0 && lastPrice !== pos.currentPrice) {
-                                    pos.currentPrice = lastPrice;
-                                    if (lastPrice > pos.highestPrice) pos.highestPrice = lastPrice;
-                                    if (lastPrice < pos.lowestPrice) pos.lowestPrice = lastPrice;
-                                }
-
-                                const wickResult = evaluateSinglePositionWickV81(pos, lastPrice || pos.currentPrice, markPrice, bidPrice);
-                                if (wickResult && wickResult.action === 'close') {
-                                    finalizeClosedTradeV81(pos, wickResult.exitPrice, wickResult.netPnl, wickResult.reason);
-                                    renderSimPositions();
-                                    updateSimHeaderStats();
-                                }
-                            }
-                        }
-                    } catch (e) {}
-                };
-
-                bybitWs.onerror = () => {
-                    const wsText = document.getElementById('wsStatusText');
-                    if (wsText) wsText.innerText = "WS: 重試連線中...";
-                };
-
-                bybitWs.onclose = () => {
-                    if (wsReconnectTimeout) clearTimeout(wsReconnectTimeout);
-                    wsReconnectTimeout = setTimeout(initBybitWebSocket, 3000);
-                };
-            } catch (err) {
-                console.warn("WebSocket 初始化失敗:", err);
+                    if (entryPrice > 0 && qty > 0) {
+                        const grossPnl = ((curPrice - entryPrice) / entryPrice) * (qty * entryPrice);
+                        const entryFee = notional * 0.00055;
+                        const exitFee = (qty * curPrice) * 0.00055;
+                        const netPnl = grossPnl - (entryFee + exitFee);
+                        if (!isNaN(netPnl)) unrealizedPnl += netPnl;
+                    }
+                });
             }
+
+            const balance = parseFloat(simState.balance) || 100000.0;
+            const totalEquity = balance + unrealizedPnl;
+            const totalPnlPct = ((totalEquity - simState.initialBalance) / simState.initialBalance) * 100;
+
+            document.getElementById('simEquityDisplay').innerText = `$${totalEquity.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            document.getElementById('simEquityDisplay').className = `text-sm sm:text-base font-bold font-mono ${totalEquity >= simState.initialBalance ? 'text-emerald-400' : 'text-rose-400'}`;
+
+            document.getElementById('simBalanceDisplay').innerText = `$${balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            
+            const pnlEl = document.getElementById('simTotalPnlDisplay');
+            pnlEl.innerText = `(${totalPnlPct >= 0 ? '+' : ''}${totalPnlPct.toFixed(2)}%)`;
+            pnlEl.className = `text-xs font-mono font-semibold ${totalPnlPct >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
+
+            document.getElementById('simOpenPositionsCount').innerText = `${simState.positions.length} / ${simState.maxPositions}`;
         }
 
-        function syncWebSocketSubscriptions() {
-            if (!bybitWs || bybitWs.readyState !== WebSocket.OPEN) return;
-            const neededSymbols = new Set(simState.positions.map(p => p.symbol));
+        // 渲染持倉看板 (徹底修復 NaN)
+        function renderSimPositions() {
+            const container = document.getElementById('simPositionsContainer');
+            const list = simState.positions || [];
 
-            const toSubscribe = [];
-            neededSymbols.forEach(sym => {
-                if (!wsSubscribedSymbols.has(sym)) {
-                    toSubscribe.push(`tickers.${sym}`);
-                    wsSubscribedSymbols.add(sym);
-                }
-            });
-            if (toSubscribe.length > 0) {
-                bybitWs.send(JSON.stringify({ op: "subscribe", args: toSubscribe }));
+            document.getElementById('activePositionsCountText').innerText = list.length;
+
+            if (list.length === 0) {
+                container.innerHTML = `<div class="text-center py-6 text-slate-500 text-xs font-sans">當前無任何持倉。</div>`;
+                return;
             }
 
-            const toUnsubscribe = [];
-            wsSubscribedSymbols.forEach(sym => {
-                if (!neededSymbols.has(sym)) {
-                    toUnsubscribe.push(`tickers.${sym}`);
-                    wsSubscribedSymbols.delete(sym);
-                }
-            });
-            if (toUnsubscribe.length > 0) {
-                bybitWs.send(JSON.stringify({ op: "unsubscribe", args: toUnsubscribe }));
-            }
+            container.innerHTML = `
+                <div class="overflow-x-auto max-h-[380px] overflow-y-auto">
+                    <table class="w-full text-left text-xs border-collapse font-mono">
+                        <thead class="bg-slate-950 text-slate-400 sticky top-0 z-10 text-[11px] border-b border-crypto-border">
+                            <tr>
+                                <th class="py-2 px-2.5">#</th>
+                                <th class="py-2 px-2.5">評級 / 幣種</th>
+                                <th class="py-2 px-2.5 text-right">開倉價</th>
+                                <th class="py-2 px-2.5 text-right">現價</th>
+                                <th class="py-2 px-2.5 text-right">淨浮動盈虧 (扣手續費)</th>
+                                <th class="py-2 px-2.5 text-center">防守止損 (SL)</th>
+                                <th class="py-2 px-2.5 text-center">目標 (TP1/TP2)</th>
+                                <th class="py-2 px-2.5 text-center">狀態</th>
+                                <th class="py-2 px-2.5 text-right">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-crypto-border/40">
+                            ${list.map((pos, idx) => {
+                                const entryPrice = parseFloat(pos.entryPrice) || 0.0001;
+                                const curPrice = parseFloat(pos.currentPrice) || entryPrice;
+                                const qty = parseFloat(pos.qty) || 0;
+                                const notional = parseFloat(pos.notional) || 50.0;
+
+                                // 扣手續費純利計算
+                                const grossPnl = ((curPrice - entryPrice) / entryPrice) * (qty * entryPrice);
+                                const entryFee = notional * 0.00055;
+                                const exitFee = (qty * curPrice) * 0.00055;
+                                const netPnlUsdt = grossPnl - (entryFee + exitFee);
+                                const netPnlPcnt = notional > 0 ? (netPnlUsdt / notional) * 100 : 0;
+
+                                const safePnlUsdt = isNaN(netPnlUsdt) ? 0.0 : netPnlUsdt;
+                                const safePnlPcnt = isNaN(netPnlPcnt) ? 0.0 : netPnlPcnt;
+                                const isWin = safePnlUsdt >= 0;
+
+                                return `
+                                    <tr class="hover:bg-slate-900/60 transition">
+                                        <td class="py-1.5 px-2.5 text-slate-500 text-[10px]">${idx + 1}</td>
+                                        <td class="py-1.5 px-2.5 font-bold text-white">${pos.symbol}</td>
+                                        <td class="py-1.5 px-2.5 text-right text-slate-300">$${formatPrice(entryPrice)}</td>
+                                        <td class="py-1.5 px-2.5 text-right font-semibold text-white">$${formatPrice(curPrice)}</td>
+                                        <td class="py-1.5 px-2.5 text-right font-bold ${isWin ? 'text-emerald-400' : 'text-rose-400'}">
+                                            ${isWin ? '+' : ''}${safePnlPcnt.toFixed(2)}% ($${isWin ? '+' : ''}${safePnlUsdt.toFixed(2)})
+                                        </td>
+                                        <td class="py-1.5 px-2.5 text-center text-rose-400">$${formatPrice(pos.stopLoss)}</td>
+                                        <td class="py-1.5 px-2.5 text-center text-emerald-400 text-[10px]">$${formatPrice(pos.tp1)} / $${formatPrice(pos.tp2)}</td>
+                                        <td class="py-1.5 px-2.5 text-center">
+                                            ${pos.tp1Reached ? '<span class="text-[10px] px-1 rounded bg-emerald-500/20 text-emerald-300">🛡️ 保本</span>' : '<span class="text-[10px] text-slate-400">⚡ 推進</span>'}
+                                        </td>
+                                        <td class="py-1.5 px-2.5 text-right">
+                                            <button onclick="closePositionManually('${pos.id}')" class="px-2 py-0.5 rounded bg-slate-800 hover:bg-rose-900 text-rose-300 text-[10px]">平倉</button>
+                                        </td>
+                                    </tr>
+                                `;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        }
+
+        function renderMarketTable(list) {
+            const tbody = document.getElementById('tickerTableBody');
+            if (!list || list.length === 0) return;
+
+            tbody.innerHTML = list.slice(0, 30).map((coin, idx) => `
+                <tr class="hover:bg-slate-900/70 transition-colors border-b border-crypto-border/30">
+                    <td class="py-2 px-2.5 font-bold text-white">
+                        <span class="px-1.5 py-0.2 rounded text-[10px] mr-1 ${coin.grade === 'A+' ? 'bg-emerald-500 text-black font-bold' : 'bg-slate-800 text-slate-400'}">${coin.grade}</span>
+                        ${coin.symbol}
+                    </td>
+                    <td class="py-2 px-2.5 text-right font-bold text-slate-100">$${formatPrice(coin.lastPrice)}</td>
+                    <td class="py-2 px-2.5 text-right">
+                        <span class="font-bold ${coin.rvol >= 2 ? 'text-amber-400' : 'text-slate-300'}">${coin.rvol.toFixed(1)}x</span>
+                        <span class="block text-[10px] text-slate-400">1h: +${coin.momentum1h.toFixed(1)}%</span>
+                    </td>
+                    <td class="py-2 px-2.5 text-right ${coin.oiVelocity >= 1 ? 'text-emerald-400 font-bold' : 'text-slate-400'}">+${coin.oiVelocity.toFixed(2)}%</td>
+                    <td class="py-2 px-2.5 text-right text-slate-300">${coin.spreadPct.toFixed(3)}%</td>
+                    <td class="py-2 px-2.5 text-center font-bold text-amber-400">${coin.score}</td>
+                    <td class="py-2 px-2.5 text-center text-slate-300">${coin.grade === 'A+' ? '🟢 A+ 狙擊' : '💤 觀察'}</td>
+                    <td class="py-2 px-2.5 text-right">
+                        <button onclick="executeOpenPosition(rawTickers.find(t=>t.symbol==='${coin.symbol}'), '手動跟單')" class="bg-emerald-600 hover:bg-emerald-500 text-white px-2 py-0.5 rounded text-[10px]">跟單</button>
+                    </td>
+                </tr>
+            `).join('');
+
+            document.getElementById('filteredCountText').innerText = list.length;
         }
 
         function closePositionManually(id) {
             const pos = simState.positions.find(p => p.id === id);
             if (!pos) return;
-            const exitNotional = pos.qty * pos.currentPrice;
-            const exitFee = exitNotional * simState.takerFeeRate;
-            const curGrossPnl = ((pos.currentPrice - pos.entryPrice) / pos.entryPrice) * (pos.qty * pos.entryPrice);
-            finalizeClosedTradeV81(pos, pos.currentPrice, curGrossPnl - exitFee + (pos.realizedNetPnl || 0), "👤 手動市價平倉");
+            const curPrice = parseFloat(pos.currentPrice) || parseFloat(pos.entryPrice);
+            const pnl = ((curPrice - pos.entryPrice) / pos.entryPrice) * (pos.qty * pos.entryPrice);
+            finalizeClosedTrade(pos, curPrice, pnl, "👤 手動市價平倉");
         }
 
         function closeAllPositions() {
-            if (simState.positions.length === 0) return;
-            showConfirmDialog(`確定要將全部 ${simState.positions.length} 筆持倉立即市價平倉嗎？`, () => {
-                const snapshot = [...simState.positions];
-                snapshot.forEach(pos => {
-                    const exitNotional = pos.qty * pos.currentPrice;
-                    const exitFee = exitNotional * simState.takerFeeRate;
-                    const curGrossPnl = ((pos.currentPrice - pos.entryPrice) / pos.entryPrice) * (pos.qty * pos.entryPrice);
-                    finalizeClosedTradeV81(pos, pos.currentPrice, curGrossPnl - exitFee + (pos.realizedNetPnl || 0), "🚨 一鍵全平");
-                });
-                showToast("已平倉所有持倉！", "🚨");
+            if (!simState.positions || simState.positions.length === 0) return;
+            [...simState.positions].forEach(pos => {
+                const curPrice = parseFloat(pos.currentPrice) || parseFloat(pos.entryPrice);
+                const pnl = ((curPrice - pos.entryPrice) / pos.entryPrice) * (pos.qty * pos.entryPrice);
+                finalizeClosedTrade(pos, curPrice, pnl, "🚨 一鍵全平");
             });
-        }
-
-        function addFomoTracker(symbol, entryPrice, exitPrice) {
-            if (simState.fomoTrackers.some(f => f.symbol === symbol)) return;
-            simState.fomoTrackers.unshift({
-                symbol,
-                entryPrice,
-                exitPrice,
-                maxPriceAfterExit: exitPrice,
-                postPumpPct: 0,
-                exitTime: Date.now()
-            });
-            if (simState.fomoTrackers.length > 20) simState.fomoTrackers.pop();
-        }
-
-        function updateFomoTrackers() {
-            let updated = false;
-            simState.fomoTrackers.forEach(item => {
-                const coin = rawTickers.find(t => t.symbol === item.symbol);
-                if (coin && coin.lastPrice > item.maxPriceAfterExit) {
-                    item.maxPriceAfterExit = coin.lastPrice;
-                    item.postPumpPct = ((coin.lastPrice - item.exitPrice) / item.exitPrice) * 100;
-                    updated = true;
-                }
-            });
-            if (updated) renderFomoTrackers();
-        }
-
-        function renderFomoTrackers() {
-            const container = document.getElementById('fomoTrackerContainer');
-            const badge = document.getElementById('fomoTrackCount');
-            if (badge) badge.innerText = `${simState.fomoTrackers.length} 檔監聽中`;
-
-            if (simState.fomoTrackers.length === 0) {
-                container.innerHTML = `<div class="text-center py-3 text-slate-500 text-xs font-sans">平倉後系統將持續追蹤 24h 走勢與 MFE 最大潛在利潤。</div>`;
-                return;
-            }
-
-            container.innerHTML = simState.fomoTrackers.map(item => {
-                const isPumpAfter = item.postPumpPct > 5.0;
-                return `
-                    <div class="p-2 rounded-lg bg-slate-900 border border-crypto-border flex items-center justify-between">
-                        <div>
-                            <span class="font-bold text-white">${item.symbol}</span>
-                            <span class="text-[10px] text-slate-400 block font-sans">平倉 $${formatPrice(item.exitPrice)}</span>
-                        </div>
-                        <div class="text-right">
-                            <span class="font-bold ${isPumpAfter ? 'text-purple-400 animate-pulse' : 'text-slate-300'}">
-                                ${isPumpAfter ? '🔥 續漲 +' : '+'}${item.postPumpPct.toFixed(1)}%
-                            </span>
-                            <span class="text-[9px] text-slate-500 block font-sans">頂部 $${formatPrice(item.maxPriceAfterExit)}</span>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-        }
-
-        function recordSignalIntelligence(coin) {
-            const container = document.getElementById('signalHistoryLog');
-            if (!container) return;
-            const time = new Date().toLocaleTimeString();
-            const div = document.createElement('div');
-            div.className = "border-b border-crypto-border/40 pb-0.5";
-            div.innerHTML = `<span class="text-slate-500">[${time}]</span> <span class="font-bold text-white">${coin.symbol}</span> [${coin.grade}] 分數:${coin.precisionScore} RVOL:${coin.rvol.toFixed(1)}x OI增速:${coin.oiVelocity.toFixed(1)}% 點差:${coin.spreadPct.toFixed(2)}%`;
-            container.prepend(div);
-            if (container.children.length > 30) container.removeChild(container.lastChild);
-        }
-
-        function togglePrecisionMode() {
-            precisionModeOnly = !precisionModeOnly;
-            const btn = document.getElementById('btnPrecisionMode');
-            const txt = document.getElementById('precisionModeText');
-            if (precisionModeOnly) {
-                btn.className = "flex items-center gap-1 bg-amber-500 text-black font-bold px-2.5 py-1 rounded-lg transition border border-amber-400 shadow-md shadow-amber-500/20 whitespace-nowrap text-[11px]";
-                txt.innerText = "狙擊模式: A+ 嚴選";
-                showToast("已啟用 A+ 頂級嚴選模式：只狙擊勝率最高的黃金 Setup！", "🎯");
-            } else {
-                btn.className = "flex items-center gap-1 bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium px-2.5 py-1 rounded-lg transition border border-crypto-border whitespace-nowrap text-[11px]";
-                txt.innerText = "全景模式: 廣播監控";
-                showToast("已切換為全景監控模式", "🌐");
-            }
-            applyFilters();
-        }
-
-        function updateScorecardStats() {
-            const history = simState.history;
-            if (history.length === 0) return;
-
-            let totalWinsPnl = 0;
-            let totalLossPnl = 0;
-            let winCount = 0;
-            let lossCount = 0;
-
-            let aPlusWins = 0;
-            let aPlusTotal = 0;
-            let riskOnWins = 0, riskOnTotal = 0;
-
-            history.forEach(t => {
-                if (t.pnl > 0) {
-                    totalWinsPnl += t.pnl;
-                    winCount++;
-                } else {
-                    totalLossPnl += Math.abs(t.pnl);
-                    lossCount++;
-                }
-
-                if (t.grade === 'A+') {
-                    aPlusTotal++;
-                    if (t.pnl > 0) aPlusWins++;
-                }
-
-                if (t.regime === 'RISK_ON') {
-                    riskOnTotal++;
-                    if (t.pnl > 0) riskOnWins++;
-                }
-            });
-
-            const winRate = history.length > 0 ? (winCount / history.length) : 0;
-            const avgWin = winCount > 0 ? (totalWinsPnl / winCount) : 0;
-            const avgLoss = lossCount > 0 ? (totalLossPnl / lossCount) : 0;
-
-            let expectancyR = 0;
-            if (avgLoss > 0) {
-                expectancyR = ((winRate * avgWin) - ((1 - winRate) * avgLoss)) / avgLoss;
-            }
-
-            const profitFactor = totalLossPnl > 0 ? (totalWinsPnl / totalLossPnl).toFixed(2) : (totalWinsPnl > 0 ? "99.9" : "0.0");
-
-            const expDisplay = document.getElementById('kpiExpectancyDisplay');
-            if (expDisplay) {
-                expDisplay.innerText = `${expectancyR >= 0 ? '+' : ''}${expectancyR.toFixed(2)}R`;
-                expDisplay.className = `font-mono font-bold ${expectancyR >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
-            }
-
-            const cardExp = document.getElementById('cardExpectancyVal');
-            if (cardExp) cardExp.innerText = `${expectancyR >= 0 ? '+' : ''}${expectancyR.toFixed(2)}R`;
-
-            const cardPF = document.getElementById('cardProfitFactorVal');
-            if (cardPF) cardPF.innerText = profitFactor;
-
-            const aPlusWR = aPlusTotal > 0 ? Math.round((aPlusWins / aPlusTotal) * 100) : "--";
-            const cardAPlus = document.getElementById('cardAPlusWinRateVal');
-            if (cardAPlus) cardAPlus.innerText = `${aPlusWR}% (${aPlusWins}/${aPlusTotal})`;
-
-            const cardReject = document.getElementById('cardRejectedTradesVal');
-            if (cardReject) cardReject.innerText = `${rejectedTradesCount} 筆`;
-
-            const statRiskOn = document.getElementById('regimeStatRiskOn');
-            if (statRiskOn) {
-                const rOnRate = riskOnTotal > 0 ? Math.round((riskOnWins / riskOnTotal) * 100) : "--";
-                statRiskOn.innerText = `勝率: ${rOnRate}% (${riskOnWins}勝 ${riskOnTotal - riskOnWins}負)`;
-            }
-        }
-
-        function openScorecardModal() {
-            updateScorecardStats();
-            document.getElementById('scorecardModal').classList.remove('hidden');
-        }
-
-        function closeScorecardModal() {
-            document.getElementById('scorecardModal').classList.add('hidden');
-        }
-
-        function togglePositionView(mode) {
-            simPositionViewMode = mode;
-            const btnTable = document.getElementById('btnViewTable');
-            const btnCard = document.getElementById('btnViewCard');
-
-            if (mode === 'table') {
-                btnTable.className = "px-2.5 py-1 rounded bg-amber-500 text-black font-bold flex items-center gap-1 transition";
-                btnCard.className = "px-2.5 py-1 rounded text-slate-400 hover:text-white font-medium flex items-center gap-1 transition";
-            } else {
-                btnCard.className = "px-2.5 py-1 rounded bg-amber-500 text-black font-bold flex items-center gap-1 transition";
-                btnTable.className = "px-2.5 py-1 rounded text-slate-400 hover:text-white font-medium flex items-center gap-1 transition";
-            }
-            renderSimPositions();
-        }
-
-        function setPosFilter(filter) {
-            currentPosFilter = filter;
-            ['all', 'win', 'loss', 'moon'].forEach(f => {
-                const btn = document.getElementById(`posFilter-${f}`);
-                if (btn) {
-                    btn.className = f === filter ? "px-2 py-0.5 rounded bg-amber-500 text-black font-bold transition" : "px-2 py-0.5 rounded text-slate-400 hover:text-white transition";
-                }
-            });
-            renderSimPositions();
-        }
-
-        function renderSimPositions() {
-            const container = document.getElementById('simPositionsContainer');
-            const countText = document.getElementById('activePositionsCountText');
-            if (countText) countText.innerText = simState.positions.length;
-
-            let list = [...simState.positions];
-            if (currentPosFilter === 'win') list = list.filter(p => p.currentPrice >= p.entryPrice);
-            else if (currentPosFilter === 'loss') list = list.filter(p => p.currentPrice < p.entryPrice);
-            else if (currentPosFilter === 'moon') list = list.filter(p => p.isMoonBag);
-
-            if (list.length === 0) {
-                container.innerHTML = `<div class="text-center py-6 text-slate-500 text-xs font-sans">當前無任何持倉。V8.1 數據真值引擎正在尋求高品質 A+ 機會。</div>`;
-                return;
-            }
-
-            if (simPositionViewMode === 'table') {
-                container.innerHTML = `
-                    <div class="overflow-x-auto max-h-[380px] overflow-y-auto">
-                        <table class="w-full text-left text-xs border-collapse font-mono">
-                            <thead class="bg-slate-950 text-slate-400 sticky top-0 z-10 text-[11px] border-b border-crypto-border">
-                                <tr>
-                                    <th class="py-2 px-2.5">#</th>
-                                    <th class="py-2 px-2.5">評級 / 幣種</th>
-                                    <th class="py-2 px-2.5 text-right">開倉價 (含滑點)</th>
-                                    <th class="py-2 px-2.5 text-right">現價</th>
-                                    <th class="py-2 px-2.5 text-right">淨浮動盈虧 (扣手續費)</th>
-                                    <th class="py-2 px-2.5 text-center">防守止損 (SL)</th>
-                                    <th class="py-2 px-2.5 text-center">目標 (TP1/TP2)</th>
-                                    <th class="py-2 px-2.5 text-center">狀態</th>
-                                    <th class="py-2 px-2.5 text-right">操作</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-crypto-border/40">
-                                ${list.map((pos, idx) => {
-                                    const grossPnl = ((pos.currentPrice - pos.entryPrice) / pos.entryPrice) * (pos.qty * pos.entryPrice);
-                                    const netPnl = grossPnl - pos.feesPaid;
-                                    const pnlPct = (netPnl / pos.notional) * 100;
-                                    const isWin = netPnl >= 0;
-                                    const pnlColor = isWin ? 'text-emerald-400' : 'text-rose-400';
-                                    const holdMin = Math.round((Date.now() - pos.openTime) / 60000);
-
-                                    return `
-                                        <tr class="hover:bg-slate-900/60 transition">
-                                            <td class="py-1.5 px-2.5 text-slate-500 text-[10px]">${idx + 1}</td>
-                                            <td class="py-1.5 px-2.5">
-                                                <div class="flex items-center gap-1.5">
-                                                    <span class="text-[9px] px-1 font-bold rounded ${pos.grade === 'A+' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-amber-500/20 text-amber-300'}">${pos.grade || 'A'}</span>
-                                                    <span class="font-bold text-white">${pos.symbol}</span>
-                                                    <span class="text-[9px] px-1 rounded bg-slate-800 text-slate-400">${holdMin}m</span>
-                                                </div>
-                                            </td>
-                                            <td class="py-1.5 px-2.5 text-right text-slate-300">$${formatPrice(pos.entryPrice)}</td>
-                                            <td class="py-1.5 px-2.5 text-right font-semibold text-white">$${formatPrice(pos.currentPrice)}</td>
-                                            <td class="py-1.5 px-2.5 text-right font-bold ${pnlColor}">
-                                                ${isWin ? '+' : ''}${pnlPct.toFixed(2)}% ($${(isWin ? '+' : '')}${netPnl.toFixed(2)})
-                                            </td>
-                                            <td class="py-1.5 px-2.5 text-center text-rose-400">$${formatPrice(pos.stopLoss)}</td>
-                                            <td class="py-1.5 px-2.5 text-center text-emerald-400 text-[10px]">$${formatPrice(pos.tp1)} / $${formatPrice(pos.tp2)}</td>
-                                            <td class="py-1.5 px-2.5 text-center">
-                                                ${pos.isMoonBag ? '<span class="text-[10px] px-1.5 py-0.2 rounded bg-purple-500/20 text-purple-300 border border-purple-500/40">🚀 尾倉</span>' :
-                                                  (pos.tp1Reached ? '<span class="text-[10px] px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">🛡️ 保本</span>' :
-                                                   '<span class="text-[10px] text-slate-400">⚡ 推進</span>')}
-                                            </td>
-                                            <td class="py-1.5 px-2.5 text-right">
-                                                <button onclick="closePositionManually('${pos.id}')" class="px-2 py-0.5 rounded bg-slate-800 hover:bg-rose-900/60 text-rose-300 text-[10px] border border-crypto-border">
-                                                    平倉
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    `;
-                                }).join('')}
-                            </tbody>
-                        </table>
-                    </div>
-                `;
-            } else {
-                container.innerHTML = `
-                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5 max-h-[460px] overflow-y-auto pr-1">
-                        ${list.map(pos => {
-                            const grossPnl = ((pos.currentPrice - pos.entryPrice) / pos.entryPrice) * (pos.qty * pos.entryPrice);
-                            const netPnl = grossPnl - pos.feesPaid;
-                            const pnlPct = (netPnl / pos.notional) * 100;
-                            const isWin = netPnl >= 0;
-                            const pnlColor = isWin ? 'text-emerald-400' : 'text-rose-400';
-                            const holdMin = Math.round((Date.now() - pos.openTime) / 60000);
-
-                            return `
-                                <div class="p-2.5 rounded-xl bg-slate-900 border ${isWin ? 'border-emerald-500/30' : 'border-rose-500/30'} flex flex-col justify-between space-y-2">
-                                    <div class="flex items-start justify-between">
-                                        <div>
-                                            <div class="flex items-center gap-1.5">
-                                                <span class="text-[9px] px-1 font-bold rounded ${pos.grade === 'A+' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-amber-500/20 text-amber-300'}">${pos.grade || 'A'}</span>
-                                                <span class="font-bold font-mono text-sm text-white">${pos.symbol}</span>
-                                                <span class="text-[9px] px-1 rounded bg-slate-800 text-slate-400">${holdMin}m</span>
-                                            </div>
-                                            <span class="text-[10px] text-slate-400 font-sans">${pos.reason}</span>
-                                        </div>
-                                        <div class="text-right">
-                                            <span class="font-bold font-mono text-sm ${pnlColor}">${isWin ? '+' : ''}${pnlPct.toFixed(2)}%</span>
-                                            <span class="block text-[10px] font-mono text-slate-400">$${(isWin ? '+' : '')}${netPnl.toFixed(2)}</span>
-                                        </div>
-                                    </div>
-                                    <div class="p-1.5 rounded-lg bg-slate-950 font-mono text-[10px] space-y-0.5">
-                                        <div class="flex justify-between text-slate-400">
-                                            <span>開倉/現價:</span>
-                                            <span class="text-slate-200">$${formatPrice(pos.entryPrice)} / $${formatPrice(pos.currentPrice)}</span>
-                                        </div>
-                                        <div class="flex justify-between text-rose-400">
-                                            <span>防守止損:</span>
-                                            <span>$${formatPrice(pos.stopLoss)}</span>
-                                        </div>
-                                    </div>
-                                    <div class="flex items-center justify-between pt-0.5">
-                                        <span class="text-[10px] text-purple-300">
-                                            ${pos.isMoonBag ? '🚀 尾倉狂飆' : (pos.tp1Reached ? '🛡️ 保本鎖定' : '⚡ 推進中')}
-                                        </span>
-                                        <button onclick="closePositionManually('${pos.id}')" class="px-2 py-0.5 rounded bg-slate-800 hover:bg-rose-900 text-rose-300 text-[10px] border border-crypto-border">
-                                            市價平倉
-                                        </button>
-                                    </div>
-                                </div>
-                            `;
-                        }).join('')}
-                    </div>
-                `;
-            }
-        }
-
-        function setFilter(filter) {
-            currentFilter = filter;
-            ['aplus', 'oiVelocity', 'rvolSurge', 'all', 'squeeze'].forEach(f => {
-                const btn = document.getElementById(`filterBtn-${f}`);
-                if (btn) {
-                    btn.className = f === filter ? "px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-600 text-white shadow-md shadow-emerald-500/20" : "px-2.5 py-1 rounded-lg text-xs font-medium bg-slate-900 hover:bg-slate-800 text-slate-300 border border-crypto-border";
-                }
-            });
-            applyFilters();
-        }
-
-        function applyFilters() {
-            const keyword = (document.getElementById('searchInput').value || '').trim().toUpperCase();
-            const minTurnover = parseFloat(document.getElementById('minTurnoverSelect').value) || 0;
-            const sortBy = document.getElementById('sortSelect').value;
-
-            let list = [...rawTickers];
-            if (keyword) list = list.filter(t => t.symbol.includes(keyword));
-            if (minTurnover > 0) list = list.filter(t => t.turnover24h >= minTurnover);
-
-            if (currentFilter === 'aplus') list = list.filter(t => t.grade === 'A+');
-            else if (currentFilter === 'oiVelocity') list = list.filter(t => t.oiVelocity >= 1.5);
-            else if (currentFilter === 'rvolSurge') list = list.filter(t => t.rvol >= 2.5);
-            else if (currentFilter === 'squeeze') list = list.filter(t => t.fundingRate <= -0.05);
-
-            list.sort((a, b) => {
-                if (sortBy === 'rvol') return b.rvol - a.rvol;
-                if (sortBy === 'oiVelocity') return b.oiVelocity - a.oiVelocity;
-                if (sortBy === 'tradeabilityScore') return b.tradeabilityScore - a.tradeabilityScore;
-                if (sortBy === 'turnover24h') return b.turnover24h - a.turnover24h;
-                return b.precisionScore - a.precisionScore;
-            });
-
-            filteredTickers = list;
-            const countEl = document.getElementById('filteredCountText');
-            if (countEl) countEl.innerText = list.length;
-            renderMarketTable(list);
-        }
-
-        function renderMarketTable(list) {
-            const tbody = document.getElementById('tickerTableBody');
-            if (!list || list.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="10" class="py-10 text-center text-slate-500 font-sans">無符合篩選條件的標的。</td></tr>`;
-                return;
-            }
-
-            tbody.innerHTML = list.map((coin, idx) => {
-                const isGain24h = coin.price24hPcnt >= 0;
-                const isGain1h = coin.momentum1h >= 0;
-                const isHighRvol = coin.rvol >= 2.5;
-
-                return `
-                    <tr class="hover:bg-slate-900/70 transition-colors border-b border-crypto-border/30 cursor-pointer" onclick="openTradePlanModal('${coin.symbol}')">
-                        <td class="py-2 px-2.5">
-                            <div class="flex items-center gap-1.5">
-                                <span class="text-[9px] px-1 font-bold rounded ${coin.grade === 'A+' ? 'bg-emerald-500/20 text-emerald-300' : (coin.grade === 'A' ? 'bg-amber-500/20 text-amber-300' : 'bg-slate-800 text-slate-400')}">${coin.grade}</span>
-                                <div>
-                                    <span class="font-bold text-white font-mono hover:text-amber-400">${coin.symbol}</span>
-                                    <span class="text-[9px] text-slate-500 block font-sans">${coin.oiMatrixInterpretation}</span>
-                                </div>
-                            </div>
-                        </td>
-                        <td class="py-2 px-2.5 text-right font-bold text-slate-100">$${formatPrice(coin.lastPrice)}</td>
-                        <td class="py-2 px-2.5 text-right">
-                            <span class="font-bold ${isGain1h ? 'text-amber-400' : 'text-slate-400'}">${isGain1h ? '+' : ''}${coin.momentum1h.toFixed(2)}%</span>
-                            <span class="block text-[10px] ${isGain24h ? 'text-emerald-400' : 'text-rose-400'}">24h: ${isGain24h ? '+' : ''}${coin.price24hPcnt.toFixed(2)}%</span>
-                        </td>
-                        <td class="py-2 px-2.5 text-right">
-                            <span class="font-bold font-mono ${isHighRvol ? 'text-amber-400 animate-pulse' : 'text-slate-300'}">${coin.rvol.toFixed(1)}x</span>
-                            <span class="block text-[9px] text-slate-500">5m增量</span>
-                        </td>
-                        <td class="py-2 px-2.5 text-right">
-                            <span class="font-bold font-mono ${coin.oiVelocity > 1.0 ? 'text-cyan-400' : 'text-slate-400'}">${coin.oiVelocity >= 0 ? '+' : ''}${coin.oiVelocity.toFixed(1)}%</span>
-                            <span class="block text-[9px] text-slate-500">$${formatNumber(coin.openInterestValue)}</span>
-                        </td>
-                        <td class="py-2 px-2.5 text-right">
-                            <span class="font-mono ${coin.spreadPct <= 0.08 ? 'text-emerald-400' : 'text-rose-400'}">${coin.spreadPct.toFixed(2)}%</span>
-                            <span class="block text-[9px] text-slate-500">點差</span>
-                        </td>
-                        <td class="py-2 px-2.5 text-center">
-                            <span class="px-1.5 py-0.2 rounded text-[11px] font-mono font-bold ${coin.precisionScore >= 85 ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-slate-800 text-slate-300'}">${coin.precisionScore}</span>
-                        </td>
-                        <td class="py-2 px-2.5 text-center">
-                            <span class="text-[10px] font-mono ${coin.tradeabilityScore >= 75 ? 'text-emerald-400' : 'text-amber-400'}">${coin.tradeabilityScore}分</span>
-                        </td>
-                        <td class="py-2 px-2.5 text-center">
-                            <span class="px-1.5 py-0.2 rounded text-[10px] font-semibold border ${coin.signalColor}">${coin.signalText}</span>
-                        </td>
-                        <td class="py-2 px-2.5 text-right" onclick="event.stopPropagation()">
-                            <button onclick="executeOpenPositionV81(rawTickers.find(t=>t.symbol==='${coin.symbol}'), '手動狙擊開倉')" class="bg-emerald-600 hover:bg-emerald-500 text-white px-2 py-0.5 rounded text-[10px] font-bold transition">
-                                跟單
-                            </button>
-                        </td>
-                    </tr>
-                `;
-            }).join('');
-        }
-
-        function renderHotCoinsV81() {
-            const container = document.getElementById('hotCoinsContainer');
-            const top3 = [...rawTickers].sort((a, b) => b.precisionScore - a.precisionScore).slice(0, 3);
-            if (top3.length === 0) return;
-
-            container.innerHTML = top3.map((coin, index) => `
-                <div onclick="openTradePlanModal('${coin.symbol}')" class="p-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-crypto-border cursor-pointer transition flex items-center justify-between">
-                    <div class="flex items-center gap-2">
-                        <span class="w-4 h-4 rounded-full ${index === 0 ? 'bg-emerald-500 text-black' : 'bg-slate-800 text-slate-300'} text-[9px] font-bold flex items-center justify-center font-mono">
-                            ${index + 1}
-                        </span>
-                        <div>
-                            <span class="font-bold text-white font-mono text-xs">${coin.symbol}</span>
-                            <span class="text-[9px] text-slate-400 block font-sans">${coin.oiMatrixInterpretation}</span>
-                        </div>
-                    </div>
-                    <div class="text-right font-mono">
-                        <span class="text-xs font-bold text-amber-400">RVOL ${coin.rvol.toFixed(1)}x</span>
-                        <span class="text-[10px] text-emerald-400 block">評分 ${coin.precisionScore} [${coin.grade}]</span>
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        function updateGlobalStatsV81() {
-            document.getElementById('statGradeAPlusCoins').innerText = rawTickers.filter(t => t.grade === 'A+').length;
-            document.getElementById('statRvolCoins').innerText = rawTickers.filter(t => t.rvol >= 2.5).length;
-            document.getElementById('statOiVelocityCoins').innerText = rawTickers.filter(t => t.oiVelocity >= 2.0).length;
-            document.getElementById('statTradeableCoins').innerText = rawTickers.filter(t => t.tradeabilityScore >= 75).length;
-        }
-
-        function updateSimHeaderStats() {
-            let unrealizedPnl = 0;
-            simState.positions.forEach(pos => {
-                const curPrice = allMarketPrices.get(pos.symbol) || pos.currentPrice;
-                const grossPnl = ((curPrice - pos.entryPrice) / pos.entryPrice) * (pos.qty * pos.entryPrice);
-                unrealizedPnl += (grossPnl - pos.feesPaid);
-            });
-
-            const totalEquity = simState.balance + unrealizedPnl;
-            const totalPnlPct = ((totalEquity - simState.initialBalance) / simState.initialBalance) * 100;
-
-            const eqEl = document.getElementById('simEquityDisplay');
-            if (eqEl) {
-                eqEl.innerText = `$${totalEquity.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-                eqEl.className = `text-sm sm:text-base font-bold font-mono ${totalEquity >= simState.initialBalance ? 'text-emerald-400' : 'text-rose-400'}`;
-            }
-
-            const balEl = document.getElementById('simBalanceDisplay');
-            if (balEl) balEl.innerText = `$${simState.balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-
-            const pnlEl = document.getElementById('simTotalPnlDisplay');
-            if (pnlEl) {
-                pnlEl.innerText = `(${totalPnlPct >= 0 ? '+' : ''}${totalPnlPct.toFixed(2)}%)`;
-                pnlEl.className = `text-xs font-mono font-semibold ${totalPnlPct >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
-            }
-
-            const openPosEl = document.getElementById('simOpenPositionsCount');
-            if (openPosEl) openPosEl.innerText = `${simState.positions.length} / ${simState.maxPositions}`;
-
-            const activeBadge = document.getElementById('simActiveWinRateBadge');
-            if (activeBadge && simState.positions.length > 0) {
-                const activeWins = simState.positions.filter(p => p.currentPrice >= p.entryPrice).length;
-                const activeWinPct = Math.round((activeWins / simState.positions.length) * 100);
-                activeBadge.innerText = `(${activeWinPct}% 浮盈 · ${activeWins}/${simState.positions.length})`;
-                activeBadge.className = `text-[10px] font-mono font-semibold ml-0.5 ${activeWinPct >= 50 ? 'text-emerald-400' : 'text-amber-400'}`;
-            } else if (activeBadge) {
-                activeBadge.innerText = `(0 倉位)`;
-            }
-
-            const moonBags = simState.positions.filter(p => p.isMoonBag).length;
-            const moonBagEl = document.getElementById('simMoonBagCount');
-            if (moonBagEl) moonBagEl.innerText = `${moonBags} 檔`;
-
-            const winRateEl = document.getElementById('simWinRateDisplay');
-            if (winRateEl && simState.history.length > 0) {
-                const wins = simState.history.filter(t => t.pnl > 0).length;
-                winRateEl.innerText = `${Math.round((wins / simState.history.length) * 100)}%`;
-            } else if (winRateEl) {
-                winRateEl.innerText = `--%`;
-            }
-        }
-
-        function toggleAutoTrade() {
-            simState.autoTrade = !simState.autoTrade;
-            saveToStorage();
-            const btn = document.getElementById('btnAutoTrade');
-            const icon = document.getElementById('autoTradeIcon');
-            const text = document.getElementById('autoTradeText');
-            if (simState.autoTrade) {
-                btn.className = "flex items-center gap-1 bg-emerald-600/80 hover:bg-emerald-600 text-white font-medium px-2.5 py-1 rounded-lg transition border border-emerald-500/30 whitespace-nowrap text-[11px]";
-                icon.innerText = "🤖";
-                text.innerText = "自動交易: 開";
-            } else {
-                btn.className = "flex items-center gap-1 bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium px-2.5 py-1 rounded-lg transition border border-crypto-border whitespace-nowrap text-[11px]";
-                icon.innerText = "⏸️";
-                text.innerText = "自動交易: 暫停";
-            }
         }
 
         function setMaxPositions(cap) {
             simState.maxPositions = cap;
             saveToStorage();
-            const btn1 = document.getElementById('btnCap1');
-            const btn3 = document.getElementById('btnCap3');
-            if (btn1) btn1.className = cap === 1 ? "px-2 py-0.5 rounded bg-amber-500 text-black font-bold transition" : "px-2 py-0.5 rounded text-slate-400 hover:text-white transition";
-            if (btn3) btn3.className = cap === 3 ? "px-2 py-0.5 rounded bg-amber-500 text-black font-bold transition" : "px-2 py-0.5 rounded text-slate-400 hover:text-white transition";
+            document.getElementById('btnCap1').className = cap === 1 ? "px-2 py-0.5 rounded bg-amber-500 text-black font-bold transition" : "px-2 py-0.5 rounded text-slate-400 hover:text-white transition";
+            document.getElementById('btnCap3').className = cap === 3 ? "px-2 py-0.5 rounded bg-amber-500 text-black font-bold transition" : "px-2 py-0.5 rounded text-slate-400 hover:text-white transition";
             updateSimHeaderStats();
-            showToast(`已設置最大持倉上限為 ${cap} 檔（集中風控）`, "🛡️");
         }
 
         function setTradeSize(size) {
             simState.tradeSize = size;
             saveToStorage();
-            const btn25 = document.getElementById('btnSize25');
-            const btn50 = document.getElementById('btnSize50');
-            if (btn25) btn25.className = size === 25 ? "px-2 py-0.5 rounded bg-emerald-600 text-white font-bold transition" : "px-2 py-0.5 rounded text-slate-400 hover:text-white transition";
-            if (btn50) btn50.className = size === 50 ? "px-2 py-0.5 rounded bg-emerald-600 text-white font-bold transition" : "px-2 py-0.5 rounded text-slate-400 hover:text-white transition";
-            const disp = document.getElementById('posTradeSizeDisplay');
-            if (disp) disp.innerText = `$${size}`;
-            showToast(`單筆名義倉位已設為 $${size} USDT (5x 槓桿)`, "💰");
+            document.getElementById('btnSize25').className = size === 25 ? "px-2 py-0.5 rounded bg-emerald-600 text-white font-bold transition" : "px-2 py-0.5 rounded text-slate-400 hover:text-white transition";
+            document.getElementById('btnSize50').className = size === 50 ? "px-2 py-0.5 rounded bg-emerald-600 text-white font-bold transition" : "px-2 py-0.5 rounded text-slate-400 hover:text-white transition";
+            document.getElementById('posTradeSizeDisplay').innerText = `$${size} · 5x 槓桿`;
         }
 
         function askResetSimulation() {
-            showConfirmDialog("確定要重置帳戶餘額 (還原為 1,000 USDT)、清空所有持倉與平倉歷史嗎？", () => {
-                simState.balance = 1000.0;
-                simState.initialBalance = 1000.0;
-                simState.positions = [];
-                simState.history = [];
-                simState.fomoTrackers = [];
-                adaptiveParams.blacklist.clear();
-                adaptiveParams.minScore = 85;
-                timeSeriesBuffers.clear();
-                saveToStorage();
-                renderSimPositions();
-                updateSimHeaderStats();
-                renderFomoTrackers();
-                renderHistoryTable();
-                updateScorecardStats();
-                showToast("帳戶已重置為 1,000 USDT！", "🔄");
-            });
-        }
-
-        function exportDataJson() {
-            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({
-                simState,
-                adaptiveParams: {
-                    ...adaptiveParams,
-                    blacklist: Array.from(adaptiveParams.blacklist)
-                },
-                exportedAt: new Date().toISOString()
-            }, null, 2));
-            const dlAnchor = document.createElement('a');
-            dlAnchor.setAttribute("href", dataStr);
-            dlAnchor.setAttribute("download", `bybit_radar_v81_backup_${Date.now()}.json`);
-            document.body.appendChild(dlAnchor);
-            dlAnchor.click();
-            dlAnchor.remove();
-            showToast("V8.1 備份 JSON 已成功匯出！", "📥");
-        }
-
-        function importDataJson(evt) {
-            const file = evt.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = e => {
-                try {
-                    const parsed = JSON.parse(e.target.result);
-                    if (parsed.simState) simState = { ...simState, ...parsed.simState };
-                    if (parsed.adaptiveParams) {
-                        adaptiveParams = {
-                            ...adaptiveParams,
-                            ...parsed.adaptiveParams,
-                            blacklist: new Set(parsed.adaptiveParams.blacklist || [])
-                        };
-                    }
-                    saveToStorage();
-                    renderSimPositions();
-                    updateSimHeaderStats();
-                    renderFomoTrackers();
-                    renderHistoryTable();
-                    updateScorecardStats();
-                    showToast("備份資料已成功匯入還原！", "📤");
-                } catch (err) {
-                    showToast("JSON 檔案解析失敗: " + err.message, "❌");
-                }
-            };
-            reader.readAsText(file);
-        }
-
-        function openHistoryModal() {
-            renderHistoryTable();
-            document.getElementById('historyModal').classList.remove('hidden');
-        }
-
-        function closeHistoryModal() {
-            document.getElementById('historyModal').classList.add('hidden');
-        }
-
-        function renderHistoryTable() {
-            const tbody = document.getElementById('historyTableBody');
-            const btnText = document.getElementById('historyBtnText');
-            if (btnText) btnText.innerText = `歷史明細 (${simState.history.length})`;
-
-            let totalNetPnl = 0;
-            let wins = 0;
-            let losses = 0;
-
-            simState.history.forEach(t => {
-                totalNetPnl += t.pnl;
-                if (t.pnl > 0) wins++;
-                else losses++;
-            });
-
-            const histTotal = document.getElementById('histTotalRealizedPnl');
-            if (histTotal) {
-                histTotal.innerText = `$${totalNetPnl.toFixed(2)}`;
-                histTotal.className = `text-sm sm:text-base font-bold ${totalNetPnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
-            }
-            const histCount = document.getElementById('histTotalTradesCount');
-            if (histCount) histCount.innerText = `${simState.history.length} 筆`;
-            const histWin = document.getElementById('histWinCountText');
-            if (histWin) histWin.innerText = `${wins} 筆`;
-            const histLoss = document.getElementById('histLossCountText');
-            if (histLoss) histLoss.innerText = `${losses} 筆`;
-
-            if (simState.history.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="8" class="py-8 text-center text-slate-500 font-sans">尚無歷史平倉數據。</td></tr>`;
-                return;
-            }
-
-            tbody.innerHTML = simState.history.map((item, idx) => {
-                const isWin = item.pnl > 0;
-                const pnlColor = isWin ? 'text-emerald-400' : 'text-rose-400';
-                return `
-                    <tr class="hover:bg-slate-900/60">
-                        <td class="py-2 px-2.5 text-slate-500 text-[10px]">${idx + 1}</td>
-                        <td class="py-2 px-2.5 font-bold text-white">
-                            <span class="text-[9px] px-1 rounded mr-1 ${item.grade === 'A+' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-amber-500/20 text-amber-300'}">${item.grade || 'A'}</span>
-                            ${item.symbol}
-                        </td>
-                        <td class="py-2 px-2.5 text-right text-slate-300">$${formatPrice(item.entryPrice)} $\\rightarrow$ $${formatPrice(item.exitPrice)}</td>
-                        <td class="py-2 px-2.5 text-right font-bold ${pnlColor}">${isWin ? '+' : ''}${item.pnlPct.toFixed(2)}%</td>
-                        <td class="py-2 px-2.5 text-right font-bold ${pnlColor}">$${(isWin ? '+' : '')}${item.pnl.toFixed(2)}</td>
-                        <td class="py-2 px-2.5 text-center text-slate-400">${item.durationMin} 分鐘</td>
-                        <td class="py-2 px-2.5 text-slate-300 font-sans">
-                            ${item.reason}
-                            <span class="text-[9px] text-slate-500 block">MFE:+${item.mfe || 0}% | MAE:${item.mae || 0}%</span>
-                        </td>
-                        <td class="py-2 px-2.5 text-right text-slate-500">${item.closedAt}</td>
-                    </tr>
-                `;
-            }).join('');
-        }
-
-        function openTradePlanModal(symbol) {
-            const coin = rawTickers.find(t => t.symbol === symbol);
-            if (!coin) return;
-
-            document.getElementById('modalCoinSymbol').innerText = `${coin.symbol} (${coin.signalText})`;
-            document.getElementById('modalCurPrice').innerText = `$${formatPrice(coin.lastPrice)}`;
-
-            const low = coin.lastPrice * 0.995;
-            const high = coin.lastPrice * 1.005;
-            document.getElementById('modalEntryZone').innerText = `$${formatPrice(low)} ~ $${formatPrice(high)}`;
-
-            const sl = coin.lastPrice * (1 - (adaptiveParams.stopLossPct / 100));
-            document.getElementById('modalStopLoss').innerText = `$${formatPrice(sl)} (-${adaptiveParams.stopLossPct.toFixed(1)}%)`;
-
-            const tp1 = coin.lastPrice * (1 + (adaptiveParams.tp1Pct / 100));
-            document.getElementById('modalTP1').innerText = `$${formatPrice(tp1)}`;
-
-            const tp2 = coin.lastPrice * (1 + (adaptiveParams.tp2Pct / 100));
-            document.getElementById('modalTP2').innerText = `$${formatPrice(tp2)}`;
-
-            document.getElementById('modalBybitLink').href = `https://www.bybit.com/trade/usdt/${coin.symbol}`;
-            document.getElementById('tradePlanModal').classList.remove('hidden');
-        }
-
-        function closeTradePlanModal() {
-            document.getElementById('tradePlanModal').classList.add('hidden');
-        }
-
-        function openCloudModal() {
-            document.getElementById('cloudRoomInput').value = currentRoomId;
-            document.getElementById('cloudModal').classList.remove('hidden');
-        }
-
-        function closeCloudModal() {
-            document.getElementById('cloudModal').classList.add('hidden');
-        }
-
-        function saveRoomConfig() {
-            const newRoom = (document.getElementById('cloudRoomInput').value || '').trim();
-            if (newRoom && newRoom !== currentRoomId) {
-                currentRoomId = newRoom;
-                localStorage.setItem(STORAGE_KEY_ROOM, currentRoomId);
-                bindCloudRoom(currentRoomId);
-                showToast(`已切換至雲端房間: ${currentRoomId}`, "☁️");
-            }
-            closeCloudModal();
-        }
-
-        function openPlaybookModal() {
-            document.getElementById('playbookModal').classList.remove('hidden');
-        }
-
-        function closePlaybookModal() {
-            document.getElementById('playbookModal').classList.add('hidden');
-        }
-
-        function checkAnomalyAlerts(coin) {
-            if (coin.precisionScore >= 85 && !triggeredSymbolsHistory.has(coin.symbol)) {
-                triggeredSymbolsHistory.add(coin.symbol);
-                if (triggeredSymbolsHistory.size > 80) {
-                    const first = triggeredSymbolsHistory.values().next().value;
-                    triggeredSymbolsHistory.delete(first);
-                }
-                pushAlertLog(coin.symbol, "⚡ A+ 嚴選突圍", `${coin.signalText} | RVOL:${coin.rvol.toFixed(1)}x | OI增速:${coin.oiVelocity.toFixed(1)}%`, coin.lastPrice, "bull");
-                playAlertSound("bull");
-            }
-        }
-
-        function pushAlertLog(symbol, tag, desc, price, type = 'bull') {
-            const container = document.getElementById('alertLogsContainer');
-            alertCount++;
-            const badge = document.getElementById('alertCountBadge');
-            if (badge) badge.innerText = `${alertCount} 則快訊`;
-
-            if (alertCount === 1 && container) container.innerHTML = '';
-
-            const time = new Date().toLocaleTimeString();
-            const div = document.createElement('div');
-            div.className = `p-2 rounded-xl border ${type === 'bull' ? 'bg-emerald-950/30 border-emerald-500/30' : 'bg-rose-950/30 border-rose-500/30'} flex flex-col space-y-1 transition`;
-            div.innerHTML = `
-                <div class="flex items-center justify-between">
-                    <div class="flex items-center gap-1.5">
-                        <span class="font-bold text-white font-mono">${symbol}</span>
-                        <span class="text-[9px] px-1 rounded font-semibold ${type === 'bull' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'}">${tag}</span>
-                    </div>
-                    <span class="text-[9px] text-slate-500 font-mono">${time}</span>
-                </div>
-                <div class="text-[10px] text-slate-300 font-sans">${desc}</div>
-                <div class="text-[10px] text-slate-400 font-mono flex justify-between pt-0.5">
-                    <span>現價: $${formatPrice(price)}</span>
-                    <button onclick="executeOpenPositionV81(rawTickers.find(t=>t.symbol==='${symbol}'), '快訊狙擊開倉')" class="text-amber-400 hover:underline">跟單</button>
-                </div>
-            `;
-            if (container) {
-                container.prepend(div);
-                if (container.children.length > 30) container.removeChild(container.lastChild);
-            }
-        }
-
-        function openGeminiAuditModal() {
-            const modal = document.getElementById('geminiModal');
-            if (modal) modal.classList.remove('hidden');
-        }
-
-        function closeGeminiAuditModal() {
-            const modal = document.getElementById('geminiModal');
-            if (modal) modal.classList.add('hidden');
-        }
-
-        async function runGeminiStrategyAudit() {
-            const apiKeyInput = document.getElementById('geminiApiKeyInput');
-            const apiKey = (apiKeyInput ? apiKeyInput.value.trim() : '') || localStorage.getItem(STORAGE_KEY_GEMINI_APIKEY);
-
-            if (!apiKey) {
-                showToast("請先在上方輸入並儲存 Gemini API Key！", "⚠️");
-                return;
-            }
-
-            const recentHistory = simState.history.slice(0, 30);
-            const activePositions = simState.positions;
-
-            if (recentHistory.length < 3) {
-                showToast("平倉記錄不足 3 筆，請累積更多數據後再體檢", "⚠️");
-                return;
-            }
-
-            const reportArea = document.getElementById('geminiReportArea');
-            const btn = document.getElementById('btnStartAudit');
-            const applyBar = document.getElementById('geminiApplyBar');
-
-            if (applyBar) applyBar.classList.add('hidden');
-            if (btn) {
-                btn.disabled = true;
-                btn.innerHTML = `<div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div> 正在連線 Gemini 進行數據真值多因子覆盤...`;
-            }
-
-            reportArea.innerHTML = `
-                <div class="flex flex-col items-center justify-center py-12 space-y-3">
-                    <div class="w-8 h-8 border-3 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-                    <span class="text-slate-300 font-mono text-xs">正在分析 ${recentHistory.length} 筆實盤扣費紀錄與 MFE/MAE 潛能分佈...</span>
-                    <span class="text-slate-500 text-[11px]">評估真實 RVOL 與 OI Velocity 確認度...</span>
-                </div>
-            `;
-
-            const promptText = `
-你是一位資深量化基金操盤手與高頻突破交易專家。
-以下是我們在 Bybit 小幣永續合約 V8.1 數據真值系統中的真實運算數據（已扣除 0.055% Taker 手續費與滑點）：
-
-【當前策略風控配置】：
-- 單筆名義倉位: $${simState.tradeSize} USDT (5x 槓桿，保證金僅 $${simState.tradeSize / 5} U)
-- 最大持倉上限: ${simState.maxPositions} 檔 (集中風控防假分散)
-- 當前進場評分門檻: ${adaptiveParams.minScore} 分 (A+ 嚴選)
-- 當前防守止損 (SL): -${adaptiveParams.stopLossPct}%
-- 第一止盈 (TP1): +${adaptiveParams.tp1Pct}% (平倉35%移保本)
-- 第二止盈 (TP2): +${adaptiveParams.tp2Pct}% (平倉35%)
-- 尾倉移動鎖利: 最高點回撤 -${adaptiveParams.trailingPct}%
-- 當前冷卻黑名單: ${JSON.stringify(Array.from(adaptiveParams.blacklist))}
-
-【最近平倉明細 (前 30 筆，含 MFE 最大盈利與 MAE 最大回撤)】：
-${JSON.stringify(recentHistory)}
-
-【當前進行中持倉】：
-${JSON.stringify(activePositions.map(p => ({ symbol: p.symbol, entry: p.entryPrice, cur: p.currentPrice, tp1Reached: p.tp1Reached, isMoonBag: p.isMoonBag, reason: p.reason })))}
-
-請為這套量化系統進行深度體檢覆盤，並依據以下結構提供繁體中文專業分析：
-1. 【虧損歸因深度復盤】：統計主要虧損原因（例如：假突破追高、時間超時平倉過早、特定幣種反覆被插針洗盤）。
-2. 【勝率與淨盈虧比健康度】：評價扣除手續費與滑點後的真實期望值 (Expectancy)。
-3. 【具體調參建議】：請嚴格依據下列 JSON 格式回傳顧問建議配置：
-\`\`\`json
-{
-  "recommendedMinScore": 85,
-  "recommendedStopLossPct": 4.5,
-  "recommendedTp1Pct": 4.0,
-  "recommendedTp2Pct": 10.0,
-  "recommendedTrailingPct": 6.5,
-  "suggestedBlacklist": ["NIULAIUSDT"],
-  "reason": "調整理由簡述"
-}
-\`\`\`
-`;
-
-            try {
-                const candidateModels = [
-                    'gemini-3.6-flash',
-                    'gemini-3-flash-preview',
-                    'gemini-2.0-flash',
-                    'gemini-2.0-flash-lite'
-                ];
-
-                let replyText = null;
-                let usedModel = null;
-                let lastErr = null;
-
-                for (const model of candidateModels) {
-                    try {
-                        const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-                        const requestBody = {
-                            contents: [{ parts: [{ text: promptText }] }],
-                            generationConfig: {
-                                maxOutputTokens: 8192
-                            }
-                        };
-
-                        const response = await fetch(endpoint, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(requestBody)
-                        });
-
-                        const result = await response.json();
-                        if (response.ok && result.candidates && result.candidates[0]) {
-                            replyText = result.candidates[0].content.parts[0].text;
-                            usedModel = model;
-                            break;
-                        } else if (result.error) {
-                            lastErr = new Error(result.error.message || `模型 ${model} 請求失敗`);
-                            await new Promise(r => setTimeout(r, 1000));
-                            continue;
-                        }
-                    } catch (e) {
-                        lastErr = e;
-                        await new Promise(r => setTimeout(r, 1000));
-                        continue;
-                    }
-                }
-
-                if (!replyText) {
-                    throw lastErr || new Error("伺服器算力暫時繁忙，請 3 秒後再次點擊體檢。");
-                }
-
-                let formattedHtml = replyText
-                    .replace(/### (.*?)\n/g, '<h4 class="font-bold text-amber-400 text-xs mt-3 mb-1">$1</h4>')
-                    .replace(/## (.*?)\n/g, '<h3 class="font-bold text-blue-300 text-sm mt-3 mb-1">$1</h3>')
-                    .replace(/\*\*(.*?)\*\*/g, '<strong class="text-white">$1</strong>')
-                    .replace(/\n\n/g, '<br><br>')
-                    .replace(/\n- /g, '<br>• ');
-
-                reportArea.innerHTML = `
-                    <div class="space-y-2 text-xs">
-                        <div class="p-2 rounded-lg bg-blue-950/40 border border-blue-500/30 text-blue-300 text-[11px] mb-2 flex items-center justify-between">
-                            <span>🤖 顧問模型：${usedModel}</span>
-                            <span class="text-emerald-400 font-bold">● 分析成功</span>
-                        </div>
-                        ${formattedHtml}
-                    </div>
-                `;
-
-                const jsonMatch = replyText.match(/```json\s*([\s\S]*?)\s*```/);
-                if (jsonMatch && jsonMatch[1]) {
-                    try {
-                        const parsedParams = JSON.parse(jsonMatch[1]);
-                        lastRecommendedGeminiParams = parsedParams;
-
-                        const paramSummary = document.getElementById('geminiParamSummaryText');
-                        if (paramSummary) {
-                            paramSummary.innerText = `建議門檻: ${parsedParams.recommendedMinScore}分 | 止損: -${parsedParams.recommendedStopLossPct}% | TP1: +${parsedParams.recommendedTp1Pct}% | 黑名單: ${parsedParams.suggestedBlacklist ? parsedParams.suggestedBlacklist.join(', ') : '無'}`;
-                        }
-                        if (applyBar) applyBar.classList.remove('hidden');
-                    } catch (e) {
-                        console.warn("JSON parse error from Gemini:", e);
-                    }
-                }
-
-                showToast(`Gemini 智慧體檢完成 (${usedModel})！`, "✨");
-            } catch (err) {
-                console.error("Gemini API Error:", err);
-                reportArea.innerHTML = `
-                    <div class="p-4 rounded-xl bg-rose-950/40 border border-rose-500/40 text-rose-300 text-xs space-y-2">
-                        <div class="font-bold">❌ 連線 Gemini API 失敗：</div>
-                        <div>${err.message}</div>
-                        <div class="text-[11px] text-slate-400">請稍候 3~5 秒再次點擊「重新執行 Gemini 策略體檢」。</div>
-                    </div>
-                `;
-                showToast("體檢失敗: " + err.message, "❌");
-            } finally {
-                if (btn) {
-                    btn.disabled = false;
-                    btn.innerHTML = `<span>✨</span><span>重新執行 Gemini 策略體檢</span>`;
-                }
-            }
-        }
-
-        function applyGeminiRecommendedParams() {
-            if (!lastRecommendedGeminiParams) return;
-            const p = lastRecommendedGeminiParams;
-
-            if (p.recommendedMinScore) adaptiveParams.minScore = p.recommendedMinScore;
-            if (p.recommendedStopLossPct) adaptiveParams.stopLossPct = p.recommendedStopLossPct;
-            if (p.recommendedTp1Pct) adaptiveParams.tp1Pct = p.recommendedTp1Pct;
-            if (p.recommendedTp2Pct) adaptiveParams.tp2Pct = p.recommendedTp2Pct;
-            if (p.recommendedTrailingPct) adaptiveParams.trailingPct = p.recommendedTrailingPct;
-
-            if (p.suggestedBlacklist && Array.isArray(p.suggestedBlacklist)) {
-                p.suggestedBlacklist.forEach(sym => {
-                    if (sym && typeof sym === 'string') adaptiveParams.blacklist.add(sym.trim());
-                });
-            }
-
+            simState.balance = 100000.0;
+            simState.positions = [];
+            simState.history = [];
             saveToStorage();
-            showToast("已成功套用 Gemini 建議參數！", "🚀");
-            closeGeminiAuditModal();
+            renderSimPositions();
+            updateSimHeaderStats();
         }
 
         function formatPrice(val) {
-            if (val >= 100) return val.toFixed(2);
-            if (val >= 1) return val.toFixed(4);
-            if (val >= 0.001) return val.toFixed(6);
-            return val.toFixed(8);
-        }
-
-        function formatNumber(num) {
-            if (num >= 1e9) return (num / 1e9).toFixed(2) + 'B';
-            if (num >= 1e6) return (num / 1e6).toFixed(2) + 'M';
-            if (num >= 1e3) return (num / 1e3).toFixed(1) + 'K';
-            return num.toFixed(2);
+            const num = parseFloat(val) || 0;
+            if (num >= 100) return num.toFixed(2);
+            if (num >= 1) return num.toFixed(4);
+            return num.toFixed(6);
         }
 
         function initTimer() {
             if (timerInterval) clearInterval(timerInterval);
             timerInterval = setInterval(() => {
                 countdown--;
-                const timerEl = document.getElementById('updateTimer');
-                if (timerEl) timerEl.innerText = `下次刷新: ${countdown}s`;
-                if (countdown <= 0) {
-                    fetchMarketData();
-                }
+                document.getElementById('updateTimer').innerText = `下次刷新: ${countdown}s`;
+                if (countdown <= 0) fetchMarketData();
             }, 1000);
         }
 
         window.addEventListener('DOMContentLoaded', () => {
             loadFromStorage();
-            initFirebaseSync();
             updateSimHeaderStats();
-            togglePositionView('table');
+            renderSimPositions();
             fetchMarketData();
-            initBybitWebSocket();
             initTimer();
-            renderHistoryTable();
-            renderFomoTrackers();
         });
     </script>
 </body>
