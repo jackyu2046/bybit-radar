@@ -63,7 +63,7 @@
                             <span class="text-[9px] bg-emerald-500/20 text-emerald-400 font-mono font-semibold px-1.5 py-0.2 rounded border border-emerald-500/30">V8.6 INTELLIGENCE</span>
                             <span class="text-[9px] bg-purple-500/20 text-purple-300 font-mono font-semibold px-1.5 py-0.2 rounded border border-purple-500/30" id="regimeHeaderBadge">Regime: CHOPPY</span>
                         </div>
-                        <p class="text-[11px] text-slate-400 hidden sm:block">V8.6 七維情報漏斗 · 標的歷史勝率智商庫 · 體制×策略矩陣 · 相關性曝險風控 2.0</p>
+                        <p class="text-[11px] text-slate-400 hidden sm:block">V8.6 七維情報漏斗 · 標的歷史勝率智商庫 · 體制×策略矩陣 · 絕對去重數據防護</p>
                     </div>
                 </div>
             </div>
@@ -597,14 +597,16 @@
         function v85StableTradeId(trade) {
             if (trade && trade.tradeId) return String(trade.tradeId);
             if (trade && trade.id && String(trade.id).startsWith('TRD_')) return String(trade.id);
-            const raw = [
-                trade?.symbol || '',
-                trade?.side || 'LONG',
-                v85Number(trade?.entryPrice),
-                v85Number(trade?.exitPrice),
-                v85Timestamp(trade?.openedAt ?? trade?.openTime, 0),
-                v85Timestamp(trade?.closedAtTs ?? trade?.closedAt, 0)
-            ].join('|');
+            
+            const symbol = String(trade?.symbol || 'UNKNOWN').toUpperCase();
+            const side = String(trade?.side || 'LONG').toUpperCase();
+            const entry = v85Number(trade?.entryPrice, 0).toFixed(6);
+            const exit = v85Number(trade?.exitPrice, 0).toFixed(6);
+            const pnl = v85Number(trade?.pnl ?? trade?.netPnl, 0).toFixed(4);
+            const closedStr = String(trade?.closedAt || trade?.closedAtTs || '');
+            const duration = v85Number(trade?.durationMin, 0);
+
+            const raw = [symbol, side, entry, exit, pnl, closedStr, duration].join('|');
             let hash = 2166136261;
             for (let i = 0; i < raw.length; i++) {
                 hash ^= raw.charCodeAt(i);
@@ -618,33 +620,30 @@
             const exitPrice = v85Number(trade?.exitPrice, entryPrice);
             const grossPnl = v85Number(trade?.grossPnl, v85Number(trade?.pnl));
             const netPnl = v85Number(trade?.netPnl, v85Number(trade?.pnl, grossPnl));
-            const openedAt = v85Timestamp(trade?.openedAt ?? trade?.openTime, Date.now());
+            const openedAt = v85Timestamp(trade?.openedAt ?? trade?.openTime, 0);
             const fills = Array.isArray(trade?.fills) ? trade.fills : [];
 
-            // 強化時間戳回溯解析：排除中文時間字串導致的 NaN 歸零問題
             let closedAtTs = v85Timestamp(trade?.closedAtTs ?? trade?.closedTimestamp, 0);
             if (!closedAtTs && fills.length > 0) {
                 closedAtTs = v85Timestamp(fills[fills.length - 1]?.timestamp, 0);
             }
-            if (!closedAtTs) {
+            if (!closedAtTs && openedAt > 0) {
                 const durMin = v85Number(trade?.durationMin, 0);
-                closedAtTs = durMin > 0 ? openedAt + (durMin * 60000) : openedAt;
+                closedAtTs = openedAt + (durMin * 60000);
             }
 
             const entryFee = v85Number(trade?.entryFee);
             const exitFees = v85Number(trade?.exitFeesPaid ?? trade?.exitFees ?? trade?.exitFee);
             const totalFees = v85Number(trade?.totalFees, entryFee + exitFees);
 
-            return {
+            const normalized = {
                 ...trade,
-                tradeId: v85StableTradeId({ ...trade, openedAt, closedAtTs }),
-                id: trade?.id || v85StableTradeId({ ...trade, openedAt, closedAtTs }),
                 symbol: String(trade?.symbol || 'UNKNOWN').toUpperCase(),
                 side: String(trade?.side || 'LONG').toUpperCase(),
                 openedAt,
                 openTime: openedAt,
                 closedAtTs,
-                closedAt: trade?.closedAt || new Date(closedAtTs).toLocaleTimeString(),
+                closedAt: trade?.closedAt || (closedAtTs > 0 ? new Date(closedAtTs).toLocaleTimeString() : '已平倉'),
                 entryPrice,
                 exitPrice,
                 originalQty: v85Number(trade?.originalQty, v85Number(trade?.qty)),
@@ -653,7 +652,7 @@
                 netPnl,
                 pnl: netPnl,
                 pnlPct: v85Number(trade?.pnlPct, entryPrice > 0 ? ((exitPrice - entryPrice) / entryPrice) * 100 : 0),
-                durationMin: Math.max(0, Math.round(v85Number(trade?.durationMin, (closedAtTs - openedAt) / 60000))),
+                durationMin: Math.max(0, Math.round(v85Number(trade?.durationMin, closedAtTs > openedAt ? (closedAtTs - openedAt) / 60000 : 0))),
                 reason: trade?.reason || trade?.closeReason || 'CLOSED',
                 mfePct: v85Number(trade?.mfePct),
                 maePct: v85Number(trade?.maePct),
@@ -663,6 +662,11 @@
                 fills,
                 schemaVersion: V85_SCHEMA_VERSION
             };
+
+            normalized.tradeId = v85StableTradeId(normalized);
+            normalized.id = normalized.tradeId;
+
+            return normalized;
         }
 
         function v85SafeJsonParse(raw) {
@@ -770,6 +774,10 @@
             });
         }
 
+        function v85MergeTrades(...lists) {
+            return v85QualityMergeTrades(...lists);
+        }
+
         function v85Checksum(value) {
             const s = typeof value === 'string' ? value : JSON.stringify(value);
             let h = 2166136261;
@@ -829,7 +837,6 @@
                 throw new Error('staging verification failed');
             }
 
-            // Recovery point created only on major transactions
             let recoveryKey = null;
             if (createRecovery) {
                 recoveryKey = v85CreateRecoveryPoint('pre-commit', {
@@ -1001,7 +1008,6 @@
             if (mom >= strategyConfig.preferredMomentumMin && mom <= strategyConfig.preferredMomentumMax) { confidence += strategyConfig.weights.momentum; reasons.push('MOMENTUM_OK'); } else blockers.push('MOMENTUM_OUT_OF_RANGE');
             if (spread <= strategyConfig.maxSpreadPct) { confidence += strategyConfig.weights.spread; reasons.push('SPREAD_OK'); } else blockers.push('SPREAD_TOO_WIDE');
 
-            // 標的歷史智商庫 (Coin Intelligence Bonus / Penalty)
             const coinIntel = getCoinIntelligence(c.symbol);
             if (coinIntel.bonus !== 0) {
                 confidence += coinIntel.bonus;
@@ -1037,7 +1043,6 @@
             if (currentMarketRegime === 'RISK_OFF') return { allowed: false, reason: 'RISK_OFF' };
             if (now < (parseInt(rs.cooldownUntil) || 0)) return { allowed: false, reason: 'SYSTEM_COOLDOWN' };
             
-            // 幣種專屬停損冷卻檢查 (解決 BLAST 連續進場接刀缺陷)
             const symCooldown = rs.cooldownBySymbol ? rs.cooldownBySymbol[candidate.symbol] : 0;
             if (symCooldown && now < symCooldown) {
                 const remainingMin = Math.ceil((symCooldown - now) / 60000);
@@ -1236,6 +1241,16 @@
                 console.warn('V8.5 Safe Migration failed; originals were not intentionally cleared:', err);
             }
         }
+
+        const V85_SAVE_REASON = Object.freeze({
+            UI_STATE: 'UI_STATE',
+            SETTINGS: 'SETTINGS',
+            TRADE_CLOSE: 'TRADE_CLOSE',
+            MIGRATION: 'MIGRATION',
+            IMPORT: 'IMPORT',
+            CLOUD_MERGE: 'CLOUD_MERGE',
+            RESET: 'RESET'
+        });
 
         function saveToStorage(syncCloud = true, isMajorTransaction = false) {
             try {
@@ -1563,7 +1578,6 @@
                 regimeAtEntry: currentMarketRegime
             });
 
-            // Use hardened quality merge
             simState.historyArchive = v85QualityMergeTrades(simState.historyArchive || [], [trade]);
             simState.history = simState.historyArchive.slice(0, 300);
 
@@ -1953,9 +1967,9 @@
 
         function v85AuditKey(t) {
             if (!t) return 'UNCLASSIFIED';
-            if (typeof t.strategy === 'string' && t.strategy.length > 0) return t.strategy;
             if (typeof t.reason === 'string' && t.reason.length > 0) return t.reason;
             if (typeof t.closeReason === 'string' && t.closeReason.length > 0) return t.closeReason;
+            if (typeof t.strategy === 'string' && t.strategy.length > 0) return t.strategy;
             if (typeof t.signalType === 'string' && t.signalType.length > 0) return t.signalType;
             if (typeof t.grade === 'string' && t.grade.length > 0) return `GRADE_${t.grade}`;
             return 'UNCLASSIFIED';
@@ -2305,7 +2319,6 @@
                 const cloudHist = cloudState.historyArchive || cloudState.history || [];
                 const merged = v85QualityMergeTrades(localHist, cloudHist);
 
-                // 安全合併進行中持倉：避免雲端推送覆蓋本機剛開啟的倉位
                 const closedTradeIds = new Set(merged.map(t => t.id || t.tradeId));
                 const posMap = new Map();
                 (cloudState.positions || []).forEach(p => {
