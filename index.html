@@ -496,6 +496,11 @@
         const V85_BACKUP_PREFIX = 'bybit_radar_v85_migration_backup_';
         const V85_MIGRATION_MANIFEST_KEY = 'bybit_radar_v85_migration_manifest';
         const STORAGE_KEY_ROOM = 'bybit_radar_room_id_v2';
+        // STORAGE FIX: historyArchive previously grew forever (only the 300-item
+        // `history` view was capped). Over weeks/months that alone would exceed
+        // localStorage quota regardless of the backup/recovery fix above. Keep the
+        // most recent N trades (still far more than enough for edge-attribution).
+        const V85_MAX_ARCHIVE = 2000;
 
         const LEGACY_SIM_KEYS = [
             STORAGE_KEY_SIM,
@@ -699,7 +704,7 @@
             };
             const key = V85_BACKUP_PREFIX + stamp;
             localStorage.setItem(key, JSON.stringify(snapshot));
-            v85PruneMigrationBackups(5);
+            v85PruneMigrationBackups(2);
             localStorage.setItem(V85_MIGRATION_MANIFEST_KEY, JSON.stringify({
                 lastBackupKey: key,
                 createdAt: stamp,
@@ -813,7 +818,7 @@
             };
             try {
                 localStorage.setItem(key, JSON.stringify(record));
-                v85PruneRecoveryPoints(3);
+                v85PruneRecoveryPoints(2);
             } catch (err) {
                 console.warn('Recovery snapshot skipped (quota limit):', err);
             }
@@ -1142,6 +1147,15 @@
         /* 儲存載入與資料庫無損整合 — V8.5-A1 FINAL */
         function loadFromStorage() {
             try {
+                // STORAGE FIX: this whole function used to run its full
+                // migration (which snapshots a fresh, multi-MB backup key
+                // AND a fresh recovery-point key) on every single page load,
+                // forever. That's what was exhausting localStorage and
+                // causing "QuotaExceededError" on every save. Once we've
+                // already migrated to the current schema, skip re-snapshotting.
+                const existingManifest = v85SafeJsonParse(localStorage.getItem(V85_MIGRATION_MANIFEST_KEY));
+                const alreadyMigrated = !!(existingManifest && existingManifest.migrated === true && existingManifest.schemaVersion === V85_SCHEMA_VERSION);
+
                 const legacyStates = [];
                 LEGACY_SIM_KEYS.forEach(key => {
                     const raw = localStorage.getItem(key);
@@ -1151,7 +1165,7 @@
 
                 const archiveRaw = localStorage.getItem(V85_ARCHIVE_KEY);
                 const archiveState = v85SafeJsonParse(archiveRaw);
-                const backupKey = v85CreateMigrationBackup(legacyStates, archiveRaw);
+                const backupKey = alreadyMigrated ? (existingManifest.lastBackupKey || null) : v85CreateMigrationBackup(legacyStates, archiveRaw);
 
                 const primary = legacyStates.find(x => x.key === STORAGE_KEY_SIM) || legacyStates[0];
                 const mergedState = primary ? { ...simState, ...primary.state } : { ...simState };
@@ -1178,7 +1192,7 @@
                     ...mergedState,
                     schemaVersion: V85_SCHEMA_VERSION,
                     positions: Array.from(positionMap.values()),
-                    historyArchive: mergedHistory,
+                    historyArchive: mergedHistory.slice(0, V85_MAX_ARCHIVE),
                     history: mergedHistory.slice(0, 300)
                 };
 
@@ -1218,13 +1232,13 @@
 
                 ensureRiskState();
 
-                const expectedCount = mergedHistory.length;
+                const expectedCount = simState.historyArchive.length;
                 if (!v85VerifyMigration(simState, expectedCount)) {
                     console.warn('V8.5 migration verification failed; originals preserved. Backup:', backupKey);
                     return;
                 }
 
-                const recoveryKey = v85AtomicWrite(simState, true);
+                const recoveryKey = v85AtomicWrite(simState, !alreadyMigrated);
                 const health = v85GetMigrationHealth(simState);
 
                 localStorage.setItem(V85_MIGRATION_MANIFEST_KEY, JSON.stringify({
@@ -1258,7 +1272,7 @@
                 ensureResearchState();
                 simState.schemaVersion = V85_SCHEMA_VERSION;
                 const merged = v85QualityMergeTrades(simState.historyArchive || [], simState.history || []);
-                simState.historyArchive = merged;
+                simState.historyArchive = merged.slice(0, V85_MAX_ARCHIVE);
                 simState.history = merged.slice(0, 300);
 
                 const recoveryKey = v85AtomicWrite(simState, isMajorTransaction);
@@ -1663,7 +1677,7 @@
                 entryContext: pos.entryContext || null
             });
 
-            simState.historyArchive = v85QualityMergeTrades(simState.historyArchive || [], [trade]);
+            simState.historyArchive = v85QualityMergeTrades(simState.historyArchive || [], [trade]).slice(0, V85_MAX_ARCHIVE);
             simState.history = simState.historyArchive.slice(0, 300);
 
             recordRiskOutcome(trade, false);
