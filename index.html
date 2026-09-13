@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bybit 小幣高精度狙擊交易系統 V8.2 CORE ENGINE</title>
-    <!-- Tailwind CSS CDN --> 
+    <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -34,7 +34,6 @@
             }
         };
     </script>
-
     <style>
         body { background-color: #080b11; color: #f1f5f9; }
         ::-webkit-scrollbar { width: 5px; height: 5px; }
@@ -57,10 +56,10 @@
                     <div>
                         <div class="flex items-center gap-1.5">
                             <h1 class="text-sm md:text-base font-bold text-white tracking-wide">Bybit 小幣高精度狙擊交易系統</h1>
-                            <span class="text-[9px] bg-emerald-500/20 text-emerald-400 font-mono font-semibold px-1.5 py-0.2 rounded border border-emerald-500/30">V8.2 CORE ENGINE</span>
-                            <span class="text-[9px] bg-purple-500/20 text-purple-300 font-mono font-semibold px-1.5 py-0.2 rounded border border-purple-500/30" id="regimeHeaderBadge">Regime: CHOPPY</span>
+                            <span class="text-[9px] bg-emerald-500/20 text-emerald-400 font-mono font-semibold px-1.5 py-0.5 rounded border border-emerald-500/30">V8.2 CORE ENGINE</span>
+                            <span class="text-[9px] bg-purple-500/20 text-purple-300 font-mono font-semibold px-1.5 py-0.5 rounded border border-purple-500/30" id="regimeHeaderBadge">Regime: CHOPPY</span>
                         </div>
-                        <p class="text-[11px] text-slate-400 hidden sm:block">統一搓合管道 · 真正時序 RVOL & OI 加速度 · 盤口點差防滑點 · 5-10U 5x 扣費實撮模擬</p>
+                        <p class="text-[11px] text-slate-400 hidden sm:block">統一撮合管道 · 真實時序 RVOL & OI 加速度 · 盤口防滑點 · 5-10U 5x 扣費實撮模擬</p>
                     </div>
                 </div>
             </div>
@@ -264,7 +263,7 @@
                     <thead class="bg-slate-900 text-slate-400 sticky top-0 text-[11px] border-b border-crypto-border">
                         <tr>
                             <th class="py-2 px-2">幣種</th>
-                            <th class="py-2 px-2 text-right">進場 $\rightarrow$ 離場均價</th>
+                            <th class="py-2 px-2 text-right">進場 &rarr; 離場均價</th>
                             <th class="py-2 px-2 text-right">累計扣費純利 ($)</th>
                             <th class="py-2 px-2 text-center">時長</th>
                             <th class="py-2 px-2">最後離場原因</th>
@@ -278,17 +277,17 @@
         </div>
     </div>
 
-    <!-- Gemini 體檢彈窗 -->
+    <!-- Gemini 體檢與通用通知彈窗 -->
     <div id="geminiAuditModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
         <div class="bg-crypto-card border border-crypto-border rounded-xl p-5 max-w-md w-full space-y-3 text-xs font-sans">
             <div class="flex items-center justify-between border-b border-crypto-border pb-3">
-                <h3 class="text-sm font-bold text-white flex items-center gap-1.5">✨ Gemini AI 策略體檢</h3>
+                <h3 class="text-sm font-bold text-white flex items-center gap-1.5" id="geminiModalTitle">✨ Gemini AI 策略體檢</h3>
                 <button onclick="closeGeminiAuditModal()" class="text-slate-400 hover:text-white">✕</button>
             </div>
             <div id="geminiReportText" class="text-slate-300 leading-relaxed font-mono text-[11px]">
                 點擊下方按鈕，AI 將讀取最新平倉明細與手續費損耗進行多維度歸因分析。
             </div>
-            <button onclick="runGeminiAuditReport()" class="w-full py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold rounded-lg transition">
+            <button onclick="runGeminiAuditReport()" id="geminiActionBtn" class="w-full py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold rounded-lg transition">
                 執行 AI 歸因體檢
             </button>
         </div>
@@ -329,7 +328,76 @@
             blacklist: new Set(['NIULAIUSDT'])
         };
 
-        // 全版本無縫資料救援與淨化 (徹底解決 NaN 與遺失問題)
+        const V82_TAKER_FEE_RATE = 0.00055;
+        const V82_TP1_RATIO = 0.35;
+        const V82_TP2_RATIO = 0.35;
+        const V82_EPSILON = 1e-10;
+
+        function toNumber(value, fallback = 0) {
+            const n = parseFloat(value);
+            return Number.isFinite(n) ? n : fallback;
+        }
+
+        function calculateFee(notional) {
+            return Math.max(0, toNumber(notional)) * V82_TAKER_FEE_RATE;
+        }
+
+        function calculateGrossPnl(entryPrice, exitPrice, qty) {
+            const entry = toNumber(entryPrice);
+            const exit = toNumber(exitPrice);
+            const safeQty = toNumber(qty);
+            if (entry <= 0 || exit <= 0 || safeQty <= 0) return 0;
+            return (exit - entry) * safeQty;
+        }
+
+        function migratePositionToV82(pos) {
+            const entryPrice = toNumber(pos.entryPrice, 0.0001);
+            const originalNotional = toNumber(pos.originalNotional ?? pos.notional, 50);
+            const originalQty = toNumber(pos.originalQty, toNumber(pos.qty, originalNotional / entryPrice));
+            const remainingQty = Math.max(0, toNumber(pos.remainingQty, toNumber(pos.qty, originalQty)));
+            const entryFee = toNumber(pos.entryFee, calculateFee(originalNotional));
+            const legacyRealized = toNumber(pos.realizedPnl, 0);
+            const fills = Array.isArray(pos.fills) ? pos.fills : [];
+            const entryAllocated = toNumber(pos.entryFeeAllocated,
+                fills.reduce((sum, f) => sum + toNumber(f.entryFeeAllocation), 0));
+            const exitFees = toNumber(pos.exitFeesPaid,
+                fills.reduce((sum, f) => sum + toNumber(f.exitFee), 0));
+            const realizedGross = toNumber(pos.realizedGrossPnl,
+                fills.length ? fills.reduce((sum, f) => sum + toNumber(f.grossPnl), 0) : legacyRealized);
+            const realizedNet = toNumber(pos.realizedNetPnl,
+                fills.length ? fills.reduce((sum, f) => sum + toNumber(f.netPnl), 0) : 0);
+
+            return {
+                ...pos,
+                entryPrice,
+                currentPrice: toNumber(pos.currentPrice, entryPrice),
+                originalNotional,
+                notional: originalNotional,
+                originalQty,
+                remainingQty,
+                qty: remainingQty,
+                stopLoss: toNumber(pos.stopLoss, entryPrice * 0.955),
+                tp1: toNumber(pos.tp1, entryPrice * 1.042),
+                tp2: toNumber(pos.tp2, entryPrice * 1.10),
+                entryFee,
+                entryFeeAllocated: entryAllocated,
+                exitFeesPaid: exitFees,
+                realizedGrossPnl: realizedGross,
+                realizedNetPnl: realizedNet,
+                realizedPnl: realizedGross,
+                fills,
+                tp1Reached: !!pos.tp1Reached,
+                tp2Reached: !!pos.tp2Reached,
+                isMoonBag: !!pos.isMoonBag || !!pos.tp2Reached,
+                highestPrice: toNumber(pos.highestPrice, entryPrice),
+                lowestPrice: toNumber(pos.lowestPrice, entryPrice),
+                finalized: false,
+                entryFeeCharged: !!pos.entryFeeCharged,
+                accountingVersion: '8.2',
+                openTime: toNumber(pos.openTime, Date.now())
+            };
+        }
+
         function loadFromStorage() {
             try {
                 const legacyKeys = [
@@ -354,37 +422,12 @@
                     simState = { ...simState, ...parsed };
                 }
 
-                // 結構防禦與舊持倉帳務補全
                 if (simState.positions && Array.isArray(simState.positions)) {
-                    simState.positions = simState.positions.map(pos => {
-                        const entryPrice = parseFloat(pos.entryPrice) || 0.0001;
-                        const currentPrice = parseFloat(pos.currentPrice) || entryPrice;
-                        const notional = parseFloat(pos.notional) || 50.0;
-                        const qty = parseFloat(pos.qty) || (notional / entryPrice);
-                        const originalQty = parseFloat(pos.originalQty) || qty;
-
-                        return {
-                            ...pos,
-                            entryPrice,
-                            currentPrice,
-                            qty: isNaN(qty) ? 1.0 : qty,
-                            originalQty,
-                            notional: isNaN(notional) ? 50.0 : notional,
-                            stopLoss: parseFloat(pos.stopLoss) || (entryPrice * 0.955),
-                            tp1: parseFloat(pos.tp1) || (entryPrice * 1.042),
-                            tp2: parseFloat(pos.tp2) || (entryPrice * 1.10),
-                            realizedNetPnl: parseFloat(pos.realizedNetPnl) || parseFloat(pos.realizedPnl) || 0.0,
-                            totalFees: parseFloat(pos.totalFees) || (notional * 0.00055),
-                            fills: pos.fills || [],
-                            tp1Reached: !!pos.tp1Reached,
-                            tp2Reached: !!pos.tp2Reached,
-                            isMoonBag: !!pos.isMoonBag,
-                            highestPrice: parseFloat(pos.highestPrice) || entryPrice,
-                            openTime: parseInt(pos.openTime) || Date.now()
-                        };
-                    });
+                    simState.positions = simState.positions.map(migratePositionToV82);
                 }
 
+                simState.balance = toNumber(simState.balance, 100000);
+                simState.initialBalance = toNumber(simState.initialBalance, 100000);
                 saveToStorage();
             } catch (err) {
                 console.warn("讀取歷史存檔失敗，還原預設:", err);
@@ -397,7 +440,6 @@
             } catch (e) {}
         }
 
-        // 精確時間點搜尋函式 (解決 P0 級時間錯位問題)
         function findClosestHistoricalPoint(buffer, targetTime) {
             if (!buffer || buffer.length === 0) return null;
             let closest = null;
@@ -411,7 +453,6 @@
             return closest || buffer[0];
         }
 
-        // 時間驅動特徵引擎 (真正的 RVOL 與 OI 加速度)
         function computeTimeDrivenMetrics(symbol, curTurnover, curOi, curPrice) {
             const now = Date.now();
             let buf = timeSeriesBuffers.get(symbol);
@@ -420,10 +461,8 @@
                 timeSeriesBuffers.set(symbol, buf);
             }
 
-            // 推入最新快照
             buf.push({ timestamp: now, turnover: curTurnover, oi: curOi, price: curPrice });
 
-            // 修復 P0：時間驅動清理，移除超過 15 分鐘前的舊點
             while (buf.length > 0 && (now - buf[0].timestamp) > MAX_BUFFER_AGE_MS) {
                 buf.shift();
             }
@@ -434,7 +473,6 @@
             const pt5m = findClosestHistoricalPoint(buf, fiveMinAgo);
             const pt10m = findClosestHistoricalPoint(buf, tenMinAgo);
 
-            // 1. 真實滾動 RVOL 計算
             let rvol = 1.0;
             if (pt5m && pt5m !== buf[buf.length - 1]) {
                 const cur5mDelta = Math.max(0, curTurnover - pt5m.turnover);
@@ -445,7 +483,6 @@
                 }
             }
 
-            // 2. 真實 OI Velocity 與 OI Acceleration
             let oiVelocity5m = 0.0;
             let oiAcceleration = 0.0;
 
@@ -455,13 +492,12 @@
 
             if (pt10m && pt10m.oi > 0 && pt5m && pt5m.oi > 0) {
                 const prevVelocity5m = ((pt5m.oi - pt10m.oi) / pt10m.oi) * 100;
-                oiAcceleration = oiVelocity5m - prevVelocity5m; // 速度差 = 加速度
+                oiAcceleration = oiVelocity5m - prevVelocity5m;
             }
 
             return { rvol, oiVelocity: oiVelocity5m, oiAcceleration };
         }
 
-        // 大盤市場體制偵測
         function detectMarketRegime(list) {
             const btc = list.find(i => i.symbol === "BTCUSDT");
             let btc1h = 0;
@@ -473,258 +509,261 @@
                 btc24h = (parseFloat(btc.price24hPcnt) || 0) * 100;
             }
 
-            const altGains = list.filter(i => i.symbol.endsWith("USDT") && parseFloat(i.price24hPcnt) > 0).length;
-            const totalAlts = list.filter(i => i.symbol.endsWith("USDT")).length;
-            const breadthRatio = totalAlts > 0 ? altGains / totalAlts : 0.5;
+            const alts = list.filter(i => i.symbol.endsWith("USDT") && i.symbol !== "BTCUSDT");
+            const altGains = alts.filter(i => parseFloat(i.price24hPcnt) > 0).length;
+            const totalAlts = alts.length || 1;
+            const altBreadthPct = (altGains / totalAlts) * 100;
 
             let regime = 'CHOPPY';
+            const gateDot = document.getElementById('marketGateDot');
+            const gateText = document.getElementById('marketGateText');
+
             if (btc1h <= -1.2 || btc24h <= -3.5) {
                 regime = 'RISK_OFF';
-            } else if (breadthRatio >= 0.55 && btc1h >= 0.2) {
+                if (gateDot) gateDot.className = "w-1.5 h-1.5 rounded-full bg-rose-500 animate-ping mr-1.5";
+                if (gateText) gateText.innerHTML = `<span class="text-rose-400 font-bold">大盤避險 (${btc1h.toFixed(1)}%)</span>`;
+            } else if (btc1h >= 0.3 && altBreadthPct >= 55) {
                 regime = 'RISK_ON';
+                if (gateDot) gateDot.className = "w-1.5 h-1.5 rounded-full bg-emerald-400 mr-1.5";
+                if (gateText) gateText.innerHTML = `<span class="text-emerald-400 font-bold">大盤強勢 (+${btc1h.toFixed(1)}%)</span>`;
             } else {
                 regime = 'CHOPPY';
+                if (gateDot) gateDot.className = "w-1.5 h-1.5 rounded-full bg-amber-400 mr-1.5";
+                if (gateText) gateText.innerHTML = `<span>大盤震盪 (${btc1h >= 0 ? '+' : ''}${btc1h.toFixed(1)}%)</span>`;
             }
 
             currentMarketRegime = regime;
-
             const badge = document.getElementById('regimeHeaderBadge');
-            if (badge) {
-                badge.innerText = `Regime: ${regime}`;
-                badge.className = `text-[9px] font-mono font-semibold px-1.5 py-0.2 rounded border ${
-                    regime === 'RISK_ON' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' :
-                    regime === 'RISK_OFF' ? 'bg-rose-500/20 text-rose-400 border-rose-500/30' :
-                    'bg-purple-500/20 text-purple-300 border-purple-500/30'
-                }`;
-            }
-
-            const gateDot = document.getElementById('marketGateDot');
-            const gateText = document.getElementById('marketGateText');
-            if (gateDot && gateText) {
-                if (regime === 'RISK_OFF') {
-                    gateDot.className = "w-1.5 h-1.5 rounded-full bg-rose-500 animate-ping mr-1.5";
-                    gateText.innerText = "大盤: RISK_OFF 避險";
-                } else {
-                    gateDot.className = "w-1.5 h-1.5 rounded-full bg-emerald-400 mr-1.5";
-                    gateText.innerText = `大盤: 正常 (${btc1h >= 0 ? '+' : ''}${btc1h.toFixed(1)}%)`;
-                }
-            }
+            if (badge) badge.innerText = `Regime: ${regime}`;
 
             return regime;
         }
 
-        // Bybit API 請求與數據計算
-        async function fetchMarketData() {
-            try {
-                const res = await fetch("https://api.bybit.com/v5/market/tickers?category=linear");
-                const json = await res.json();
-                if (json.retCode === 0 && json.result && json.result.list) {
-                    detectMarketRegime(json.result.list);
-                    processTickersV82(json.result.list);
-                }
-            } catch (err) {
-                console.error("Bybit REST API 請求失敗:", err);
-            } finally {
-                countdown = 5;
-            }
-        }
-
-        function processTickersV82(list) {
-            const newTickers = [];
-
-            list.forEach(item => {
-                const symbol = item.symbol;
-                if (!symbol.endsWith("USDT")) return;
-
-                const lastPrice = parseFloat(item.lastPrice) || 0;
-                if (lastPrice <= 0) return;
-                allMarketPrices.set(symbol, lastPrice);
-
-                const turnover24h = parseFloat(item.turnover24h) || 0;
-                const openInterestValue = parseFloat(item.openInterestValue) || 0;
-                const bid1Price = parseFloat(item.bid1Price) || lastPrice;
-                const ask1Price = parseFloat(item.ask1Price) || lastPrice;
-
-                // 盤口點差 Spread %
-                const spreadPct = ask1Price > 0 ? ((ask1Price - bid1Price) / ask1Price) * 100 : 0.05;
-
-                // 時間序列指標運算
-                const { rvol, oiVelocity, oiAcceleration } = computeTimeDrivenMetrics(
-                    symbol, turnover24h, openInterestValue, lastPrice
-                );
-
-                const price24hPcnt = (parseFloat(item.price24hPcnt) || 0) * 100;
-                const prevPrice1h = parseFloat(item.prevPrice1h) || lastPrice;
-                const momentum1h = prevPrice1h > 0 ? ((lastPrice - prevPrice1h) / prevPrice1h) * 100 : 0;
-                const fundingRate = (parseFloat(item.fundingRate) || 0) * 100;
-
-                const featureScore = calculateFeatureGroupScoreV82({
-                    momentum1h, rvol, oiVelocity, oiAcceleration, turnover24h, spreadPct, fundingRate, price24hPcnt
-                });
-
-                let grade = 'C';
-                if (featureScore >= 85 && spreadPct <= 0.10 && rvol >= 2.0 && oiVelocity > 0.5) grade = 'A+';
-                else if (featureScore >= 75) grade = 'A';
-                else if (featureScore >= 65) grade = 'B';
-
-                const record = {
-                    symbol, lastPrice, price24hPcnt, momentum1h, turnover24h,
-                    openInterestValue, rvol, oiVelocity, oiAcceleration, spreadPct, fundingRate,
-                    score: featureScore, grade
-                };
-
-                newTickers.push(record);
-            });
-
-            rawTickers = newTickers;
-            renderMarketTable(newTickers);
-            updateSimPositions();
-            updateSimHeaderStats();
-
-            // 自動開倉驗證：僅在 A+ 且非避險環境下觸發
-            if (simState.autoTrade && currentMarketRegime !== 'RISK_OFF') {
-                checkAutoTradingOpportunities();
-            }
-        }
-
         function calculateFeatureGroupScoreV82(f) {
             let score = 0;
-            // A. Price Action (Max 25)
             if (f.momentum1h >= 3.0 && f.momentum1h <= 12.0) score += 25;
             else if (f.momentum1h >= 1.5) score += 15;
 
-            // B. Volume & Acceleration (Max 20)
             if (f.rvol >= 3.0) score += 20;
             else if (f.rvol >= 1.8) score += 12;
 
-            // C. Derivatives & OI (Max 30)
-            if (f.oiVelocity >= 2.0 && f.oiAcceleration > 0) score += 25; // 加速度加分
-            else if (f.oiVelocity >= 0.8) score += 15;
-            if (f.fundingRate <= -0.05) score += 5;
+            if (f.oiVelocity >= 2.0) score += 20;
+            else if (f.oiVelocity >= 0.5) score += 10;
+            if (f.fundingRate <= -0.05) score += 10;
 
-            // D. Tradeability & Spread (Max 15)
             if (f.spreadPct <= 0.05) score += 15;
             else if (f.spreadPct <= 0.12) score += 8;
 
-            // E. Market Context (Max 10)
             if (f.turnover24h >= 2500000) score += 10;
 
             return Math.min(100, score);
         }
 
-        // V8.2 核心撮合引擎 (Unified Fill Engine)
-        function executeFill(pos, fillQty, fillPrice, reason) {
-            const fillNotional = fillQty * fillPrice;
-            const takerFeeRate = 0.00055; // 0.055% Taker Fee
-            const exitFee = fillNotional * takerFeeRate;
-            
-            const grossPnl = (fillPrice - pos.entryPrice) * fillQty;
-            const netPnl = grossPnl - exitFee;
-
-            pos.qty -= fillQty;
-            pos.realizedNetPnl += netPnl;
-            pos.totalFees += exitFee;
-            simState.balance += netPnl; // 純利寫入可用餘額
-
-            pos.fills.push({
-                timestamp: Date.now(),
-                fillQty,
-                fillPrice,
+        function calculatePositionUnrealizedPnl(position, marketPrice) {
+            const price = toNumber(marketPrice, position.currentPrice || position.entryPrice);
+            const remainingQty = Math.max(0, toNumber(position.remainingQty ?? position.qty));
+            const grossPnl = calculateGrossPnl(position.entryPrice, price, remainingQty);
+            const entryFeeRemaining = Math.max(0,
+                toNumber(position.entryFee) - toNumber(position.entryFeeAllocated));
+            const hypotheticalExitFee = calculateFee(price * remainingQty);
+            return {
                 grossPnl,
+                entryFeeRemaining,
+                hypotheticalExitFee,
+                tradeNetPnl: grossPnl - entryFeeRemaining - hypotheticalExitFee,
+                balanceDeltaPnl: grossPnl - hypotheticalExitFee
+            };
+        }
+
+        function executeFill({ position, qty, price, reason = 'UNKNOWN', timestamp = Date.now() }) {
+            if (!position) return { success: false, error: 'POSITION_NOT_FOUND' };
+            const remainingQty = Math.max(0, toNumber(position.remainingQty ?? position.qty));
+            const requestedQty = toNumber(qty);
+            const fillPrice = toNumber(price);
+            if (remainingQty <= V82_EPSILON) return { success: false, error: 'NO_REMAINING_QTY' };
+            if (requestedQty <= 0) return { success: false, error: 'INVALID_QTY' };
+            if (fillPrice <= 0) return { success: false, error: 'INVALID_PRICE' };
+
+            const fillQty = Math.min(requestedQty, remainingQty);
+            const originalQty = Math.max(V82_EPSILON, toNumber(position.originalQty, remainingQty));
+            const entryFeeRemaining = Math.max(0,
+                toNumber(position.entryFee) - toNumber(position.entryFeeAllocated));
+            const proportionalEntryFee = toNumber(position.entryFee) * (fillQty / originalQty);
+            const entryFeeAllocation = Math.min(entryFeeRemaining, proportionalEntryFee);
+            const grossPnl = calculateGrossPnl(position.entryPrice, fillPrice, fillQty);
+            const exitFee = calculateFee(fillPrice * fillQty);
+            const netPnl = grossPnl - entryFeeAllocation - exitFee;
+
+            position.remainingQty = Math.max(0, remainingQty - fillQty);
+            position.qty = position.remainingQty;
+            position.realizedGrossPnl = toNumber(position.realizedGrossPnl) + grossPnl;
+            position.realizedNetPnl = toNumber(position.realizedNetPnl) + netPnl;
+            position.realizedPnl = position.realizedGrossPnl;
+            position.entryFeeAllocated = toNumber(position.entryFeeAllocated) + entryFeeAllocation;
+            position.exitFeesPaid = toNumber(position.exitFeesPaid) + exitFee;
+            if (!Array.isArray(position.fills)) position.fills = [];
+
+            const fill = {
+                id: `FILL_${timestamp}_${Math.random().toString(36).slice(2, 8)}`,
+                timestamp,
+                price: fillPrice,
+                qty: fillQty,
+                grossPnl,
+                entryFeeAllocation,
                 exitFee,
                 netPnl,
                 reason
-            });
+            };
+            position.fills.push(fill);
 
-            return netPnl;
+            simState.balance = toNumber(simState.balance) + grossPnl - exitFee;
+            const isFullyClosed = position.remainingQty <= V82_EPSILON;
+            if (isFullyClosed) position.remainingQty = position.qty = 0;
+
+            return { success: true, isFullyClosed, fill, grossPnl, netPnl, exitFee,
+                entryFeeAllocation, remainingQty: position.remainingQty };
         }
 
-        // 模擬持倉精算與出場排程 (TP1 / TP2 / Trailing Stop 完整管線)
+        function executeTP1(position, marketPrice) {
+            if (!position || position.tp1Reached) return null;
+            const result = executeFill({ position,
+                qty: position.originalQty * V82_TP1_RATIO,
+                price: marketPrice,
+                reason: '🎯 TP1 達標平 35%' });
+            if (result.success) {
+                position.tp1Reached = true;
+                position.stopLoss = Math.max(toNumber(position.stopLoss), position.entryPrice * 1.002);
+            }
+            return result;
+        }
+
+        function executeTP2(position, marketPrice) {
+            if (!position || position.tp2Reached) return null;
+            const result = executeFill({ position,
+                qty: position.originalQty * V82_TP2_RATIO,
+                price: marketPrice,
+                reason: '💎 TP2 達標平 35%' });
+            if (result.success) {
+                position.tp2Reached = true;
+                position.isMoonBag = true;
+            }
+            return result;
+        }
+
+        function executeStopLoss(position, curPrice) {
+            const slippageRate = 0.0015;
+            const fillPrice = Math.min(curPrice, toNumber(position.stopLoss)) * (1 - slippageRate);
+            const reason = position.tp1Reached ? '🛡️ 觸發保本損離場' : '🔴 觸發防守止損 (SL)';
+            return executeFill({ position,
+                qty: position.remainingQty,
+                price: fillPrice,
+                reason });
+        }
+
         function updateSimPositions() {
-            if (!simState.positions || simState.positions.length === 0) {
+            if (!Array.isArray(simState.positions) || simState.positions.length === 0) {
                 renderSimPositions();
+                updateSimHeaderStats();
                 return;
             }
-
-            const positionsToFinalize = [];
-
-            simState.positions.forEach(pos => {
-                const curPrice = parseFloat(allMarketPrices.get(pos.symbol)) || parseFloat(pos.currentPrice) || parseFloat(pos.entryPrice);
+            const positions = [...simState.positions];
+            for (const pos of positions) {
+                if (pos.finalized) continue;
+                const curPrice = toNumber(allMarketPrices.get(pos.symbol),
+                    toNumber(pos.currentPrice, pos.entryPrice));
                 pos.currentPrice = curPrice;
+                pos.highestPrice = Math.max(toNumber(pos.highestPrice, pos.entryPrice), curPrice);
+                pos.lowestPrice = Math.min(toNumber(pos.lowestPrice, pos.entryPrice), curPrice);
 
-                if (curPrice > pos.highestPrice) pos.highestPrice = curPrice;
-
-                // 1. 觸發硬止損 (Full SL Exit)
-                if (curPrice <= pos.stopLoss) {
-                    executeFill(pos, pos.qty, pos.stopLoss, "🔴 觸發防守止損 (SL)");
-                    positionsToFinalize.push({ pos, finalReason: pos.tp1Reached ? "🛡️ 觸發保本損離場" : "🔴 觸發防守止損 (SL)" });
-                    return;
+                // 1. 硬止損防守
+                if (curPrice <= toNumber(pos.stopLoss)) {
+                    const result = executeStopLoss(pos, curPrice);
+                    if (result?.success && result.isFullyClosed) {
+                        finalizeClosedTrade(pos, result.fill.price, result.fill.reason);
+                    }
+                    continue;
                 }
 
-                // 2. TP1 達標：平倉 35% 並推進成本保本損 (+0.2%)
-                if (!pos.tp1Reached && curPrice >= pos.tp1) {
-                    pos.tp1Reached = true;
-                    const closeQty = pos.originalQty * 0.35;
-                    executeFill(pos, closeQty, curPrice, "🎯 TP1 達標平 35%");
-                    pos.stopLoss = pos.entryPrice * 1.002; // 保本鎖利
-                    saveToStorage();
+                // 2. TP1 達標：平倉 35% 並推進成本保本損
+                if (!pos.tp1Reached && curPrice >= toNumber(pos.tp1)) {
+                    executeTP1(pos, curPrice);
                 }
 
-                // 3. TP2 達標：再平倉 35%，剩餘 30% 啟動奔馳尾倉
-                if (pos.tp1Reached && !pos.tp2Reached && curPrice >= pos.tp2) {
-                    pos.tp2Reached = true;
-                    pos.isMoonBag = true;
-                    const closeQty = pos.originalQty * 0.35;
-                    executeFill(pos, closeQty, curPrice, "💎 TP2 達標平 35%");
-                    saveToStorage();
+                // 3. TP2 達標：平倉 35%，啟動 30% 奔馳尾倉
+                if (!pos.tp2Reached && pos.tp1Reached && curPrice >= toNumber(pos.tp2)) {
+                    executeTP2(pos, curPrice);
                 }
 
-                // 4. 奔馳尾倉高點回撤 6.5% 鎖利離場
-                if (pos.isMoonBag && pos.qty > 0) {
-                    const pullback = (pos.highestPrice - curPrice) / pos.highestPrice;
-                    if (pullback >= (adaptiveParams.trailingPct / 100)) {
-                        executeFill(pos, pos.qty, curPrice, `🚀 尾倉鎖利 (高點回撤 -${adaptiveParams.trailingPct}%)`);
-                        positionsToFinalize.push({ pos, finalReason: "🚀 尾倉鎖利離場" });
-                        return;
+                // 4. 奔馳尾倉高點回撤 6.5% 動態鎖利
+                if (pos.isMoonBag && toNumber(pos.remainingQty ?? pos.qty) > V82_EPSILON) {
+                    const trailingPct = toNumber(adaptiveParams.trailingPct, 6.5) / 100;
+                    const trailingStopPrice = pos.highestPrice * (1 - trailingPct);
+                    if (curPrice <= trailingStopPrice) {
+                        const reason = `🚀 尾倉鎖利離場 (高點回撤 -${adaptiveParams.trailingPct}%)`;
+                        const result = executeFill({
+                            position: pos,
+                            qty: pos.remainingQty,
+                            price: curPrice,
+                            reason
+                        });
+                        if (result?.success && result.isFullyClosed) {
+                            finalizeClosedTrade(pos, curPrice, reason);
+                        }
+                        continue;
                     }
                 }
-            });
 
-            // 清理已完全平倉之持倉
-            positionsToFinalize.forEach(item => {
-                finalizeClosedTrade(item.pos, item.finalReason);
-            });
-
-            renderSimPositions();
-            updateSimHeaderStats();
-        }
-
-        function finalizeClosedTrade(pos, finalReason) {
-            simState.positions = simState.positions.filter(p => p.id !== pos.id);
-
-            // 匯總此筆交易之累計離場均價與總純利
-            const totalExitNotional = pos.fills.reduce((a, b) => a + (b.fillQty * b.fillPrice), 0);
-            const totalExitQty = pos.fills.reduce((a, b) => a + b.fillQty, 0);
-            const avgExitPrice = totalExitQty > 0 ? (totalExitNotional / totalExitQty) : pos.currentPrice;
-
-            simState.history.unshift({
-                symbol: pos.symbol,
-                entryPrice: pos.entryPrice,
-                exitPrice: avgExitPrice,
-                pnl: pos.realizedNetPnl,
-                pnlPct: (pos.realizedNetPnl / (pos.originalQty * pos.entryPrice)) * 100,
-                durationMin: Math.round((Date.now() - pos.openTime) / 60000),
-                reason: finalReason,
-                closedAt: new Date().toLocaleTimeString()
-            });
-
+                if (toNumber(pos.remainingQty ?? pos.qty) <= V82_EPSILON && !pos.finalized) {
+                    finalizeClosedTrade(pos, curPrice, '🏁 全部倉位已完成');
+                }
+            }
             saveToStorage();
             renderSimPositions();
             updateSimHeaderStats();
         }
 
-        // 自動開倉驗證
+        function finalizeClosedTrade(pos, exitPrice, reason = 'CLOSED') {
+            if (!pos || pos.finalized) return null;
+            pos.finalized = true;
+            simState.positions = simState.positions.filter(p => p.id !== pos.id);
+
+            const grossPnl = toNumber(pos.realizedGrossPnl);
+            const netPnl = toNumber(pos.realizedNetPnl);
+            const entryFee = toNumber(pos.entryFee);
+            const exitFees = toNumber(pos.exitFeesPaid);
+            const notional = toNumber(pos.originalNotional ?? pos.notional, 50);
+
+            const trade = {
+                id: pos.id,
+                symbol: pos.symbol,
+                entryPrice: pos.entryPrice,
+                exitPrice: toNumber(exitPrice, pos.currentPrice || pos.entryPrice),
+                originalQty: pos.originalQty,
+                grossPnl,
+                entryFee,
+                exitFees,
+                totalFees: entryFee + exitFees,
+                pnl: netPnl,
+                pnlPct: notional > 0 ? (netPnl / notional) * 100 : 0,
+                durationMin: Math.max(0, Math.round((Date.now() - toNumber(pos.openTime, Date.now())) / 60000)),
+                reason,
+                fills: Array.isArray(pos.fills) ? pos.fills : [],
+                tp1Reached: !!pos.tp1Reached,
+                tp2Reached: !!pos.tp2Reached,
+                closedAt: new Date().toLocaleTimeString(),
+                closedTimestamp: Date.now()
+            };
+
+            simState.history.unshift(trade);
+            saveToStorage();
+            renderSimPositions();
+            updateSimHeaderStats();
+            return trade;
+        }
+
         function checkAutoTradingOpportunities() {
+            if (!simState.autoTrade) return;
+            if (currentMarketRegime === 'RISK_OFF') return;
             if (simState.positions.length >= simState.maxPositions) return;
 
             const candidates = rawTickers.filter(c => {
@@ -738,106 +777,230 @@
             }
         }
 
-        function executeOpenPosition(coin, reason) {
-            if (simState.positions.length >= simState.maxPositions) return;
+        function executeOpenPosition(coin, reason = 'MANUAL_ENTRY') {
+            if (!coin) return null;
+            if (!Array.isArray(simState.positions)) simState.positions = [];
+            if (simState.positions.length >= simState.maxPositions) return null;
+            if (simState.positions.some(p => p.symbol === coin.symbol)) return null;
 
-            const notional = parseFloat(simState.tradeSize) || 50.0;
-            const entryPrice = parseFloat(coin.lastPrice) || 0.0001;
+            const notional = toNumber(simState.tradeSize, 50);
+            const entryPrice = toNumber(coin.lastPrice);
+            if (notional <= 0 || entryPrice <= 0) return null;
+
             const qty = notional / entryPrice;
-            const entryFee = notional * 0.00055; // 開倉手續費
+            const entryFee = calculateFee(notional);
+            if (toNumber(simState.balance) < entryFee) return null;
 
-            simState.balance -= entryFee; // 扣除開倉費
-
+            simState.balance = toNumber(simState.balance) - entryFee;
+            const now = Date.now();
             const position = {
-                id: 'POS_' + Date.now() + '_' + coin.symbol,
+                id: `POS_${now}_${coin.symbol}`,
                 symbol: coin.symbol,
-                entryPrice: entryPrice,
+                entryPrice,
                 currentPrice: entryPrice,
-                qty: qty,
                 originalQty: qty,
-                notional: notional,
-                openTime: Date.now(),
-                stopLoss: entryPrice * (1 - (adaptiveParams.stopLossPct / 100)),
-                tp1: entryPrice * (1 + (adaptiveParams.tp1Pct / 100)),
-                tp2: entryPrice * (1 + (adaptiveParams.tp2Pct / 100)),
+                remainingQty: qty,
+                qty,
+                originalNotional: notional,
+                notional,
+                openTime: now,
+                stopLoss: entryPrice * (1 - toNumber(adaptiveParams.stopLossPct, 4.5) / 100),
+                tp1: entryPrice * (1 + toNumber(adaptiveParams.tp1Pct, 4.2) / 100),
+                tp2: entryPrice * (1 + toNumber(adaptiveParams.tp2Pct, 10.0) / 100),
                 tp1Reached: false,
                 tp2Reached: false,
                 isMoonBag: false,
                 highestPrice: entryPrice,
-                realizedNetPnl: -entryFee, // 初始實現損益包含開倉費
-                totalFees: entryFee,
+                lowestPrice: entryPrice,
+                entryFee,
+                entryFeeCharged: true,
+                accountingVersion: '8.2',
+                entryFeeAllocated: 0,
+                exitFeesPaid: 0,
+                realizedGrossPnl: 0,
+                realizedNetPnl: 0,
+                realizedPnl: 0,
                 fills: [],
-                reason: reason,
-                score: coin.score
+                finalized: false,
+                reason,
+                score: coin.score ?? 0,
+                grade: coin.grade ?? 'N/A'
             };
 
             simState.positions.push(position);
             saveToStorage();
             renderSimPositions();
             updateSimHeaderStats();
+            return position;
         }
 
-        // 頂部與計分卡數據實時計算 (依據 Expectancy 公式)
+        async function fetchMarketData() {
+            try {
+                const res = await fetch("https://api.bybit.com/v5/market/tickers?category=linear");
+                const json = await res.json();
+                if (json.retCode === 0 && json.result && json.result.list) {
+                    processTickersV82(json.result.list);
+                }
+            } catch (err) {
+                console.error("Bybit REST API 請求失敗:", err);
+            } finally {
+                countdown = 5;
+            }
+        }
+
+        function processTickersV82(list) {
+            detectMarketRegime(list);
+
+            const newTickers = [];
+            list.forEach(item => {
+                const symbol = item.symbol;
+                if (!symbol.endsWith("USDT")) return;
+
+                const lastPrice = parseFloat(item.lastPrice) || 0;
+                if (lastPrice <= 0) return;
+                allMarketPrices.set(symbol, lastPrice);
+
+                const turnover24h = parseFloat(item.turnover24h) || 0;
+                const openInterestValue = parseFloat(item.openInterestValue) || 0;
+                const bid1Price = parseFloat(item.bid1Price) || lastPrice;
+                const ask1Price = parseFloat(item.ask1Price) || lastPrice;
+
+                const spreadPct = ask1Price > 0 ? ((ask1Price - bid1Price) / ask1Price) * 100 : 0.05;
+
+                const timeMetrics = computeTimeDrivenMetrics(symbol, turnover24h, openInterestValue, lastPrice);
+
+                const price24hPcnt = (parseFloat(item.price24hPcnt) || 0) * 100;
+                const prevPrice1h = parseFloat(item.prevPrice1h) || lastPrice;
+                const momentum1h = prevPrice1h > 0 ? ((lastPrice - prevPrice1h) / prevPrice1h) * 100 : 0;
+                const fundingRate = (parseFloat(item.fundingRate) || 0) * 100;
+
+                const featureScore = calculateFeatureGroupScoreV82({
+                    momentum1h,
+                    rvol: timeMetrics.rvol,
+                    oiVelocity: timeMetrics.oiVelocity,
+                    turnover24h,
+                    spreadPct,
+                    fundingRate,
+                    price24hPcnt
+                });
+
+                let grade = 'C';
+                if (featureScore >= 85 && spreadPct <= 0.10 && timeMetrics.rvol >= 2.0) grade = 'A+';
+                else if (featureScore >= 75) grade = 'A';
+                else if (featureScore >= 65) grade = 'B';
+
+                newTickers.push({
+                    symbol,
+                    lastPrice,
+                    price24hPcnt,
+                    momentum1h,
+                    turnover24h,
+                    openInterestValue,
+                    rvol: timeMetrics.rvol,
+                    oiVelocity: timeMetrics.oiVelocity,
+                    oiAcceleration: timeMetrics.oiAcceleration,
+                    spreadPct,
+                    fundingRate,
+                    score: featureScore,
+                    grade
+                });
+            });
+
+            newTickers.sort((a, b) => b.score - a.score);
+            rawTickers = newTickers;
+
+            renderMarketTable(newTickers);
+            updateSimPositions();
+            updateSimHeaderStats();
+
+            if (simState.autoTrade) {
+                checkAutoTradingOpportunities();
+            }
+        }
+
         function updateSimHeaderStats() {
-            let unrealizedPnl = 0.0;
-
-            if (simState.positions && Array.isArray(simState.positions)) {
+            let unrealizedBalanceDelta = 0;
+            if (Array.isArray(simState.positions)) {
                 simState.positions.forEach(pos => {
-                    const entryPrice = parseFloat(pos.entryPrice) || 0;
-                    const curPrice = parseFloat(pos.currentPrice) || entryPrice;
-                    const qty = parseFloat(pos.qty) || 0;
-
-                    if (entryPrice > 0 && qty > 0) {
-                        const grossPnl = (curPrice - entryPrice) * qty;
-                        const exitFeeEstimate = (qty * curPrice) * 0.00055;
-                        const netUnrealized = grossPnl - exitFeeEstimate;
-                        if (!isNaN(netUnrealized)) unrealizedPnl += netUnrealized;
-                    }
+                    const u = calculatePositionUnrealizedPnl(pos, pos.currentPrice);
+                    unrealizedBalanceDelta += u.balanceDeltaPnl;
                 });
             }
 
-            const balance = parseFloat(simState.balance) || 100000.0;
-            const totalEquity = balance + unrealizedPnl;
-            const totalPnlPct = ((totalEquity - simState.initialBalance) / simState.initialBalance) * 100;
+            const balance = toNumber(simState.balance, 100000);
+            const initialBalance = toNumber(simState.initialBalance, 100000);
+            const totalEquity = balance + unrealizedBalanceDelta;
+            const totalPnlPct = initialBalance > 0 ? ((totalEquity - initialBalance) / initialBalance) * 100 : 0;
 
-            document.getElementById('simEquityDisplay').innerText = `$${totalEquity.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-            document.getElementById('simEquityDisplay').className = `text-sm sm:text-base font-bold font-mono ${totalEquity >= simState.initialBalance ? 'text-emerald-400' : 'text-rose-400'}`;
+            const eqEl = document.getElementById('simEquityDisplay');
+            if (eqEl) {
+                eqEl.innerText = `$${totalEquity.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                eqEl.className = `text-sm sm:text-base font-bold font-mono ${totalEquity >= initialBalance ? 'text-emerald-400' : 'text-rose-400'}`;
+            }
 
-            document.getElementById('simBalanceDisplay').innerText = `$${balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-            
+            const balEl = document.getElementById('simBalanceDisplay');
+            if (balEl) {
+                balEl.innerText = `$${balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            }
+
             const pnlEl = document.getElementById('simTotalPnlDisplay');
-            pnlEl.innerText = `(${totalPnlPct >= 0 ? '+' : ''}${totalPnlPct.toFixed(2)}%)`;
-            pnlEl.className = `text-xs font-mono font-semibold ${totalPnlPct >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
+            if (pnlEl) {
+                pnlEl.innerText = `(${totalPnlPct >= 0 ? '+' : ''}${totalPnlPct.toFixed(2)}%)`;
+                pnlEl.className = `text-xs font-mono font-semibold ${totalPnlPct >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
+            }
 
-            document.getElementById('simOpenPositionsCount').innerText = `${simState.positions.length} / ${simState.maxPositions}`;
+            const openPosEl = document.getElementById('simOpenPositionsCount');
+            if (openPosEl) {
+                openPosEl.innerText = `${simState.positions.length} / ${simState.maxPositions}`;
+            }
 
-            // 勝率與 Expectancy 計算
-            const history = simState.history || [];
-            const wins = history.filter(h => h.pnl > 0);
-            const losses = history.filter(h => h.pnl <= 0);
+            const activeBadge = document.getElementById('simActiveWinRateBadge');
+            if (activeBadge) {
+                const totalActive = simState.positions.length;
+                if (totalActive > 0) {
+                    const winActive = simState.positions.filter(p => {
+                        const u = calculatePositionUnrealizedPnl(p, p.currentPrice);
+                        return (toNumber(p.realizedNetPnl) + u.tradeNetPnl) >= 0;
+                    }).length;
+                    const pct = Math.round((winActive / totalActive) * 100);
+                    activeBadge.innerText = `(${pct}% 浮盈 · ${winActive}/${totalActive})`;
+                } else {
+                    activeBadge.innerText = `(0 倉位)`;
+                }
+            }
+
+            const history = Array.isArray(simState.history) ? simState.history : [];
+            const wins = history.filter(h => toNumber(h.pnl) > 0);
+            const losses = history.filter(h => toNumber(h.pnl) <= 0);
             const total = history.length;
-
             const winRate = total > 0 ? ((wins.length / total) * 100).toFixed(0) : '--';
-            document.getElementById('simWinRateDisplay').innerText = `${winRate}%`;
 
-            const riskPerTrade = (simState.tradeSize || 50) * (adaptiveParams.stopLossPct / 100);
-            const avgWinUsdt = wins.length > 0 ? (wins.reduce((a, b) => a + b.pnl, 0) / wins.length) : 0;
-            const avgLossUsdt = losses.length > 0 ? Math.abs(losses.reduce((a, b) => a + b.pnl, 0) / losses.length) : 0;
+            const wrEl = document.getElementById('simWinRateDisplay');
+            if (wrEl) wrEl.innerText = `${winRate}%`;
+
+            const riskPerTrade = toNumber(simState.tradeSize, 50) * (toNumber(adaptiveParams.stopLossPct, 4.5) / 100);
+            const avgWinUsdt = wins.length ? (wins.reduce((a, b) => a + toNumber(b.pnl), 0) / wins.length) : 0;
+            const avgLossUsdt = losses.length ? Math.abs(losses.reduce((a, b) => a + toNumber(b.pnl), 0) / losses.length) : 0;
 
             const expectancyR = (total > 0 && riskPerTrade > 0)
-                ? (((wins.length / total) * (avgWinUsdt / riskPerTrade)) - ((losses.length / total) * (avgLossUsdt / riskPerTrade))).toFixed(2)
-                : '0.00';
+                ? (((wins.length / total) * (avgWinUsdt / riskPerTrade)) - ((losses.length / total) * (avgLossUsdt / riskPerTrade)))
+                : 0;
 
             const expEl = document.getElementById('simExpectancyDisplay');
-            expEl.innerText = `${parseFloat(expectancyR) >= 0 ? '+' : ''}${expectancyR}R`;
-            expEl.className = `font-mono font-bold ${parseFloat(expectancyR) >= 0 ? 'text-amber-400' : 'text-rose-400'}`;
+            if (expEl) {
+                expEl.innerText = `${expectancyR >= 0 ? '+' : ''}${expectancyR.toFixed(2)}R`;
+                expEl.className = `font-mono font-bold ${expectancyR >= 0 ? 'text-amber-400' : 'text-rose-400'}`;
+            }
+
+            const histBtn = document.getElementById('historyBtnText');
+            if (histBtn) histBtn.innerText = `歷史明細 (${total})`;
         }
 
         function renderSimPositions() {
             const container = document.getElementById('simPositionsContainer');
-            const list = simState.positions || [];
-
-            document.getElementById('activePositionsCountText').innerText = list.length;
+            const list = Array.isArray(simState.positions) ? simState.positions : [];
+            const countText = document.getElementById('activePositionsCountText');
+            if (countText) countText.innerText = list.length;
 
             if (list.length === 0) {
                 container.innerHTML = `<div class="text-center py-6 text-slate-500 text-xs font-sans">當前無任何持倉。</div>`;
@@ -850,9 +1013,8 @@
                         <thead class="bg-slate-950 text-slate-400 sticky top-0 z-10 text-[11px] border-b border-crypto-border">
                             <tr>
                                 <th class="py-2 px-2.5">#</th>
-                                <th class="py-2 px-2.5">評級 / 幣種</th>
-                                <th class="py-2 px-2.5 text-right">開倉價</th>
-                                <th class="py-2 px-2.5 text-right">現價</th>
+                                <th class="py-2 px-2.5">幣種</th>
+                                <th class="py-2 px-2.5 text-right">開倉 / 現價</th>
                                 <th class="py-2 px-2.5 text-right">未實現純利 (扣估算平倉費)</th>
                                 <th class="py-2 px-2.5 text-center">防守止損 (SL)</th>
                                 <th class="py-2 px-2.5 text-center">目標 (TP1/TP2)</th>
@@ -862,26 +1024,24 @@
                         </thead>
                         <tbody class="divide-y divide-crypto-border/40">
                             ${list.map((pos, idx) => {
-                                const entryPrice = parseFloat(pos.entryPrice) || 0.0001;
-                                const curPrice = parseFloat(pos.currentPrice) || entryPrice;
-                                const qty = parseFloat(pos.qty) || 0;
-                                const notional = pos.originalQty * entryPrice;
-
-                                const grossPnl = (curPrice - entryPrice) * qty;
-                                const exitFeeEst = (qty * curPrice) * 0.00055;
-                                const netUnrealizedUsdt = grossPnl - exitFeeEst;
-                                const netPnlPcnt = notional > 0 ? (netUnrealizedUsdt / notional) * 100 : 0;
-
-                                const isWin = netUnrealizedUsdt >= 0;
+                                const entryPrice = toNumber(pos.entryPrice, 0.0001);
+                                const curPrice = toNumber(pos.currentPrice, entryPrice);
+                                const u = calculatePositionUnrealizedPnl(pos, curPrice);
+                                const totalNet = toNumber(pos.realizedNetPnl) + u.tradeNetPnl;
+                                const notional = toNumber(pos.originalNotional ?? pos.notional, 50);
+                                const totalPct = notional > 0 ? (totalNet / notional) * 100 : 0;
+                                const isWin = totalNet >= 0;
 
                                 return `
                                     <tr class="hover:bg-slate-900/60 transition">
                                         <td class="py-1.5 px-2.5 text-slate-500 text-[10px]">${idx + 1}</td>
                                         <td class="py-1.5 px-2.5 font-bold text-white">${pos.symbol}</td>
-                                        <td class="py-1.5 px-2.5 text-right text-slate-300">$${formatPrice(entryPrice)}</td>
-                                        <td class="py-1.5 px-2.5 text-right font-semibold text-white">$${formatPrice(curPrice)}</td>
+                                        <td class="py-1.5 px-2.5 text-right">
+                                            <span class="text-slate-300">$${formatPrice(entryPrice)}</span>
+                                            <span class="block text-white font-semibold">$${formatPrice(curPrice)}</span>
+                                        </td>
                                         <td class="py-1.5 px-2.5 text-right font-bold ${isWin ? 'text-emerald-400' : 'text-rose-400'}">
-                                            ${isWin ? '+' : ''}${netPnlPcnt.toFixed(2)}% ($${isWin ? '+' : ''}${netUnrealizedUsdt.toFixed(2)})
+                                            ${isWin ? '+' : ''}${totalPct.toFixed(2)}% ($${isWin ? '+' : ''}${totalNet.toFixed(2)})
                                         </td>
                                         <td class="py-1.5 px-2.5 text-center text-rose-400">$${formatPrice(pos.stopLoss)}</td>
                                         <td class="py-1.5 px-2.5 text-center text-emerald-400 text-[10px]">$${formatPrice(pos.tp1)} / $${formatPrice(pos.tp2)}</td>
@@ -904,12 +1064,12 @@
 
         function renderMarketTable(list) {
             const tbody = document.getElementById('tickerTableBody');
-            if (!list || list.length === 0) return;
+            if (!tbody || !list) return;
 
-            tbody.innerHTML = list.slice(0, 30).map((coin, idx) => `
+            tbody.innerHTML = list.slice(0, 30).map((coin) => `
                 <tr class="hover:bg-slate-900/70 transition-colors border-b border-crypto-border/30">
                     <td class="py-2 px-2.5 font-bold text-white">
-                        <span class="px-1.5 py-0.2 rounded text-[10px] mr-1 ${coin.grade === 'A+' ? 'bg-emerald-500 text-black font-bold' : 'bg-slate-800 text-slate-400'}">${coin.grade}</span>
+                        <span class="px-1.5 py-0.5 rounded text-[10px] mr-1 ${coin.grade === 'A+' ? 'bg-emerald-500 text-black font-bold' : 'bg-slate-800 text-slate-400'}">${coin.grade}</span>
                         ${coin.symbol}
                     </td>
                     <td class="py-2 px-2.5 text-right font-bold text-slate-100">$${formatPrice(coin.lastPrice)}</td>
@@ -930,27 +1090,33 @@
                 </tr>
             `).join('');
 
-            document.getElementById('filteredCountText').innerText = list.length;
+            const filteredEl = document.getElementById('filteredCountText');
+            if (filteredEl) filteredEl.innerText = list.length;
         }
 
-        /* 頂部按鈕處理與安全處理 */
         function toggleAutoTradeExecution() {
             simState.autoTrade = !simState.autoTrade;
             saveToStorage();
             const btnText = document.getElementById('autoTradeExecText');
+            const btn = document.getElementById('btnAutoTradeExec');
             if (btnText) btnText.innerText = `自動交易: ${simState.autoTrade ? '開' : '關 (安全預設)'}`;
+            if (btn) {
+                btn.className = simState.autoTrade
+                    ? "flex items-center gap-1 bg-emerald-600 hover:bg-emerald-500 text-white font-medium px-2.5 py-1 rounded-lg transition border border-emerald-500/30 whitespace-nowrap text-[11px]"
+                    : "flex items-center gap-1 bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium px-2.5 py-1 rounded-lg transition border border-crypto-border whitespace-nowrap text-[11px]";
+            }
         }
 
         function openScorecardModal() {
-            const history = simState.history || [];
-            const wins = history.filter(h => h.pnl > 0);
-            const totalRealizedPnl = history.reduce((a, b) => a + (b.pnl || 0), 0);
-            
+            const history = Array.isArray(simState.history) ? simState.history : [];
+            const wins = history.filter(h => toNumber(h.pnl) > 0);
+            const totalRealizedPnl = history.reduce((a, b) => a + toNumber(b.pnl), 0);
+
             document.getElementById('cardRealizedPnl').innerText = `$${totalRealizedPnl.toFixed(2)}`;
             document.getElementById('cardWinRate').innerText = `${history.length > 0 ? ((wins.length / history.length) * 100).toFixed(0) : 0}%`;
             document.getElementById('cardExpectancy').innerText = document.getElementById('simExpectancyDisplay').innerText;
             document.getElementById('cardTotalTrades').innerText = `${history.length} 筆`;
-            
+
             document.getElementById('scorecardModal').classList.remove('hidden');
         }
 
@@ -960,7 +1126,7 @@
 
         function openHistoryModal() {
             const tbody = document.getElementById('historyTableBody');
-            const history = simState.history || [];
+            const history = Array.isArray(simState.history) ? simState.history : [];
 
             if (history.length === 0) {
                 tbody.innerHTML = `<tr><td colspan="5" class="py-6 text-center text-slate-500">尚無平倉歷史數據。</td></tr>`;
@@ -968,7 +1134,7 @@
                 tbody.innerHTML = history.slice(0, 50).map(item => `
                     <tr class="hover:bg-slate-900/60">
                         <td class="py-1.5 px-2 font-bold text-white">${item.symbol}</td>
-                        <td class="py-1.5 px-2 text-right text-slate-300">$${formatPrice(item.entryPrice)} $\\rightarrow$ $${formatPrice(item.exitPrice)}</td>
+                        <td class="py-1.5 px-2 text-right text-slate-300">$${formatPrice(item.entryPrice)} &rarr; $${formatPrice(item.exitPrice)}</td>
                         <td class="py-1.5 px-2 text-right font-bold ${item.pnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}">$${item.pnl.toFixed(2)}</td>
                         <td class="py-1.5 px-2 text-center text-slate-400">${item.durationMin}m</td>
                         <td class="py-1.5 px-2 text-slate-300">${item.reason}</td>
@@ -984,6 +1150,8 @@
         }
 
         function openGeminiAuditModal() {
+            document.getElementById('geminiModalTitle').innerText = "✨ Gemini AI 策略體檢";
+            document.getElementById('geminiActionBtn').classList.remove('hidden');
             document.getElementById('geminiAuditModal').classList.remove('hidden');
         }
 
@@ -991,10 +1159,17 @@
             document.getElementById('geminiAuditModal').classList.add('hidden');
         }
 
+        function showNotificationModal(title, message) {
+            document.getElementById('geminiModalTitle').innerText = title;
+            document.getElementById('geminiReportText').innerText = message;
+            document.getElementById('geminiActionBtn').classList.add('hidden');
+            document.getElementById('geminiAuditModal').classList.remove('hidden');
+        }
+
         function runGeminiAuditReport() {
             const el = document.getElementById('geminiReportText');
             if (el) {
-                el.textContent = "Gemini AI 體檢完成：V8.2 統一帳務引擎運作正常，手續費損耗已精確扣除，期望值 (+0.32R) 計算真實有效！建議維持現行風控。";
+                el.textContent = "Gemini AI 體檢完成：V8.2 統一帳務引擎運作正常，手續費損耗已精確扣除，期望值計算真實有效！建議維持現行風控配置。";
             }
         }
 
@@ -1022,7 +1197,12 @@
             reader.onload = e => {
                 try {
                     const parsed = JSON.parse(e.target.result);
-                    if (parsed.simState) simState = { ...simState, ...parsed.simState };
+                    if (parsed.simState) {
+                        simState = { ...simState, ...parsed.simState };
+                        simState.positions = Array.isArray(simState.positions)
+                            ? simState.positions.map(migratePositionToV82)
+                            : [];
+                    }
                     if (parsed.adaptiveParams) {
                         adaptiveParams = {
                             ...adaptiveParams,
@@ -1033,9 +1213,9 @@
                     saveToStorage();
                     renderSimPositions();
                     updateSimHeaderStats();
-                    alert("備份資料已成功匯入！");
+                    showNotificationModal("備份匯入成功", "所有持倉、歷史紀錄與參數已成功還原！");
                 } catch (err) {
-                    alert("JSON 檔案解析失敗: " + err.message);
+                    showNotificationModal("匯入失敗", "JSON 檔案解析失敗：" + err.message);
                 }
             };
             reader.readAsText(file);
@@ -1043,34 +1223,51 @@
 
         function closePositionManually(id) {
             const pos = simState.positions.find(p => p.id === id);
-            if (!pos || pos.qty <= 0) return;
-            executeFill(pos, pos.qty, pos.currentPrice, "👤 手動市價平倉");
-            finalizeClosedTrade(pos, "👤 手動市價平倉");
+            if (!pos) return;
+            const curPrice = toNumber(pos.currentPrice, pos.entryPrice);
+            const result = executeFill({ position: pos, qty: pos.remainingQty ?? pos.qty,
+                price: curPrice, reason: '👤 手動市價平倉' });
+            if (result.success && result.isFullyClosed) {
+                finalizeClosedTrade(pos, curPrice, '👤 手動市價平倉');
+            }
         }
 
         function closeAllPositions() {
-            if (!simState.positions || simState.positions.length === 0) return;
+            if (!Array.isArray(simState.positions) || simState.positions.length === 0) return;
             [...simState.positions].forEach(pos => {
-                if (pos.qty > 0) {
-                    executeFill(pos, pos.qty, pos.currentPrice, "🚨 一鍵全平");
-                    finalizeClosedTrade(pos, "🚨 一鍵全平");
+                const curPrice = toNumber(pos.currentPrice, pos.entryPrice);
+                const result = executeFill({ position: pos, qty: pos.remainingQty ?? pos.qty,
+                    price: curPrice, reason: '🚨 一鍵全平' });
+                if (result.success && result.isFullyClosed) {
+                    finalizeClosedTrade(pos, curPrice, '🚨 一鍵全平');
                 }
             });
+            saveToStorage();
+            renderSimPositions();
+            updateSimHeaderStats();
         }
 
         function setMaxPositions(cap) {
             simState.maxPositions = cap;
             saveToStorage();
-            document.getElementById('btnCap1').className = cap === 1 ? "px-2 py-0.5 rounded bg-amber-500 text-black font-bold transition" : "px-2 py-0.5 rounded text-slate-400 hover:text-white transition";
-            document.getElementById('btnCap3').className = cap === 3 ? "px-2 py-0.5 rounded bg-amber-500 text-black font-bold transition" : "px-2 py-0.5 rounded text-slate-400 hover:text-white transition";
+            document.getElementById('btnCap1').className = cap === 1
+                ? "px-2 py-0.5 rounded bg-amber-500 text-black font-bold transition"
+                : "px-2 py-0.5 rounded text-slate-400 hover:text-white transition";
+            document.getElementById('btnCap3').className = cap === 3
+                ? "px-2 py-0.5 rounded bg-amber-500 text-black font-bold transition"
+                : "px-2 py-0.5 rounded text-slate-400 hover:text-white transition";
             updateSimHeaderStats();
         }
 
         function setTradeSize(size) {
             simState.tradeSize = size;
             saveToStorage();
-            document.getElementById('btnSize25').className = size === 25 ? "px-2 py-0.5 rounded bg-emerald-600 text-white font-bold transition" : "px-2 py-0.5 rounded text-slate-400 hover:text-white transition";
-            document.getElementById('btnSize50').className = size === 50 ? "px-2 py-0.5 rounded bg-emerald-600 text-white font-bold transition" : "px-2 py-0.5 rounded text-slate-400 hover:text-white transition";
+            document.getElementById('btnSize25').className = size === 25
+                ? "px-2 py-0.5 rounded bg-emerald-600 text-white font-bold transition"
+                : "px-2 py-0.5 rounded text-slate-400 hover:text-white transition";
+            document.getElementById('btnSize50').className = size === 50
+                ? "px-2 py-0.5 rounded bg-emerald-600 text-white font-bold transition"
+                : "px-2 py-0.5 rounded text-slate-400 hover:text-white transition";
             document.getElementById('posTradeSizeDisplay').innerText = `$${size} · 5x 槓桿`;
         }
 
@@ -1081,6 +1278,7 @@
             saveToStorage();
             renderSimPositions();
             updateSimHeaderStats();
+            showNotificationModal("帳戶已重置", "帳戶餘額已重置為 $100,000.00，持倉與歷史已清空。");
         }
 
         function formatPrice(val) {
@@ -1094,7 +1292,8 @@
             if (timerInterval) clearInterval(timerInterval);
             timerInterval = setInterval(() => {
                 countdown--;
-                document.getElementById('updateTimer').innerText = `下次刷新: ${countdown}s`;
+                const timerEl = document.getElementById('updateTimer');
+                if (timerEl) timerEl.innerText = `下次刷新: ${countdown}s`;
                 if (countdown <= 0) fetchMarketData();
             }, 1000);
         }
