@@ -423,7 +423,7 @@
 
     <script>
         /* =========================================================
-           BYBIT RADAR V8.5 CORE ENGINE
+           BYBIT RADAR V8.5 CORE ENGINE — A1.1 FINAL INTEGRATION
            整合: 數據防護 + 統一撮合 (TP1/TP2/Trailing) + 幣種冷卻風控 + Strategy Lab
         ========================================================= */
         const STORAGE_KEY_SIM = 'bybit_radar_sim_v82';
@@ -796,6 +796,37 @@
             localStorage.removeItem(txKey);
             localStorage.removeItem(archiveKey);
             return recoveryKey;
+        }
+
+        function v85RestoreLatestRecoveryPoint() {
+            try {
+                const keys = Object.keys(localStorage)
+                    .filter(k => k.startsWith(V85_RECOVERY_PREFIX))
+                    .sort()
+                    .reverse();
+                if (!keys.length) return false;
+
+                const rp = v85SafeJsonParse(localStorage.getItem(keys[0]));
+                if (!rp?.payload) return false;
+
+                const stateRaw = rp.payload.simStateRaw;
+                const archiveRaw = rp.payload.archiveRaw;
+
+                if (typeof stateRaw === 'string') {
+                    const parsed = v85SafeJsonParse(stateRaw);
+                    if (!parsed || typeof parsed !== 'object') return false;
+                    localStorage.setItem(STORAGE_KEY_SIM, stateRaw);
+                }
+                if (typeof archiveRaw === 'string') {
+                    const parsedArchive = v85SafeJsonParse(archiveRaw);
+                    if (!Array.isArray(parsedArchive)) return false;
+                    localStorage.setItem(V85_ARCHIVE_KEY, archiveRaw);
+                }
+                return true;
+            } catch (err) {
+                console.warn('V8.5 recovery restore failed:', err);
+                return false;
+            }
         }
 
         function v85GetMigrationHealth(state) {
@@ -2088,6 +2119,32 @@
         let firestoreDb = null;
         let lastLocalUpdate = Date.now();
 
+        function v85ApplyCloudStateSafely(cloudState) {
+            if (!cloudState || typeof cloudState !== 'object') return false;
+
+            const localHist = simState.historyArchive || simState.history || [];
+            const cloudHist = cloudState.historyArchive || cloudState.history || [];
+            const merged = v85QualityMergeTrades(localHist, cloudHist);
+
+            // Preserve local execution archive while allowing cloud settings/state updates.
+            simState = {
+                ...simState,
+                ...cloudState,
+                schemaVersion: V85_SCHEMA_VERSION,
+                historyArchive: merged,
+                history: merged.slice(0, 300)
+            };
+
+            const health = v85GetMigrationHealth(simState);
+            if (!health.duplicateFree || simState.history.length > 300) {
+                console.warn('Cloud merge rejected by migration health check:', health);
+                return false;
+            }
+
+            saveToStorage(false);
+            return true;
+        }
+
         function initFirebaseSync() {
             try {
                 if (!firebase.apps.length) firebase.initializeApp(defaultFirebaseConfig);
@@ -2105,11 +2162,7 @@
                 const data = doc.data();
                 if (data && data.updatedAt && data.updatedAt > lastLocalUpdate) {
                     if (data.simState) {
-                        const localHist = simState.historyArchive || simState.history || [];
-                        const cloudHist = data.simState.historyArchive || data.simState.history || [];
-                        const merged = v85MergeTrades(localHist, cloudHist);
-                        simState = { ...simState, ...data.simState, historyArchive: merged, history: merged.slice(0, 300) };
-                        saveToStorage(false);
+                        if (!v85ApplyCloudStateSafely(data.simState)) return;
                         renderSimPositions();
                         updateSimHeaderStats();
                     }
@@ -2130,11 +2183,7 @@
             if (!firestoreDb) return;
             firestoreDb.collection('bybit_sync_rooms').doc(currentRoomId).get().then(doc => {
                 if (doc.exists && doc.data().simState) {
-                    const localHist = simState.historyArchive || simState.history || [];
-                    const cloudHist = doc.data().simState.historyArchive || doc.data().simState.history || [];
-                    const merged = v85MergeTrades(localHist, cloudHist);
-                    simState = { ...simState, ...doc.data().simState, historyArchive: merged, history: merged.slice(0, 300) };
-                    saveToStorage(false);
+                    if (!v85ApplyCloudStateSafely(doc.data().simState)) return;
                     renderSimPositions();
                     updateSimHeaderStats();
                     showNotificationModal("同步成功", "已成功從雲端合併最新紀錄！");
