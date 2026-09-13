@@ -338,7 +338,7 @@
                     <thead class="bg-slate-900 text-slate-400 sticky top-0 text-[11px] border-b border-crypto-border">
                         <tr>
                             <th class="py-2 px-2">幣種</th>
-                            <th class="py-2 px-2 text-right">進場 $\rightarrow$ 離場均價</th>
+                            <th class="py-2 px-2 text-right">進場 → 離場均價</th>
                             <th class="py-2 px-2 text-right">累計純利 ($)</th>
                             <th class="py-2 px-2 text-center">時長</th>
                             <th class="py-2 px-2">最後離場原因</th>
@@ -376,6 +376,7 @@
                 <label class="block text-slate-300 font-medium mb-1">同步房間名稱 (Room ID)</label>
                 <div class="flex gap-2">
                     <input type="text" id="cloudRoomInput" class="flex-1 bg-slate-900 border border-crypto-border rounded-lg px-3 py-1.5 text-white font-mono text-xs focus:outline-none focus:border-sky-500">
+                    <button onclick="copyRoomIdToClipboard()" class="px-3 py-1.5 rounded-lg bg-sky-700 hover:bg-sky-600 text-white text-[11px] font-bold whitespace-nowrap">📋 複製</button>
                     <button onclick="saveRoomConfig()" class="px-3 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-500 text-white text-[11px] font-bold whitespace-nowrap">儲存房間</button>
                 </div>
             </div>
@@ -555,8 +556,18 @@
             const grossPnl = v85Number(trade?.grossPnl, v85Number(trade?.pnl));
             const netPnl = v85Number(trade?.netPnl, v85Number(trade?.pnl, grossPnl));
             const openedAt = v85Timestamp(trade?.openedAt ?? trade?.openTime, Date.now());
-            const closedAtTs = v85Timestamp(trade?.closedAtTs ?? trade?.closedAt, openedAt);
             const fills = Array.isArray(trade?.fills) ? trade.fills : [];
+
+            // 強化時間戳回溯解析：排除中文時間字串導致的 NaN 歸零問題
+            let closedAtTs = v85Timestamp(trade?.closedAtTs ?? trade?.closedTimestamp, 0);
+            if (!closedAtTs && fills.length > 0) {
+                closedAtTs = v85Timestamp(fills[fills.length - 1]?.timestamp, 0);
+            }
+            if (!closedAtTs) {
+                const durMin = v85Number(trade?.durationMin, 0);
+                closedAtTs = durMin > 0 ? openedAt + (durMin * 60000) : openedAt;
+            }
+
             const entryFee = v85Number(trade?.entryFee);
             const exitFees = v85Number(trade?.exitFeesPaid ?? trade?.exitFees ?? trade?.exitFee);
             const totalFees = v85Number(trade?.totalFees, entryFee + exitFees);
@@ -964,7 +975,7 @@
             return { allowed: true, reason: 'OK', confidence };
         }
 
-        function recordRiskOutcome(trade) {
+        function recordRiskOutcome(trade, shouldPersist = true) {
             const rs = ensureRiskState();
             const pnl = parseFloat(trade.pnl) || 0;
             rs.dailyRealizedPnl = (parseFloat(rs.dailyRealizedPnl) || 0) + pnl;
@@ -986,7 +997,7 @@
             const equity = getCurrentEquity();
             rs.equityPeak = Math.max(parseFloat(rs.equityPeak) || equity, equity);
             rs.maxDrawdownPct = Math.max(parseFloat(rs.maxDrawdownPct) || 0, ((rs.equityPeak - equity) / Math.max(1, rs.equityPeak)) * 100);
-            saveToStorage(false);
+            if (shouldPersist) saveToStorage(false);
         }
 
         function getStrategyAnalytics() {
@@ -1482,7 +1493,7 @@
             simState.historyArchive = v85QualityMergeTrades(simState.historyArchive || [], [trade]);
             simState.history = simState.historyArchive.slice(0, 300);
 
-            recordRiskOutcome(trade);
+            recordRiskOutcome(trade, false); // Avoid double-saving within the same microtask
             saveToStorage(true, true); // Major transaction: create recovery snapshot
             renderSimPositions();
             updateSimHeaderStats();
@@ -1787,7 +1798,7 @@
                 tbody.innerHTML = history.slice(0, 100).map(item => `
                     <tr class="hover:bg-slate-900/60">
                         <td class="py-1.5 px-2 font-bold text-white">${item.symbol}</td>
-                        <td class="py-1.5 px-2 text-right text-slate-300">$${formatPrice(item.entryPrice)} $\\rightarrow$ $${formatPrice(item.exitPrice)}</td>
+                        <td class="py-1.5 px-2 text-right text-slate-300">$${formatPrice(item.entryPrice)} → $${formatPrice(item.exitPrice)}</td>
                         <td class="py-1.5 px-2 text-right font-bold ${item.pnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}">$${parseFloat(item.pnl).toFixed(2)}</td>
                         <td class="py-1.5 px-2 text-center text-slate-400">${item.durationMin}m</td>
                         <td class="py-1.5 px-2 text-slate-300">${item.reason}</td>
@@ -1798,9 +1809,57 @@
 
             document.getElementById('historyModal').classList.remove('hidden');
         }
+        function v85ApplyCloudStateSafely(cloudState, source = 'cloud') {
+            try {
+                if (!cloudState || typeof cloudState !== 'object') return false;
 
-        function closeHistoryModal() {
-            document.getElementById('historyModal').classList.add('hidden');
+                const localHist = simState.historyArchive || simState.history || [];
+                const cloudHist = cloudState.historyArchive || cloudState.history || [];
+                const merged = v85QualityMergeTrades(localHist, cloudHist);
+
+                // 安全合併進行中持倉：避免雲端推送覆蓋本機剛開啟的倉位
+                const closedTradeIds = new Set(merged.map(t => t.id || t.tradeId));
+                const posMap = new Map();
+                (cloudState.positions || []).forEach(p => {
+                    if (p && p.id && !closedTradeIds.has(p.id)) posMap.set(p.id, p);
+                });
+                (simState.positions || []).forEach(p => {
+                    if (p && p.id && !closedTradeIds.has(p.id)) {
+                        const prev = posMap.get(p.id);
+                        posMap.set(p.id, prev ? { ...prev, ...p } : p);
+                    }
+                });
+
+                const candidate = {
+                    ...simState,
+                    ...cloudState,
+                    positions: Array.from(posMap.values()),
+                    schemaVersion: V85_SCHEMA_VERSION,
+                    historyArchive: merged,
+                    history: merged.slice(0, 300)
+                };
+
+                const health = v85GetMigrationHealth(candidate);
+                if (!health.duplicateFree || candidate.history.length > 300) {
+                    console.warn(`Cloud ${source} merge rejected:`, health);
+                    return false;
+                }
+
+                simState = candidate;
+                saveToStorage(false);
+                return true;
+            } catch (err) {
+                console.warn(`Cloud ${source} merge failed:`, err);
+                return false;
+            }
+        }
+
+        function copyRoomIdToClipboard() {
+            const input = document.getElementById('cloudRoomInput');
+            if (!input || !input.value) return;
+            input.select();
+            document.execCommand('copy');
+            showNotificationModal('複製成功', `房間 ID 已複製到剪貼簿：\n${input.value}`);
         }
 
         function openGeminiAuditModal() {
@@ -2125,7 +2184,16 @@
             appId: "1:72603303245:web:c0102b58cb20cdb663cb04"
         };
 
-        let currentRoomId = localStorage.getItem(STORAGE_KEY_ROOM) || 'radar-usr-main';
+        function v85GenerateRoomId() {
+            if (globalThis.crypto?.randomUUID) return `radar-${crypto.randomUUID().slice(0, 8)}`;
+            return `radar-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+        }
+
+        let currentRoomId = localStorage.getItem(STORAGE_KEY_ROOM);
+        if (!currentRoomId || currentRoomId === 'radar-usr-main') {
+            currentRoomId = v85GenerateRoomId();
+            localStorage.setItem(STORAGE_KEY_ROOM, currentRoomId);
+        }
         let firestoreDb = null;
         let lastLocalUpdate = Date.now();
 
