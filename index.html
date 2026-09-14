@@ -1082,10 +1082,11 @@
 
         function updateIdbStatsBadge() {
             const el = document.getElementById('idbStatsBadge');
-            if (!el) return;
+            const hText = document.getElementById('historyBtnText');
             const execCount = (simState.historyArchive || []).length;
             const shadowCount = (simState.research?.archive || []).length;
-            el.innerText = `${execCount} 實盤 / ${shadowCount} 影子`;
+            if (el) el.innerText = `${execCount} 實盤 / ${shadowCount} 影子`;
+            if (hText) hText.innerText = `歷史明細 (${execCount})`;
         }
 
         function v85Number(value, fallback = 0) { const n = parseFloat(value); return Number.isFinite(n) ? n : fallback; }
@@ -2442,6 +2443,7 @@
         let cloudLastError = null;
         let cloudPushQueued = false;
         let cloudPullQueued = false;
+        let firestoreConfigured = false;
 
         function stableHash(input) {
             const str = typeof input === 'string' ? input : JSON.stringify(input);
@@ -2572,10 +2574,12 @@
             cloudRetryTimer = setTimeout(async () => {
                 cloudRetryTimer = null;
                 if (!isNetworkLikelyAvailable()) { scheduleCloudRetry('BROWSER_OFFLINE'); return; }
+                if (isSyncing) return;
                 try {
                     const recovered = await ensureFirestoreNetwork('RETRY');
                     if (!recovered) throw new Error('Firestore network recovery failed');
-                    await withCloudTimeout(cloudRoomRef().get({ source: 'server' }), 'Cloud health probe', 8000);
+                    // Avoid target-id conflict: use standard get() without forcing server source
+                    await withCloudTimeout(cloudRoomRef().get(), 'Cloud health probe', 8000);
                     cloudRetryAttempt = 0;
                     updateCloudStatus('ONLINE', '雲端連線已恢復');
                     if (cloudPullQueued) { cloudPullQueued = false; await pullFromCloudForce(true); }
@@ -2629,15 +2633,18 @@
                     appId: '1:72603303245:web:c0102b58cb20cdb663cb04'
                 });
                 firestoreDb = firebase.firestore();
-                try {
-                    firestoreDb.settings({ experimentalAutoDetectLongPolling: true });
-                } catch (settingsErr) {
-                    console.warn('[Cloud] Firestore transport settings skipped', settingsErr);
+                if (!firestoreConfigured) {
+                    try {
+                        firestoreDb.settings({ experimentalAutoDetectLongPolling: true, merge: true });
+                        firestoreConfigured = true;
+                    } catch (settingsErr) {
+                        console.warn('[Cloud] Firestore transport settings skipped', settingsErr);
+                    }
                 }
                 enforcePermanentCloudRoomUI();
                 updateCloudStatus('CONNECTING', '等待 Firestore 回應');
                 bindCloudRoom(DEFAULT_PERMANENT_ROOM);
-                scheduleCloudRetry('INIT_PROBE');
+                // Do NOT call scheduleCloudRetry probe here to prevent concurrent WebChannel target collisions with pullFromCloudForce
             } catch (err) {
                 console.warn('[Cloud] init failed', err);
                 markCloudFailure(err, 'INIT');
@@ -2729,7 +2736,7 @@
                 if (!recovered) throw new Error('Firestore 暫時處於 offline 狀態；已排入自動重試');
                 const roomId = getActiveRoomIdFromUI();
                 const room = cloudRoomRef();
-                const previousSnap = await withCloudTimeout(room.get({ source: 'server' }), 'Read current manifest');
+                const previousSnap = await withCloudTimeout(room.get(), 'Read current manifest');
                 const previous = previousSnap.exists ? (previousSnap.data() || {}) : {};
                 const syncId = `sync_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
                 const records = [
@@ -2783,7 +2790,7 @@
             }
             const payload = { execution: [], research: [], activeResearch: [], state: meta.state || {} };
             for (let i = 0; i < chunkCount; i++) {
-                const c = await withCloudTimeout(room.collection('archives').doc(`${meta.syncId}_${i}`).get({ source: 'server' }), `Cloud chunk ${i + 1}/${chunkCount}`);
+                const c = await withCloudTimeout(room.collection('archives').doc(`${meta.syncId}_${i}`).get(), `Cloud chunk ${i + 1}/${chunkCount}`);
                 if (!c.exists) throw new Error(`缺少已提交雲端區塊 ${i + 1}/${chunkCount}`);
                 let arr;
                 try { arr = JSON.parse(c.data().payload || '[]'); } catch (_) { throw new Error(`雲端區塊 ${i + 1} JSON 損毀`); }
@@ -2824,7 +2831,7 @@
                 if (!recovered) throw new Error('Firestore 暫時處於 offline 狀態；已排入自動重試');
                 const roomId = getActiveRoomIdFromUI();
                 const room = cloudRoomRef();
-                const snap = await withCloudTimeout(room.get({ source: 'server' }), 'Cloud manifest read');
+                const snap = await withCloudTimeout(room.get(), 'Cloud manifest read');
                 if (!snap.exists) {
                     isSyncing = false;
                     return await pushToCloudForce(silent);
@@ -2908,7 +2915,7 @@
             await initStorageWithIndexedDB();
             await persistDatasetMetadata('STARTUP');
             initFirebaseSync();
-            setTimeout(() => { if (firestoreDb) pullFromCloudForce(true); }, 250);
+            setTimeout(() => { if (firestoreDb) pullFromCloudForce(true); }, 350);
             fetchMarketData();
             initTimer();
         });
