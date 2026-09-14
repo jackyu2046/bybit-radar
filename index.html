@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bybit 小幣高精度狙擊交易系統 V8.6-A2.3 (Negative Edge & EES 旗艦版)</title>
-    <!-- Tailwind CSS CDN --> 
+    <title>Bybit 小幣高精度狙擊交易系統 V8.6-A2.3.1 (Storage Hardening & Counterfactual A/B)</title>
+    <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -31,7 +31,8 @@
                             bear: '#ef4444',
                             gold: '#f59e0b',
                             purple: '#8b5cf6',
-                            cyan: '#06b6d4'
+                            cyan: '#06b6d4',
+                            fuchsia: '#d946ef'
                         }
                     }
                 }
@@ -51,24 +52,31 @@
 </head>
 <body class="font-sans min-h-screen flex flex-col antialiased selection:bg-amber-500 selection:text-black">
 
-    <header class="border-b border-crypto-border bg-slate-950/90 backdrop-blur sticky top-0 z-40 px-3 py-2.5">
-        <div class="max-w-[1750px] mx-auto flex flex-col md:flex-row items-stretch md:items-center justify-between gap-2.5">
+    <header class="border-b border-crypto-border bg-slate-950/95 backdrop-blur sticky top-0 z-40 px-3 py-2.5">
+        <div class="max-w-[1800px] mx-auto flex flex-col md:flex-row items-stretch md:items-center justify-between gap-2.5">
             <div class="flex items-center justify-between">
                 <div class="flex items-center space-x-2.5">
-                    <div class="w-8 h-8 rounded-xl bg-gradient-to-tr from-cyan-500 via-amber-500 to-emerald-400 flex items-center justify-center text-black font-black text-base shadow-md shadow-cyan-500/20">
+                    <div class="w-8 h-8 rounded-xl bg-gradient-to-tr from-cyan-500 via-amber-500 to-fuchsia-500 flex items-center justify-center text-black font-black text-base shadow-md shadow-cyan-500/20">
                         ⚡
                     </div>
                     <div>
                         <div class="flex items-center gap-1.5 flex-wrap">
                             <h1 class="text-sm md:text-base font-bold text-white tracking-wide">Bybit 小幣高精度狙擊交易系統</h1>
-                            <span class="text-[9px] bg-cyan-500/20 text-cyan-300 font-mono font-semibold px-1.5 py-0.2 rounded border border-cyan-500/30 flex items-center gap-1">
+                            <span class="text-[9px] bg-cyan-500/20 text-cyan-300 font-mono font-semibold px-1.5 py-0.5 rounded border border-cyan-500/30 flex items-center gap-1" id="idbVersionBadge">
                                 <span class="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse"></span>
-                                <span>INDEXED-DB 897+ 倉儲</span>
+                                <span>IDB v2 · 5 STORES</span>
                             </span>
-                            <span class="text-[9px] bg-purple-500/20 text-purple-300 font-mono font-semibold px-1.5 py-0.2 rounded border border-purple-500/30" id="regimeHeaderBadge">Regime: CHOPPY</span>
-                            <span class="text-[9px] bg-rose-500/20 text-rose-300 font-mono font-semibold px-1.5 py-0.2 rounded border border-rose-500/30">V8.6-A2.3 Negative Filter + EES</span>
+                            <span class="text-[9px] bg-emerald-500/20 text-emerald-300 font-mono font-semibold px-1.5 py-0.5 rounded border border-emerald-500/30" id="metadataQualityBadge">
+                                Meta: 100% FULL
+                            </span>
+                            <span class="text-[9px] bg-purple-500/20 text-purple-300 font-mono font-semibold px-1.5 py-0.5 rounded border border-purple-500/30" id="regimeHeaderBadge">
+                                Regime: CHOPPY
+                            </span>
+                            <span class="text-[9px] bg-fuchsia-500/20 text-fuchsia-300 font-mono font-semibold px-1.5 py-0.5 rounded border border-fuchsia-500/30">
+                                V8.6-A2.3.1 Data Hardening
+                            </span>
                         </div>
-                        <p class="text-[11px] text-slate-400 hidden sm:block">A2.3 負向邊緣剪枝 · 預期邊際評分 (EES) 重構 · 影子 A/B 雙軌校準 · 深度防禦穿價</p>
+                        <p class="text-[11px] text-slate-400 hidden sm:block">三重冗餘儲存 · 反事實 A/B 記帳 · 階層式 Context 加權 · 舊數據回填引擎</p>
                     </div>
                 </div>
             </div>
@@ -79,15 +87,14 @@
                     <span id="updateTimer">下次刷新: 5s</span>
                 </div>
 
-                <div class="flex items-center bg-slate-900 border border-crypto-border px-2 py-1 rounded-lg text-slate-300 font-mono whitespace-nowrap text-[11px]" id="marketGateBadge">
-                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 mr-1.5" id="marketGateDot"></span>
-                    <span id="marketGateText">大盤: 正常</span>
+                <div class="flex items-center bg-slate-900 border border-cyan-500/30 px-2.5 py-1 rounded-lg text-cyan-300 font-mono whitespace-nowrap text-[11px]" title="IndexedDB 倉儲總筆數與元數據健康度">
+                    <span>🗄️ IDB: </span>
+                    <span id="idbStatsBadge" class="ml-1 font-bold text-white">讀取中...</span>
                 </div>
 
-                <div class="flex items-center bg-slate-900 border border-cyan-500/30 px-2 py-1 rounded-lg text-cyan-300 font-mono whitespace-nowrap text-[11px]" title="IndexedDB 倉儲總筆數">
-                    <span>🗄️ IDB: </span>
-                    <span id="idbStatsBadge" class="ml-1 font-bold text-white">載入中...</span>
-                </div>
+                <button onclick="openDataIntegrityModal()" class="flex items-center gap-1 bg-cyan-950/80 hover:bg-cyan-900 text-cyan-300 font-medium px-2.5 py-1 rounded-lg transition border border-cyan-500/40 whitespace-nowrap text-[11px]">
+                    <span>🛡️</span><span>資料健全中心</span>
+                </button>
 
                 <button onclick="toggleAutoTradeExecution()" id="btnAutoTradeExec" class="flex items-center gap-1 bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium px-2.5 py-1 rounded-lg transition border border-crypto-border whitespace-nowrap text-[11px]">
                     <span>🤖</span>
@@ -98,16 +105,16 @@
                     <span>🧠</span><span>EES & Filter Lab</span>
                 </button>
 
+                <button onclick="openFilterAuditModal()" class="flex items-center gap-1 bg-rose-700/80 hover:bg-rose-600 text-white font-medium px-2.5 py-1 rounded-lg transition border border-rose-400/30 whitespace-nowrap text-[11px]">
+                    <span>⚖️</span><span>過濾成效審計</span>
+                </button>
+
                 <button onclick="openStrategyIntelligenceModal()" class="flex items-center gap-1 bg-purple-700/80 hover:bg-purple-600 text-white font-medium px-2.5 py-1 rounded-lg transition border border-purple-400/30 whitespace-nowrap text-[11px]">
                     <span>🎯</span><span>策略情報</span>
                 </button>
 
                 <button onclick="openScorecardModal()" class="flex items-center gap-1 bg-indigo-600/80 hover:bg-indigo-600 text-white font-medium px-2.5 py-1 rounded-lg transition border border-indigo-500/30 whitespace-nowrap text-[11px]">
                     <span>📊</span><span>計分卡</span>
-                </button>
-
-                <button onclick="openPerformanceAudit()" class="flex items-center gap-1 bg-blue-600/80 hover:bg-blue-600 text-white font-medium px-2.5 py-1 rounded-lg transition border border-blue-400/30 whitespace-nowrap text-[11px]">
-                    <span>📈</span><span>績效審計</span>
                 </button>
 
                 <button onclick="openHistoryModal()" class="flex items-center gap-1 bg-amber-600/80 hover:bg-amber-600 text-white font-medium px-2.5 py-1 rounded-lg transition border border-amber-500/30 whitespace-nowrap text-[11px]">
@@ -119,13 +126,13 @@
                     <span>☁️</span><span>雲端同步</span>
                 </button>
 
-                <button onclick="exportDataJson()" class="flex items-center gap-1 bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium px-2 py-1 rounded-lg transition border border-crypto-border whitespace-nowrap text-[11px]">
-                    <span>📥</span><span>匯出</span>
+                <button onclick="exportDataJsonV2()" class="flex items-center gap-1 bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium px-2 py-1 rounded-lg transition border border-crypto-border whitespace-nowrap text-[11px]">
+                    <span>📥</span><span>匯出 (V2)</span>
                 </button>
 
                 <label class="flex items-center gap-1 bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium px-2 py-1 rounded-lg transition border border-crypto-border cursor-pointer whitespace-nowrap text-[11px]">
-                    <span>📤</span><span>匯入</span>
-                    <input type="file" id="importFileInput" onchange="importDataJson(event)" class="hidden" accept=".json">
+                    <span>📤</span><span>匯入驗證</span>
+                    <input type="file" id="importFileInput" onchange="importDataJsonV2(event)" class="hidden" accept=".json">
                 </label>
 
                 <button onclick="fetchMarketData()" class="flex items-center gap-1 bg-amber-500 hover:bg-amber-400 text-black font-semibold px-2.5 py-1 rounded-lg transition shadow-md shadow-amber-500/10 active:scale-95 whitespace-nowrap text-[11px]">
@@ -135,7 +142,7 @@
         </div>
     </header>
 
-    <main class="flex-1 p-3 md:p-5 max-w-[1750px] mx-auto w-full space-y-4">
+    <main class="flex-1 p-3 md:p-5 max-w-[1800px] mx-auto w-full space-y-4">
         <!-- 頂部動態權益儀表板 -->
         <section class="bg-gradient-to-r from-slate-900 via-crypto-card to-slate-900 border border-crypto-border rounded-xl p-3 flex flex-wrap items-center justify-between gap-3 text-xs">
             <div class="flex items-center flex-wrap gap-3 sm:gap-4">
@@ -157,7 +164,7 @@
                 </div>
                 <div class="h-3 w-[1px] bg-crypto-border hidden sm:block"></div>
                 <div class="flex items-center gap-1.5 text-slate-300">
-                    <span class="text-slate-400">勝率:</span>
+                    <span class="text-slate-400">實戰勝率:</span>
                     <span class="font-mono font-bold text-emerald-400" id="simWinRateDisplay">--%</span>
                     <span class="text-slate-400 font-mono ml-1">期望值:</span>
                     <span class="font-mono font-bold text-amber-400" id="simExpectancyDisplay">+0.00R</span>
@@ -182,30 +189,36 @@
                     <button onclick="setMaxPositions(10)" id="btnCap10" class="px-2 py-0.5 rounded text-slate-400 hover:text-white transition">10 倉 (擴展)</button>
                 </div>
 
-                <button onclick="askResetSimulation()" class="text-[11px] text-slate-400 hover:text-rose-400 transition ml-1">重置帳戶</button>
+                <button onclick="askResetSimulationCustom()" class="text-[11px] text-slate-400 hover:text-rose-400 transition ml-1">重置帳戶</button>
             </div>
         </section>
 
-        <!-- A/B 影子即時對比快訊條 -->
-        <section class="bg-slate-950/80 border border-fuchsia-500/30 rounded-xl p-3 flex flex-wrap items-center justify-between gap-3 text-xs">
+        <!-- 反事實 A/B 影子即時對比快訊條 -->
+        <section class="bg-slate-950/90 border border-fuchsia-500/40 rounded-xl p-3 flex flex-wrap items-center justify-between gap-3 text-xs">
             <div class="flex items-center gap-2">
                 <span class="text-base">🧪</span>
                 <div class="font-mono">
-                    <span class="text-white font-bold">A/B Shadow Research:</span>
+                    <span class="text-white font-bold">Counterfactual A/B Research:</span>
                     <span class="text-slate-400 ml-2">原策略 (Variant A):</span>
                     <span id="abSummaryA" class="font-bold text-slate-300">計算中...</span>
                     <span class="text-slate-500 mx-2">|</span>
                     <span class="text-fuchsia-300 font-bold">A2.3 Filtered (Variant B):</span>
                     <span id="abSummaryB" class="font-bold text-emerald-400">計算中...</span>
+                    <span class="text-slate-500 mx-2">|</span>
+                    <span class="text-emerald-400 font-bold" id="abAlphaSavedText">Alpha Saved: $0.00</span>
                 </div>
             </div>
             <div class="flex items-center gap-2">
+                <button onclick="openFilterAuditModal()" class="px-3 py-1 rounded bg-rose-900/60 hover:bg-rose-800 text-rose-200 border border-rose-500/40 font-bold text-[11px] transition">
+                    過濾效能審計 ➔
+                </button>
                 <button onclick="openA23LabModal()" class="px-3 py-1 rounded bg-fuchsia-600/80 hover:bg-fuchsia-500 text-white font-bold text-[11px] transition">
-                    查看 A2.3 歸因細節 ➔
+                    EES & Filter Lab ➔
                 </button>
             </div>
         </section>
 
+        <!-- 即時持倉區塊 -->
         <section class="bg-crypto-card border border-crypto-border rounded-xl overflow-hidden shadow-lg">
             <div class="px-3.5 py-2.5 border-b border-crypto-border flex flex-wrap items-center justify-between gap-2 bg-slate-900/50">
                 <div class="flex items-center gap-2">
@@ -217,23 +230,24 @@
                 </div>
 
                 <div class="flex items-center gap-2">
-                    <button onclick="closeAllPositions()" class="px-2.5 py-1 rounded-lg bg-rose-950/60 hover:bg-rose-900 border border-rose-500/40 text-rose-300 text-xs font-semibold transition flex items-center gap-1">
+                    <button onclick="closeAllPositionsCustom()" class="px-2.5 py-1 rounded-lg bg-rose-950/60 hover:bg-rose-900 border border-rose-500/40 text-rose-300 text-xs font-semibold transition flex items-center gap-1">
                         <span>🚨</span> 一鍵全平
                     </button>
                 </div>
             </div>
 
             <div id="simPositionsContainer" class="p-3">
-                <div class="text-center py-6 text-slate-500 text-xs font-sans">當前無任何持倉。雷達偵測到 A+ 級高精度突破訊號時將自動下單。</div>
+                <div class="text-center py-6 text-slate-500 text-xs font-sans">當前無任何持倉。雷達偵測到符合 A2.3 EES 期望值訊號時將自動下單。</div>
             </div>
         </section>
 
+        <!-- 全市場監控與雙評分清單 -->
         <section class="bg-crypto-card border border-crypto-border rounded-xl overflow-hidden shadow-lg">
             <div class="p-2.5 border-b border-crypto-border flex items-center justify-between bg-slate-900/40">
                 <span class="text-xs font-semibold text-slate-200">
                     全市場高精度監控列表 (<span id="filteredCountText" class="text-amber-400 font-mono">0</span> 標的符合)
                 </span>
-                <span class="text-[11px] text-slate-400">雙評分系統：Base Score vs Expected Edge Score (EES)</span>
+                <span class="text-[11px] text-slate-400">雙評分系統：Base Score vs Expected Edge Score (EES) + 階層式權重</span>
             </div>
 
             <div class="overflow-x-auto max-h-[600px] overflow-y-auto">
@@ -246,7 +260,7 @@
                             <th class="py-2 px-2.5 text-right">OI 向量增速 (加速度)</th>
                             <th class="py-2 px-2.5 text-right">盤口點差 (Spread)</th>
                             <th class="py-2 px-2.5 text-center">原得分 / EES 期望值分</th>
-                            <th class="py-2 px-2.5 text-center">A2.3 風險診斷</th>
+                            <th class="py-2 px-2.5 text-center">A2.3 邊界診斷</th>
                             <th class="py-2 px-2.5 text-right">跟單操作</th>
                         </tr>
                     </thead>
@@ -262,36 +276,182 @@
         </section>
     </main>
 
-    <!-- V8.6-A2.3 預期邊界與負向邊緣歸因實驗室 (Expected Edge & Negative Filter Lab) -->
+    <!-- 1. 資料健全與儲存管理中心 (Data Integrity & Storage Hardening Modal) -->
+    <div id="dataIntegrityModal" class="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5 hidden">
+        <div class="bg-crypto-card border border-cyan-500/40 rounded-2xl max-w-4xl w-full p-4 sm:p-6 shadow-2xl space-y-4 max-h-[92vh] flex flex-col text-xs font-sans">
+            <div class="flex items-center justify-between border-b border-crypto-border pb-3">
+                <div class="flex items-center gap-2">
+                    <span class="text-xl">🛡️</span>
+                    <div>
+                        <h3 class="font-bold text-white text-sm sm:text-base">V8.6-A2.3.1 資料健全與三層儲存管理中心</h3>
+                        <p class="text-[11px] text-cyan-300">IndexedDB v2 狀態 · 元數據覆蓋率審計 · 遷移回填引擎 · 自動備份快照</p>
+                    </div>
+                </div>
+                <button onclick="closeDataIntegrityModal()" class="text-slate-400 hover:text-white text-lg p-1">✕</button>
+            </div>
+
+            <div class="space-y-4 overflow-y-auto max-h-[75vh] pr-1 font-mono">
+                <!-- 儲存層狀態摘要卡片 -->
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                    <div class="p-3 rounded-xl border border-cyan-500/30 bg-cyan-950/20 text-center">
+                        <span class="text-[10px] text-slate-400 block">實盤歸檔 (Execution)</span>
+                        <span class="text-base font-bold text-white" id="integrityExecCount">0</span>
+                    </div>
+                    <div class="p-3 rounded-xl border border-fuchsia-500/30 bg-fuchsia-950/20 text-center">
+                        <span class="text-[10px] text-slate-400 block">影子歸檔 (Research)</span>
+                        <span class="text-base font-bold text-fuchsia-300" id="integrityResearchCount">0</span>
+                    </div>
+                    <div class="p-3 rounded-xl border border-emerald-500/30 bg-emerald-950/20 text-center">
+                        <span class="text-[10px] text-slate-400 block">元數據 FULL 覆蓋率</span>
+                        <span class="text-base font-bold text-emerald-400" id="integrityFullMetaPct">100%</span>
+                    </div>
+                    <div class="p-3 rounded-xl border border-amber-500/30 bg-amber-950/20 text-center">
+                        <span class="text-[10px] text-slate-400 block">自動快照隊列</span>
+                        <span class="text-base font-bold text-amber-400" id="integritySnapshotCount">0 個快照</span>
+                    </div>
+                </div>
+
+                <!-- 元數據品質分類分布 -->
+                <div class="p-3.5 rounded-xl border border-crypto-border bg-slate-900/70 space-y-2">
+                    <div class="flex justify-between items-center">
+                        <span class="font-bold text-white text-xs">📊 元數據健康品質分布 (Metadata Quality Breakdown)</span>
+                        <button onclick="runMetadataBackfillMigration()" class="px-2.5 py-1 bg-cyan-700 hover:bg-cyan-600 text-white rounded text-[11px] font-bold">
+                            🔄 立即執行回填遷移 (Backfill V2)
+                        </button>
+                    </div>
+                    <div class="grid grid-cols-4 gap-2 text-center text-[11px]">
+                        <div class="p-2 bg-slate-950 rounded border border-emerald-500/30">
+                            <span class="text-emerald-400 font-bold block" id="metaCountFull">0</span>
+                            <span class="text-slate-400 text-[10px]">FULL (完整上下文)</span>
+                        </div>
+                        <div class="p-2 bg-slate-950 rounded border border-amber-500/30">
+                            <span class="text-amber-400 font-bold block" id="metaCountPartial">0</span>
+                            <span class="text-slate-400 text-[10px]">PARTIAL (已修復補齊)</span>
+                        </div>
+                        <div class="p-2 bg-slate-950 rounded border border-purple-500/30">
+                            <span class="text-purple-400 font-bold block" id="metaCountLegacy">0</span>
+                            <span class="text-slate-400 text-[10px]">LEGACY (早期舊樣本)</span>
+                        </div>
+                        <div class="p-2 bg-slate-950 rounded border border-rose-500/30">
+                            <span class="text-rose-400 font-bold block" id="metaCountInvalid">0</span>
+                            <span class="text-slate-400 text-[10px]">INVALID (不合規剔除)</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 儲存冗餘保護操作 -->
+                <div class="p-3.5 rounded-xl border border-crypto-border bg-slate-900/70 space-y-2">
+                    <span class="font-bold text-white text-xs">💾 自動備份快照隊列 (Automatic Snapshot Queue)</span>
+                    <p class="text-[11px] text-slate-400">系統每累積 50 筆平倉自動留存完整快照，確保跨瀏覽器清理時不失真。</p>
+                    <div class="flex gap-2">
+                        <button onclick="triggerManualSnapshot()" class="px-3 py-1.5 rounded bg-cyan-700 hover:bg-cyan-600 text-white text-xs font-bold">
+                            📸 立即產生手動快照
+                        </button>
+                        <button onclick="downloadLatestSnapshot()" class="px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs border border-crypto-border">
+                            💾 下載最新快照 (.json)
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex justify-end pt-1">
+                <button onclick="closeDataIntegrityModal()" class="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-xs border border-crypto-border">
+                    關閉管理中心
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. 過濾器效能審計彈窗 (Filter Effectiveness Audit Modal) -->
+    <div id="filterAuditModal" class="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5 hidden">
+        <div class="bg-crypto-card border border-rose-500/40 rounded-2xl max-w-5xl w-full p-4 sm:p-6 shadow-2xl space-y-4 max-h-[92vh] flex flex-col text-xs font-sans">
+            <div class="flex items-center justify-between border-b border-crypto-border pb-3">
+                <div class="flex items-center gap-2">
+                    <span class="text-xl">⚖️</span>
+                    <div>
+                        <h3 class="font-bold text-white text-sm sm:text-base">負向邊緣過濾器效能審計 (Filter Effectiveness Audit)</h3>
+                        <p class="text-[11px] text-rose-300">實證驗證：過濾器究竟是在「拯救本金」還是「單純減少交易」？</p>
+                    </div>
+                </div>
+                <button onclick="closeFilterAuditModal()" class="text-slate-400 hover:text-white text-lg p-1">✕</button>
+            </div>
+
+            <div class="space-y-4 overflow-y-auto max-h-[75vh] pr-1 font-mono">
+                <!-- 反事實三大核心衡量指標 -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div class="p-3 bg-emerald-950/30 border border-emerald-500/40 rounded-xl">
+                        <span class="text-[11px] text-slate-400 block font-sans">🛡️ 攔截虧損金額 (Alpha Saved)</span>
+                        <div class="text-lg font-bold text-emerald-400" id="auditAlphaSavedDisplay">+$0.00</div>
+                        <span class="text-[10px] text-slate-400 block mt-1">成功排除的毒性交易累計虧損</span>
+                    </div>
+                    <div class="p-3 bg-rose-950/30 border border-rose-500/40 rounded-xl">
+                        <span class="text-[11px] text-slate-400 block font-sans">⚠️ 誤殺獲利金額 (Opportunity Cost)</span>
+                        <div class="text-lg font-bold text-rose-400" id="auditOppCostDisplay">-$0.00</div>
+                        <span class="text-[10px] text-slate-400 block mt-1">被誤攔截但實際有獲利的單子</span>
+                    </div>
+                    <div class="p-3 bg-cyan-950/30 border border-cyan-500/40 rounded-xl">
+                        <span class="text-[11px] text-slate-400 block font-sans">✨ 淨過濾效益 (Net Filter Advantage)</span>
+                        <div class="text-lg font-bold text-cyan-300" id="auditNetAdvantageDisplay">+$0.00</div>
+                        <span class="text-[10px] text-slate-400 block mt-1">Alpha Saved 減去 Opportunity Cost</span>
+                    </div>
+                </div>
+
+                <!-- 規則明細清單 -->
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-[11px]">
+                        <thead class="text-slate-400 border-b border-slate-800 bg-slate-950">
+                            <tr>
+                                <th class="p-2">過濾規則 (Negative Rule)</th>
+                                <th class="p-2 text-center">攔截筆數</th>
+                                <th class="p-2 text-center">攔截單勝率</th>
+                                <th class="p-2 text-center">假想期望值</th>
+                                <th class="p-2 text-center">信心加權 (Confidence)</th>
+                                <th class="p-2 text-center">效益評定 (Status)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="filterEffectivenessTableBody" class="divide-y divide-slate-900">
+                            <!-- 動態填充 -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="flex justify-end pt-1">
+                <button onclick="closeFilterAuditModal()" class="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-xs border border-crypto-border">
+                    關閉審計中心
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. EES & Filter Lab 彈窗 (保留原有優勢並升級) -->
     <div id="a23LabModal" class="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5 hidden">
         <div class="bg-crypto-card border border-fuchsia-500/40 rounded-2xl max-w-5xl w-full p-4 sm:p-6 shadow-2xl space-y-4 max-h-[92vh] flex flex-col text-xs font-sans">
             <div class="flex items-center justify-between border-b border-crypto-border pb-3">
                 <div class="flex items-center gap-2">
                     <span class="text-xl">🧠</span>
                     <div>
-                        <h3 class="font-bold text-white text-sm sm:text-base">V8.6-A2.3 Expected Edge & Negative Filter Lab</h3>
-                        <p class="text-[11px] text-fuchsia-300">原策略 vs Filtered 新策略 A/B 影子對比 · 負向特徵剪枝審計 (897+ 樣本)</p>
+                        <h3 class="font-bold text-white text-sm sm:text-base">V8.6-A2.3.1 Expected Edge & Filter Lab</h3>
+                        <p class="text-[11px] text-fuchsia-300">原策略 vs Filtered A/B 影子研究 · 階層式權重校準分桶</p>
                     </div>
                 </div>
                 <div class="flex gap-2">
-                    <button onclick="exportA23Report()" class="px-3 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-[11px] font-bold border border-crypto-border">
-                        匯出 A2.3 JSON
+                    <button onclick="exportDataJsonV2()" class="px-3 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-[11px] font-bold border border-crypto-border">
+                        匯出完整 Dataset V2
                     </button>
                     <button onclick="closeA23LabModal()" class="text-slate-400 hover:text-white text-lg p-1">✕</button>
                 </div>
             </div>
 
             <div class="space-y-4 overflow-y-auto max-h-[75vh] pr-1 font-mono">
-                <!-- 第一部分：A/B 對比卡片 -->
+                <!-- A/B 對比卡片 -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div class="p-3.5 rounded-xl border border-slate-700 bg-slate-900/80 space-y-2">
                         <div class="flex justify-between items-center border-b border-slate-800 pb-1.5">
                             <span class="font-bold text-slate-300 text-xs">🅰️ 原策略 (Variant A: Base Signal)</span>
                             <span class="text-[10px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded">未經剪枝</span>
                         </div>
-                        <div id="abVariantACard" class="grid grid-cols-3 gap-2 text-center pt-1 text-[11px]">
-                            <!-- 動態填充 -->
-                        </div>
+                        <div id="abVariantACard" class="grid grid-cols-3 gap-2 text-center pt-1 text-[11px]"></div>
                     </div>
 
                     <div class="p-3.5 rounded-xl border border-fuchsia-500/40 bg-fuchsia-950/20 space-y-2">
@@ -299,40 +459,13 @@
                             <span class="font-bold text-fuchsia-300 text-xs">🅱️ A2.3 Filtered (Variant B: EES 剪枝)</span>
                             <span class="text-[10px] bg-fuchsia-900/60 text-fuchsia-200 px-1.5 py-0.5 rounded">排除負向 Edge</span>
                         </div>
-                        <div id="abVariantBCard" class="grid grid-cols-3 gap-2 text-center pt-1 text-[11px]">
-                            <!-- 動態填充 -->
-                        </div>
+                        <div id="abVariantBCard" class="grid grid-cols-3 gap-2 text-center pt-1 text-[11px]"></div>
                     </div>
                 </div>
 
-                <!-- 第二部分：負向剪枝規則即時效能稽核 (Negative Filter Performance Audit) -->
+                <!-- 階層式 Context 分佈權重展示 -->
                 <div class="p-3.5 rounded-xl border border-crypto-border bg-slate-900/60 space-y-2">
-                    <div class="flex justify-between items-center">
-                        <span class="font-bold text-white text-xs">🚫 負向規則剪枝效能審計 (Filter Effectiveness Audit)</span>
-                        <span class="text-[10px] text-slate-400">* 被攔截的交易其期望值必須顯著低於全體，否則代表誤殺</span>
-                    </div>
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-left text-[11px]">
-                            <thead class="text-slate-400 border-b border-slate-800 bg-slate-950">
-                                <tr>
-                                    <th class="p-2">剪枝規則 (Filter Rule)</th>
-                                    <th class="p-2 text-center">觸發攔截數</th>
-                                    <th class="p-2 text-center">被攔截單勝率</th>
-                                    <th class="p-2 text-center">被攔截期望值</th>
-                                    <th class="p-2 text-center">攔截單 PF</th>
-                                    <th class="p-2 text-center">規則狀態評定</th>
-                                </tr>
-                            </thead>
-                            <tbody id="a23FilterAuditTableBody" class="divide-y divide-slate-900">
-                                <tr><td colspan="6" class="p-4 text-center text-slate-500">計算歷史回溯中...</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <!-- 第三部分：Base Score vs Expected Edge Score (EES) 校準分佈 -->
-                <div class="p-3.5 rounded-xl border border-crypto-border bg-slate-900/60 space-y-2">
-                    <span class="font-bold text-white text-xs">📊 分數校準對比：原 Base Score vs 新 EES 期望值分桶</span>
+                    <span class="font-bold text-white text-xs">📊 Base Score vs 新 EES 期望值分桶</span>
                     <div class="overflow-x-auto">
                         <table class="w-full text-left text-[11px]">
                             <thead class="text-slate-400 border-b border-slate-800 bg-slate-950">
@@ -340,7 +473,7 @@
                                     <th class="p-2">分桶區間 (Score Bucket)</th>
                                     <th class="p-2 text-center">原 Base Score 樣本 / 勝率 / 期望值</th>
                                     <th class="p-2 text-center">新 EES 期望值分桶 樣本 / 勝率 / 期望值</th>
-                                    <th class="p-2 text-center">邊際質量改善度 (Improvement)</th>
+                                    <th class="p-2 text-center">邊際品質改善 (Improvement)</th>
                                 </tr>
                             </thead>
                             <tbody id="a23ScoreCalibrationBody" class="divide-y divide-slate-900">
@@ -359,15 +492,36 @@
         </div>
     </div>
 
-    <!-- 原有 Modals 保持完整 -->
+    <!-- 4. 匯入前審計結果對話框 (Pre-Import Validation Result Modal) -->
+    <div id="importAuditModal" class="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+        <div class="bg-crypto-card border border-cyan-500/40 rounded-2xl max-w-lg w-full p-5 shadow-2xl space-y-4 text-xs font-sans">
+            <div class="flex items-center justify-between border-b border-crypto-border pb-2.5">
+                <div class="flex items-center gap-2">
+                    <span class="text-xl">📋</span>
+                    <h3 class="font-bold text-white text-sm">資料匯入稽核報告 (Pre-Import Audit)</h3>
+                </div>
+                <button onclick="closeImportAuditModal()" class="text-slate-400 hover:text-white text-lg">✕</button>
+            </div>
+            <div id="importAuditContent" class="space-y-2 font-mono text-[11px]">
+                <!-- 動態注入 -->
+            </div>
+            <div class="flex justify-end gap-2 pt-2">
+                <button onclick="closeImportAuditModal()" class="px-4 py-1.5 rounded-lg bg-cyan-700 hover:bg-cyan-600 text-white font-bold text-xs">
+                    確定並完成載入
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 5. 策略情報 Modal -->
     <div id="strategyIntelligenceModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5 hidden">
         <div class="bg-crypto-card border border-purple-500/40 rounded-2xl max-w-3xl w-full p-4 sm:p-6 shadow-2xl space-y-4 max-h-[90vh] flex flex-col text-xs font-sans">
             <div class="flex items-center justify-between border-b border-crypto-border pb-3">
                 <div class="flex items-center gap-2">
                     <span class="text-xl">🧠</span>
                     <div>
-                        <h3 class="font-bold text-white text-sm sm:text-base">V8.6-A2.3 策略情報與市場體制矩陣</h3>
-                        <p class="text-[11px] text-purple-300">體制聯鎖 · 標的歷史勝率智商庫 · IndexedDB 無上限特徵溯源</p>
+                        <h3 class="font-bold text-white text-sm sm:text-base">V8.6-A2.3.1 策略情報與市場體制矩陣</h3>
+                        <p class="text-[11px] text-purple-300">體制聯鎖 · 標的歷史勝率智商庫 · Hierarchical Edge</p>
                     </div>
                 </div>
                 <button onclick="closeStrategyIntelligenceModal()" class="text-slate-400 hover:text-white text-lg p-1">✕</button>
@@ -378,7 +532,6 @@
                     <div class="text-[11px] text-slate-300 leading-relaxed font-mono">
                         <div>當前體制路由: <b class="text-purple-300 font-bold" id="intelRegimeText">CHOPPY</b> (A2.3 已禁止追高突破)</div>
                         <div class="text-[10px] text-slate-400 mt-1">
-                            • 歷史獲利標的 (Top Edge): <span class="text-emerald-400 font-bold">FIL / WLFI / LSK</span><br>
                             • 多頭總曝險控制: Max 25% | 當前: <span class="text-amber-400 font-bold" id="intelExposureText">0.0% / 25%</span>
                         </div>
                     </div>
@@ -386,7 +539,7 @@
                 <div class="bg-slate-900/80 p-3.5 rounded-xl border border-crypto-border space-y-2">
                     <span class="font-bold text-white block text-xs">🪙 標的實戰智商庫 (Coin Intelligence Matrix)</span>
                     <div id="coinIntelContainer" class="space-y-1.5 font-mono text-[11px]">
-                        <div class="text-center py-4 text-slate-500">正在動態計算歷史封存檔之各代幣勝率與 Expectancy...</div>
+                        <div class="text-center py-4 text-slate-500">正在計算歷史封存檔之各代幣勝率與 Expectancy...</div>
                     </div>
                 </div>
             </div>
@@ -396,6 +549,7 @@
         </div>
     </div>
 
+    <!-- 6. 策略計分卡 Modal -->
     <div id="scorecardModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
         <div class="bg-crypto-card border border-crypto-border rounded-xl p-5 max-w-lg w-full space-y-4 text-xs font-mono">
             <div class="flex items-center justify-between border-b border-crypto-border pb-3">
@@ -408,7 +562,7 @@
                     <span class="text-base font-bold text-emerald-400" id="cardRealizedPnl">$0.00</span>
                 </div>
                 <div class="p-3 bg-slate-900 border border-crypto-border rounded-lg">
-                    <span class="text-slate-400 text-[10px] block font-sans">勝率 (Win Rate)</span>
+                    <span class="text-slate-400 text-[10px] block font-sans">實戰勝率</span>
                     <span class="text-base font-bold text-amber-400" id="cardWinRate">0%</span>
                 </div>
                 <div class="p-3 bg-slate-900 border border-crypto-border rounded-lg">
@@ -423,6 +577,7 @@
         </div>
     </div>
 
+    <!-- 7. 歷史明細 Modal -->
     <div id="historyModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
         <div class="bg-crypto-card border border-crypto-border rounded-xl p-5 max-w-4xl w-full space-y-3 text-xs font-mono">
             <div class="flex items-center justify-between border-b border-crypto-border pb-3">
@@ -437,8 +592,8 @@
                             <th class="py-2 px-2 text-right">進場 → 離場均價</th>
                             <th class="py-2 px-2 text-right">累計純利 ($)</th>
                             <th class="py-2 px-2 text-center">時長</th>
-                            <th class="py-2 px-2">最後離場原因</th>
-                            <th class="py-2 px-2 text-right">關閉時間</th>
+                            <th class="py-2 px-2">離場原因</th>
+                            <th class="py-2 px-2 text-right">時間</th>
                         </tr>
                     </thead>
                     <tbody id="historyTableBody" class="divide-y divide-crypto-border/40">
@@ -449,6 +604,7 @@
         </div>
     </div>
 
+    <!-- 8. 雲端同步 Modal -->
     <div id="cloudModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 hidden">
         <div class="bg-crypto-card border border-sky-500/40 rounded-2xl max-w-md w-full p-5 shadow-2xl space-y-3 text-xs">
             <div class="flex items-center justify-between border-b border-crypto-border pb-2.5">
@@ -467,48 +623,43 @@
                 </div>
             </div>
             <div class="grid grid-cols-2 gap-2">
-                <button onclick="pullFromCloudForce()" class="py-2 px-2 rounded-lg bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs flex items-center justify-center gap-1 transition"><span>📥</span> 拉取合併</button>
-                <button onclick="pushToCloudForce()" class="py-2 px-2 rounded-lg bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs flex items-center justify-center gap-1 transition"><span>⚡</span> 強制推送</button>
+                <button onclick="pullFromCloudForce()" class="py-2 px-2 rounded-lg bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs flex items-center justify-center gap-1 transition"><span>📥</span> 拉取完整庫存</button>
+                <button onclick="pushToCloudForce()" class="py-2 px-2 rounded-lg bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs flex items-center justify-center gap-1 transition"><span>⚡</span> 強制推送完整庫存</button>
             </div>
         </div>
     </div>
 
-    <div id="performanceAuditModal" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
-      <div class="bg-crypto-card border border-crypto-border rounded-xl p-5 max-w-5xl w-full max-h-[90vh] overflow-y-auto space-y-4 text-xs font-sans">
-        <div class="flex items-center justify-between border-b border-crypto-border pb-3">
-          <div><h3 class="text-base font-bold text-white">📊 Performance Audit (IndexedDB)</h3></div>
-          <button onclick="closePerformanceAudit()" class="text-slate-400 hover:text-white text-lg">✕</button>
-        </div>
-        <div id="performanceAuditSummary" class="grid grid-cols-2 md:grid-cols-4 gap-3"></div>
-        <div id="performanceAuditConclusion" class="text-slate-300 leading-relaxed font-sans bg-slate-900/60 p-3 rounded-lg border border-crypto-border"></div>
-        <div class="flex justify-end gap-2"><button onclick="closePerformanceAudit()" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-lg">關閉</button></div>
-      </div>
-    </div>
-
-    <div id="notificationModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+    <!-- 自訂通知與確認視窗 (完全替換 alert/confirm) -->
+    <div id="customDialogModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
         <div class="bg-crypto-card border border-crypto-border rounded-xl p-5 max-w-sm w-full space-y-3 text-xs font-sans">
-            <h3 class="text-sm font-bold text-white" id="notificationModalTitle">通知</h3>
-            <p class="text-slate-300 leading-relaxed" id="notificationModalMsg"></p>
-            <div class="flex gap-2" id="notificationModalActions">
-                <button onclick="closeNotificationModal()" class="w-full py-2 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-lg transition">確定</button>
+            <h3 class="text-sm font-bold text-white" id="customDialogTitle">提示</h3>
+            <p class="text-slate-300 leading-relaxed font-sans" id="customDialogMsg"></p>
+            <div class="flex justify-end gap-2 pt-2" id="customDialogActions">
+                <button onclick="resolveCustomDialog(true)" class="px-4 py-1.5 bg-cyan-700 hover:bg-cyan-600 text-white font-bold rounded-lg transition">確定</button>
             </div>
         </div>
     </div>
 
     <script>
         /* =========================================================
-           BYBIT RADAR V8.6-A2.3 — NEGATIVE EDGE FILTER & EXPECTED EDGE SCORE (EES)
-           1. 實裝 Negative Edge Filter Engine (三級懲罰 & CHOPPY BREAKOUT 研究級硬阻擋)
-           2. 實裝 Expected Edge Score (EES) 演算法，將 Signal Strength 與 Expected Edge 解耦
-           3. 雙軌影子單 A/B 測試（Variant A: Original vs Variant B: A2.3 Filtered）
-           4. 包含對 897+ 歷史樣本的分桶與過濾規則效能自動審計
+           BYBIT RADAR V8.6-A2.3.1 CORE ENGINE
+           Priority 1: Storage Hardening & IndexedDB Version 2 (5 Stores)
+           Priority 2: Metadata Quality & Backfill Engine V2
+           Priority 3: Hierarchical Context Weight & Counterfactual Accounting
+           Priority 4: Filter Effectiveness Audit & Pre-import Validator
         ========================================================= */
         const STORAGE_KEY_SIM = 'bybit_radar_sim_v82';
         const STORAGE_KEY_ROOM = 'bybit_radar_room_id_v2';
+        const STORAGE_KEY_SNAPSHOTS = 'bybit_radar_snapshots_v2';
+
+        // IndexedDB 升級至 Version 2
         const IDB_DB_NAME = 'BybitSniperRadarDB';
-        const IDB_DB_VERSION = 1;
+        const IDB_DB_VERSION = 2;
         const IDB_STORE_EXECUTION = 'execution_archive';
         const IDB_STORE_RESEARCH = 'research_archive';
+        const IDB_STORE_STRATEGY_SNAPSHOTS = 'strategy_snapshots';
+        const IDB_STORE_EDGE_SNAPSHOTS = 'edge_snapshots';
+        const IDB_STORE_DATASET_METADATA = 'dataset_metadata';
 
         let idbInstance = null;
         let allMarketPrices = new Map();
@@ -537,7 +688,7 @@
                 active: [], 
                 archive: [], 
                 seenSignals: {}, 
-                version: 'V8.6-A2.3' 
+                version: 'V8.6-A2.3.1' 
             }
         };
 
@@ -585,12 +736,12 @@
         };
 
         /* =========================================================
-           V8.6-A2.3 CONFIG & NEGATIVE EDGE / EES ENGINE
+           V8.6-A2.3.1 NEGATIVE EDGE & DYNAMIC PENALTY CONFIG
         ========================================================= */
         const A23_CONFIG = {
             enabled: true,
-            mode: "RESEARCH", // RESEARCH: 記錄雙軌影子不阻斷正常觀察; ACTIVE: 實盤實裝
-            penalties: {
+            mode: "RESEARCH",
+            basePenalties: {
                 HIGH_VOL: 15,
                 EXTREME_RVOL: 18,
                 STRONG_OI: 12,
@@ -619,95 +770,138 @@
         }
         function classifyRegime() { const r = String(currentMarketRegime || 'UNKNOWN').toUpperCase(); return ['RISK_ON','RISK_OFF','TRENDING','CHOPPY'].includes(r) ? r : 'UNKNOWN'; }
 
-        // 897 筆數據專屬：Late Momentum / Crowding 組合風險偵測
+        /* =========================================================
+           階層式邊界權重模型 (Hierarchical Context Weighting)
+        ========================================================= */
+        function calculateHierarchicalContextWeight(ctx) {
+            const h = simState.historyArchive || [];
+            if (h.length < 20) return { weight: 0, level: 'NONE', samples: 0, confidence: 0 };
+
+            // Level 3: 策略 × 體制 × 方向 × 波動度 × RVOL Bucket
+            const keyL3 = `${ctx.strategy}×${ctx.regime}×${ctx.direction}×${ctx.volatility}×${ctx.rvolBucket}`;
+            const subL3 = h.filter(t => {
+                const c = t.entryContext || {};
+                const k = `${c.strategy}×${c.regime}×${c.direction}×${c.volatility}×${c.rvolBucket}`;
+                return k === keyL3;
+            });
+
+            if (subL3.length >= 18) {
+                return evaluateSegmentEdge(subL3, 'L3', subL3.length);
+            }
+
+            // Level 2: 策略 × 體制 × 方向 × 波動度
+            const keyL2 = `${ctx.strategy}×${ctx.regime}×${ctx.direction}×${ctx.volatility}`;
+            const subL2 = h.filter(t => {
+                const c = t.entryContext || {};
+                const k = `${c.strategy}×${c.regime}×${c.direction}×${c.volatility}`;
+                return k === keyL2;
+            });
+
+            if (subL2.length >= 14) {
+                return evaluateSegmentEdge(subL2, 'L2', subL2.length);
+            }
+
+            // Level 1: 策略 × 體制 × 方向
+            const keyL1 = `${ctx.strategy}×${ctx.regime}×${ctx.direction}`;
+            const subL1 = h.filter(t => {
+                const c = t.entryContext || {};
+                const k = `${c.strategy || t.strategy}×${c.regime || t.regimeAtEntry}×${c.direction || t.direction}`;
+                return k === keyL1;
+            });
+
+            if (subL1.length >= 10) {
+                return evaluateSegmentEdge(subL1, 'L1', subL1.length);
+            }
+
+            return { weight: 0, level: 'FALLBACK_NEUTRAL', samples: subL1.length, confidence: 0 };
+        }
+
+        function evaluateSegmentEdge(subset, level, sampleCount) {
+            const wins = subset.filter(t => (parseFloat(t.pnl) || 0) > 0);
+            const wr = wins.length / subset.length;
+            const net = subset.reduce((acc, t) => acc + (parseFloat(t.pnl) || 0), 0);
+            const exp = net / subset.length;
+
+            const confidence = Math.min(1.0, Math.log(sampleCount) / Math.log(100));
+            let rawWeight = (exp * 10) + ((wr - 0.40) * 20);
+            const weight = Math.max(-25, Math.min(25, Math.round(rawWeight * confidence)));
+            return { weight, level, samples: sampleCount, confidence };
+        }
+
+        /* =========================================================
+           過濾器懲罰信心度加權 (Filter Penalty with Confidence)
+        ========================================================= */
+        function getRuleConfidenceFactor(ruleKey) {
+            const h = simState.historyArchive || [];
+            const matched = h.filter(t => (t.entryContext?.riskFlags || []).includes(ruleKey));
+            if (matched.length < 10) return 0.5; // 樣本少時保守扣分
+            return Math.min(1.0, 0.5 + (matched.length / 100) * 0.5);
+        }
+
         function detectLateMomentumRisk(ctx) {
             let riskPoints = 0;
             if (ctx.volatility === 'HIGH_VOL') riskPoints++;
             if (ctx.rvolBucket === 'EXTREME') riskPoints++;
             if (ctx.oiBucket === 'STRONG') riskPoints++;
             if (ctx.momentumBucket === 'HIGH') riskPoints++;
-            return riskPoints; // 0~1: NORMAL, 2: CAUTION, 3: HIGH_RISK, 4: EXTREME_FOMO
+            return riskPoints;
         }
 
-        // A2.3 核心負向邊緣評估 (Negative Edge Evaluation)
         function evaluateNegativeEdge(ctx) {
             let penalty = 0;
             const flags = [];
             let blockCandidate = false;
             let severity = "NONE";
 
-            // 規則 1: 致命組合 MOMENTUM_BREAKOUT × CHOPPY × LONG (897 筆大樣本 WR 9.8%, PF 0.09)
+            // 規則 1: MOMENTUM_BREAKOUT × CHOPPY × LONG (帶有樣本信心加權)
             if (ctx.strategy === "MOMENTUM_BREAKOUT" && ctx.regime === "CHOPPY" && ctx.direction === "LONG") {
                 flags.push("CHOPPY_LONG_BREAKOUT");
-                penalty += A23_CONFIG.penalties.CHOPPY_LONG_BREAKOUT;
+                const conf = getRuleConfidenceFactor("CHOPPY_LONG_BREAKOUT");
+                penalty += Math.round(A23_CONFIG.basePenalties.CHOPPY_LONG_BREAKOUT * conf);
                 blockCandidate = true;
                 severity = "HARD_BLOCK";
             }
 
-            // 規則 2: 高波動環境 High Volatility 懲罰 (897 筆 WR 17.7%, Exp -$0.636)
+            // 規則 2: HIGH_VOLATILITY
             if (ctx.volatility === "HIGH_VOL") {
                 flags.push("HIGH_VOLATILITY");
-                penalty += A23_CONFIG.penalties.HIGH_VOL;
+                const conf = getRuleConfidenceFactor("HIGH_VOLATILITY");
+                penalty += Math.round(A23_CONFIG.basePenalties.HIGH_VOL * conf);
                 if (severity !== "HARD_BLOCK") severity = "STRONG_PENALTY";
             }
 
-            // 規則 3: Extreme RVOL 追高風險 (897 筆 Exp -$0.973, PF 0.136)
+            // 規則 3: EXTREME_RVOL
             if (ctx.rvolBucket === "EXTREME") {
                 flags.push("EXTREME_RVOL");
-                penalty += A23_CONFIG.penalties.EXTREME_RVOL;
+                const conf = getRuleConfidenceFactor("EXTREME_RVOL");
+                penalty += Math.round(A23_CONFIG.basePenalties.EXTREME_RVOL * conf);
                 if (severity !== "HARD_BLOCK") severity = "STRONG_PENALTY";
             }
 
-            // 規則 4: Strong OI 擁擠踩踏風險 (897 筆 Exp -$0.990, PF 0.168)
+            // 規則 4: STRONG_OI
             if (ctx.oiBucket === "STRONG") {
                 flags.push("STRONG_OI_CROWDING");
-                penalty += A23_CONFIG.penalties.STRONG_OI;
+                const conf = getRuleConfidenceFactor("STRONG_OI_CROWDING");
+                penalty += Math.round(A23_CONFIG.basePenalties.STRONG_OI * conf);
                 if (severity !== "HARD_BLOCK") severity = "STRONG_PENALTY";
             }
 
-            // 規則 5: Late Momentum / Crowded Entry Combo
+            // 規則 5: LATE_FOMO_COMBO
             const lateRisk = detectLateMomentumRisk(ctx);
             if (lateRisk >= 3) {
                 flags.push(`LATE_FOMO_COMBO_LV${lateRisk}`);
-                penalty += A23_CONFIG.penalties.LATE_MOMENTUM_COMBO;
+                penalty += A23_CONFIG.basePenalties.LATE_MOMENTUM_COMBO;
                 if (lateRisk === 4) blockCandidate = true;
             }
 
             return { penalty, flags, blockCandidate, severity, lateRisk };
         }
 
-        // 基於歷史統計的分段權重計算 (Empirical Historical Weight)
-        function calculateHistoricalSegmentEdge(ctx) {
-            const h = simState.historyArchive || [];
-            if (h.length < 30) return 0; // 歷史平倉數據不足時給 0 修正
-
-            const key = `${ctx.strategy} × ${ctx.regime} × ${ctx.direction}`;
-            const subset = h.filter(t => {
-                const c = t.entryContext || {};
-                const k = `${t.strategy || c.strategy || 'UNKNOWN'} × ${t.regimeAtEntry || c.regime || 'UNKNOWN'} × ${t.direction || c.direction || 'UNKNOWN'}`;
-                return k === key;
-            });
-
-            if (subset.length < 15) return 0; // 樣本信心不足
-
-            const wins = subset.filter(t => (parseFloat(t.pnl) || 0) > 0);
-            const wr = wins.length / subset.length;
-            const net = subset.reduce((acc, t) => acc + (parseFloat(t.pnl) || 0), 0);
-            const exp = net / subset.length;
-
-            // 信心度採 log 遞增
-            const confidence = Math.min(1.0, Math.log(subset.length) / Math.log(100));
-            let weight = (exp * 10) + ((wr - 0.40) * 20);
-            weight = Math.max(-20, Math.min(20, weight * confidence));
-            return Math.round(weight);
-        }
-
-        // 計算 V8.6-A2.3 預期邊際評分 (Expected Edge Score, EES)
         function calculateExpectedEdgeScore(baseScore, ctx) {
             const neg = evaluateNegativeEdge(ctx);
-            const histWeight = calculateHistoricalSegmentEdge(ctx);
+            const hier = calculateHierarchicalContextWeight(ctx);
 
-            let ees = baseScore + histWeight - neg.penalty;
+            let ees = baseScore + hier.weight - neg.penalty;
             ees = Math.max(0, Math.min(100, Math.round(ees)));
 
             let decision = "CANDIDATE";
@@ -728,12 +922,12 @@
                 flags: neg.flags,
                 severity: neg.severity,
                 blockCandidate: neg.blockCandidate,
-                histWeight,
+                hierarchical: hier,
                 decision
             };
         }
 
-        function buildEntryContext(c) {
+        function buildEntryContext(c, quality = "FULL") {
             const f = { 
                 momentum1h: a22n(c.momentum1h), 
                 rvol: a22n(c.rvol), 
@@ -746,7 +940,8 @@
             };
             
             const rawCtx = {
-                schema: 'A2.3-IDB',
+                schemaVersion: 'A2.3.1',
+                metadataQuality: quality,
                 capturedAt: Date.now(),
                 score: a22n(c.score),
                 grade: c.grade || 'C',
@@ -763,7 +958,6 @@
                 features: f
             };
 
-            // 注入 A2.3 EES 計算核心
             const eesResult = calculateExpectedEdgeScore(rawCtx.score, rawCtx);
             rawCtx.ees = eesResult;
             rawCtx.expectedEdgeScore = eesResult.expectedEdgeScore;
@@ -775,24 +969,38 @@
         }
 
         /* =========================================================
-           INDEXED-DB 倉儲基礎層
+           INDEXED-DB VERSION 2 儲存核心 (5 Object Stores)
         ========================================================= */
-        function openIndexedDatabase() {
+        function openIndexedDatabaseV2() {
             return new Promise((resolve) => {
                 if (!window.indexedDB) return resolve(null);
                 const request = indexedDB.open(IDB_DB_NAME, IDB_DB_VERSION);
 
                 request.onupgradeneeded = (e) => {
                     const db = e.target.result;
+                    // Store 1: Execution Archive
                     if (!db.objectStoreNames.contains(IDB_STORE_EXECUTION)) {
                         const store = db.createObjectStore(IDB_STORE_EXECUTION, { keyPath: 'tradeId' });
                         store.createIndex('symbol', 'symbol', { unique: false });
                         store.createIndex('closedAtTs', 'closedAtTs', { unique: false });
                     }
+                    // Store 2: Research Archive
                     if (!db.objectStoreNames.contains(IDB_STORE_RESEARCH)) {
                         const rStore = db.createObjectStore(IDB_STORE_RESEARCH, { keyPath: 'id' });
                         rStore.createIndex('symbol', 'symbol', { unique: false });
                         rStore.createIndex('strategyVariant', 'strategyVariant', { unique: false });
+                    }
+                    // Store 3: Strategy Snapshots
+                    if (!db.objectStoreNames.contains(IDB_STORE_STRATEGY_SNAPSHOTS)) {
+                        db.createObjectStore(IDB_STORE_STRATEGY_SNAPSHOTS, { keyPath: 'snapshotId' });
+                    }
+                    // Store 4: Edge Snapshots
+                    if (!db.objectStoreNames.contains(IDB_STORE_EDGE_SNAPSHOTS)) {
+                        db.createObjectStore(IDB_STORE_EDGE_SNAPSHOTS, { keyPath: 'edgeSnapshotId' });
+                    }
+                    // Store 5: Dataset Metadata
+                    if (!db.objectStoreNames.contains(IDB_STORE_DATASET_METADATA)) {
+                        db.createObjectStore(IDB_STORE_DATASET_METADATA, { keyPath: 'metaKey' });
                     }
                 };
 
@@ -828,33 +1036,403 @@
             });
         }
 
-        function updateIdbStatsBadge() {
-            const el = document.getElementById('idbStatsBadge');
-            if (!el) return;
-            const execCount = (simState.historyArchive || []).length;
-            const shadowCount = (simState.research?.archive || []).length;
-            el.innerText = `${execCount} 實盤 / ${shadowCount} 影子`;
-        }
+        /* =========================================================
+           元數據回填引擎 V2 (Dataset Metadata Backfill Engine)
+        ========================================================= */
+        async function runMetadataBackfillMigration() {
+            let fullCount = 0, partialCount = 0, legacyCount = 0, invalidCount = 0;
+            const updatedHistory = [];
 
-        function v85Number(value, fallback = 0) { const n = parseFloat(value); return Number.isFinite(n) ? n : fallback; }
-        function v85Timestamp(value, fallback = Date.now()) {
-            if (typeof value === 'number' && Number.isFinite(value)) return value;
-            if (typeof value === 'string') {
-                const parsed = Date.parse(value);
-                if (Number.isFinite(parsed)) return parsed;
+            for (const t of (simState.historyArchive || [])) {
+                if (!t || typeof t !== 'object') {
+                    invalidCount++;
+                    continue;
+                }
+
+                if (t.entryContext && t.entryContext.schemaVersion === 'A2.3.1' && t.entryContext.metadataQuality === 'FULL') {
+                    fullCount++;
+                    updatedHistory.push(t);
+                    continue;
+                }
+
+                // 需要回填的舊記錄
+                const mockCoin = {
+                    score: a22n(t.scoreAtEntry, a22n(t.score, 75)),
+                    grade: t.grade || 'B',
+                    momentum1h: a22n(t.momentumAtEntry, 2.0),
+                    rvol: a22n(t.rvolAtEntry, 1.8),
+                    oiVelocity: a22n(t.oiVelocityAtEntry, 0.8),
+                    oiAcceleration: 0.1,
+                    spreadPct: a22n(t.spreadPctAtEntry, 0.04),
+                    turnover24h: 3000000,
+                    price24hPcnt: 5.0
+                };
+
+                const reconstructedCtx = buildEntryContext(mockCoin, t.entryContext ? 'PARTIAL' : 'LEGACY');
+                if (reconstructedCtx.metadataQuality === 'PARTIAL') partialCount++;
+                else legacyCount++;
+
+                const upgradedTrade = {
+                    ...t,
+                    entryContext: reconstructedCtx,
+                    metadataQuality: reconstructedCtx.metadataQuality
+                };
+
+                updatedHistory.push(upgradedTrade);
+                if (idbInstance) await idbPutRecord(IDB_STORE_EXECUTION, upgradedTrade);
             }
-            return fallback;
-        }
-        function v85SafeJsonParse(raw) { if (!raw || typeof raw !== 'string') return null; try { return JSON.parse(raw); } catch (_) { return null; } }
 
+            simState.historyArchive = updatedHistory;
+            saveToStorage(false);
+            updateMetadataQualityUI();
+            updateIntegrityModalCounts();
+            showCustomDialog("回填完成", `成功回填！\nFULL: ${fullCount} 筆\nPARTIAL: ${partialCount} 筆\nLEGACY: ${legacyCount} 筆`);
+        }
+
+        function updateMetadataQualityUI() {
+            const h = simState.historyArchive || [];
+            if (h.length === 0) return;
+            const fulls = h.filter(t => t.entryContext?.metadataQuality === 'FULL').length;
+            const pct = Math.round((fulls / h.length) * 100);
+            const badge = document.getElementById('metadataQualityBadge');
+            if (badge) badge.innerText = `Meta: ${pct}% FULL (${fulls}/${h.length})`;
+        }
+
+        /* =========================================================
+           自動快照隊列 (Automatic Backup Snapshots)
+        ========================================================= */
+        function triggerManualSnapshot() {
+            const snapshot = {
+                snapshotId: 'SNAP_' + Date.now(),
+                timestamp: Date.now(),
+                executionCount: (simState.historyArchive || []).length,
+                researchCount: (simState.research?.archive || []).length,
+                balance: simState.balance,
+                datasetChecksum: generateDatasetChecksum(simState.historyArchive)
+            };
+
+            const raw = localStorage.getItem(STORAGE_KEY_SNAPSHOTS);
+            const snapshots = raw ? JSON.parse(raw) : [];
+            snapshots.unshift(snapshot);
+            if (snapshots.length > 10) snapshots.pop(); // 保留最近 10 個快照
+            localStorage.setItem(STORAGE_KEY_SNAPSHOTS, JSON.stringify(snapshots));
+
+            if (idbInstance) idbPutRecord(IDB_STORE_STRATEGY_SNAPSHOTS, snapshot);
+            updateIntegrityModalCounts();
+            showCustomDialog("快照建立成功", `已成功儲存快照 ${snapshot.snapshotId}！`);
+        }
+
+        function downloadLatestSnapshot() {
+            const raw = localStorage.getItem(STORAGE_KEY_SNAPSHOTS);
+            const snapshots = raw ? JSON.parse(raw) : [];
+            if (snapshots.length === 0) {
+                showCustomDialog("無快照", "目前尚無快照記錄，請先產生手動快照。");
+                return;
+            }
+            const blob = new Blob([JSON.stringify(snapshots[0], null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob), a = document.createElement('a');
+            a.href = url;
+            a.download = `snapshot_${snapshots[0].snapshotId}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function updateIntegrityModalCounts() {
+            const execCount = (simState.historyArchive || []).length;
+            const researchCount = (simState.research?.archive || []).length;
+            const elExec = document.getElementById('integrityExecCount');
+            if (elExec) elExec.innerText = execCount;
+            const elRes = document.getElementById('integrityResearchCount');
+            if (elRes) elRes.innerText = researchCount;
+
+            const h = simState.historyArchive || [];
+            let full = 0, partial = 0, legacy = 0, invalid = 0;
+            h.forEach(t => {
+                const q = t.entryContext?.metadataQuality || 'LEGACY';
+                if (q === 'FULL') full++;
+                else if (q === 'PARTIAL') partial++;
+                else if (q === 'LEGACY') legacy++;
+                else invalid++;
+            });
+
+            const countFullEl = document.getElementById('metaCountFull');
+            if (countFullEl) countFullEl.innerText = full;
+            const countPartialEl = document.getElementById('metaCountPartial');
+            if (countPartialEl) countPartialEl.innerText = partial;
+            const countLegacyEl = document.getElementById('metaCountLegacy');
+            if (countLegacyEl) countLegacyEl.innerText = legacy;
+            const countInvalidEl = document.getElementById('metaCountInvalid');
+            if (countInvalidEl) countInvalidEl.innerText = invalid;
+
+            const fullPct = h.length > 0 ? Math.round((full / h.length) * 100) : 100;
+            const fullPctEl = document.getElementById('integrityFullMetaPct');
+            if (fullPctEl) fullPctEl.innerText = `${fullPct}%`;
+
+            const raw = localStorage.getItem(STORAGE_KEY_SNAPSHOTS);
+            const snapshots = raw ? JSON.parse(raw) : [];
+            const snapEl = document.getElementById('integritySnapshotCount');
+            if (snapEl) snapEl.innerText = `${snapshots.length} 個本機快照`;
+        }
+
+        /* =========================================================
+           反事實 A/B 記帳引擎 (Counterfactual Accounting Engine)
+        ========================================================= */
+        function computeCounterfactualMetrics() {
+            const { variantA, blockedTrades } = computeABDataset();
+            let alphaSaved = 0; // 成功排除的毒性交易累計虧損 (正數代表省下的錢)
+            let opportunityCost = 0; // 被誤攔截但實際獲利的單子
+
+            blockedTrades.forEach(t => {
+                const pnl = parseFloat(t.pnl) || 0;
+                if (pnl < 0) {
+                    alphaSaved += Math.abs(pnl);
+                } else if (pnl > 0) {
+                    opportunityCost += pnl;
+                }
+            });
+
+            const netAdvantage = alphaSaved - opportunityCost;
+            return { alphaSaved, opportunityCost, netAdvantage, totalBlocked: blockedTrades.length };
+        }
+
+        function updateCounterfactualUI() {
+            const cf = computeCounterfactualMetrics();
+            const textEl = document.getElementById('abAlphaSavedText');
+            if (textEl) {
+                textEl.innerText = `Alpha Saved: +$${cf.alphaSaved.toFixed(2)} (Net Advantage: ${cf.netAdvantage >= 0 ? '+' : ''}$${cf.netAdvantage.toFixed(2)})`;
+            }
+            const elA = document.getElementById('auditAlphaSavedDisplay');
+            if (elA) elA.innerText = `+$${cf.alphaSaved.toFixed(2)}`;
+            const elO = document.getElementById('auditOppCostDisplay');
+            if (elO) elO.innerText = `-$${cf.opportunityCost.toFixed(2)}`;
+            const elN = document.getElementById('auditNetAdvantageDisplay');
+            if (elN) {
+                elN.innerText = `${cf.netAdvantage >= 0 ? '+' : ''}$${cf.netAdvantage.toFixed(2)}`;
+                elN.className = `text-lg font-bold ${cf.netAdvantage >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
+            }
+        }
+
+        /* =========================================================
+           過濾器效能審計 (Filter Effectiveness Audit Table)
+        ========================================================= */
+        function openFilterAuditModal() {
+            const { variantA } = computeABDataset();
+            updateCounterfactualUI();
+
+            const tbody = document.getElementById('filterEffectivenessTableBody');
+            if (tbody) {
+                const rules = [
+                    { key: "CHOPPY_LONG_BREAKOUT", name: "CHOPPY × MOMENTUM_BREAKOUT × LONG (震盪追高破位)" },
+                    { key: "HIGH_VOLATILITY", name: "HIGH_VOL (極端高波無序雜訊)" },
+                    { key: "EXTREME_RVOL", name: "EXTREME_RVOL (高潮放量誘多出貨)" },
+                    { key: "STRONG_OI_CROWDING", name: "STRONG_OI (槓桿過度擁擠爆倉風險)" }
+                ];
+
+                tbody.innerHTML = rules.map(r => {
+                    const matchedTrades = variantA.filter(t => (t.entryContext?.riskFlags || []).includes(r.key));
+                    const stat = calculateGroupMetrics(matchedTrades);
+                    const conf = getRuleConfidenceFactor(r.key);
+                    const isEffective = stat.exp < 0; // 攔截單平均為負，證明攔截正確
+
+                    return `
+                        <tr class="hover:bg-slate-900/60 border-b border-slate-900">
+                            <td class="p-2 font-bold text-white">${r.name}</td>
+                            <td class="p-2 text-center text-slate-300">${stat.count} 筆</td>
+                            <td class="p-2 text-center text-amber-400">${stat.wr.toFixed(1)}%</td>
+                            <td class="p-2 text-center ${stat.exp >= 0 ? 'text-emerald-400' : 'text-rose-400'} font-bold">$${stat.exp.toFixed(3)}</td>
+                            <td class="p-2 text-center text-cyan-300 font-mono">${(conf * 100).toFixed(0)}%</td>
+                            <td class="p-2 text-center font-bold">
+                                ${stat.count < 10 ? '<span class="text-slate-500">樣本累積中</span>' :
+                                  isEffective ? '<span class="text-emerald-400">🟢 EFFECTIVE (避險有功)</span>' :
+                                  '<span class="text-rose-400">⚠️ CAUTION (有誤殺疑慮)</span>'}
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+            }
+            document.getElementById('filterAuditModal').classList.remove('hidden');
+        }
+        function closeFilterAuditModal() { document.getElementById('filterAuditModal').classList.add('hidden'); }
+
+        /* =========================================================
+           進階匯出與匯入前驗證 (Pre-Import Validation & V2 Export)
+        ========================================================= */
+        function generateDatasetChecksum(records) {
+            const raw = (records || []).map(r => `${r.tradeId || r.id}_${r.pnl}`).join(';');
+            let hash = 2166136261;
+            for (let i = 0; i < raw.length; i++) {
+                hash ^= raw.charCodeAt(i);
+                hash = Math.imul(hash, 16777619);
+            }
+            return (hash >>> 0).toString(16).toUpperCase();
+        }
+
+        async function exportDataJsonV2() {
+            const execRecords = simState.historyArchive || [];
+            const researchRecords = simState.research?.archive || [];
+            const fullDataset = {
+                schema: "BYBIT_RADAR_DATASET_V2",
+                appVersion: "V8.6-A2.3.1",
+                exportedAt: new Date().toISOString(),
+                executionCount: execRecords.length,
+                researchCount: researchRecords.length,
+                datasetChecksum: generateDatasetChecksum(execRecords),
+                simState: { ...simState, historyArchive: execRecords, research: simState.research }
+            };
+
+            const blob = new Blob([JSON.stringify(fullDataset, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob), a = document.createElement('a');
+            a.href = url;
+            a.download = `bybit_radar_dataset_v2_${Date.now()}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showCustomDialog("匯出成功", `已完整匯出 V2 資料集！\n實盤: ${execRecords.length} 筆\n影子: ${researchRecords.length} 筆\n校驗碼: ${fullDataset.datasetChecksum}`);
+        }
+
+        function importDataJsonV2(evt) {
+            const file = evt.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = async e => {
+                try {
+                    const parsed = JSON.parse(e.target.result);
+                    let incomingExec = [];
+                    if (parsed.simState) {
+                        incomingExec = parsed.simState.historyArchive || parsed.simState.history || [];
+                    } else if (Array.isArray(parsed)) {
+                        incomingExec = parsed;
+                    }
+
+                    // Pre-import 稽核驗證
+                    let validCount = 0, dupCount = 0, corruptedCount = 0;
+                    const existingMap = new Map();
+                    (simState.historyArchive || []).forEach(t => existingMap.set(t.tradeId || t.id, true));
+
+                    const validRecordsToMerge = [];
+                    incomingExec.forEach(r => {
+                        if (!r || typeof r !== 'object') {
+                            corruptedCount++;
+                            return;
+                        }
+                        const id = r.tradeId || r.id;
+                        if (!id) {
+                            corruptedCount++;
+                            return;
+                        }
+                        if (existingMap.has(id)) {
+                            dupCount++;
+                        } else {
+                            validCount++;
+                            validRecordsToMerge.push(r);
+                        }
+                    });
+
+                    // 執行合併
+                    const merged = v85QualityMergeTrades(simState.historyArchive || [], validRecordsToMerge);
+                    simState.historyArchive = merged;
+                    simState.history = merged.slice(0, 30);
+                    if (idbInstance) {
+                        for (const trd of validRecordsToMerge) {
+                            await idbPutRecord(IDB_STORE_EXECUTION, trd);
+                        }
+                    }
+
+                    saveToStorage(true);
+                    updateIdbStatsBadge();
+                    renderSimPositions();
+                    updateSimHeaderStats();
+                    updateABComparisonStats();
+                    updateCounterfactualUI();
+                    updateMetadataQualityUI();
+
+                    // 彈出 Pre-import 報告
+                    const reportModalContent = document.getElementById('importAuditContent');
+                    if (reportModalContent) {
+                        reportModalContent.innerHTML = `
+                            <div class="p-2 bg-slate-900 rounded border border-crypto-border space-y-1">
+                                <div>• 來源版本 (Schema): <b class="text-white">${parsed.schema || 'Legacy-V1'}</b></div>
+                                <div>• 讀取筆數 (Incoming): <b class="text-cyan-300">${incomingExec.length} 筆</b></div>
+                                <div>• 成功新增 (Imported): <b class="text-emerald-400">${validCount} 筆</b></div>
+                                <div>• 重複略過 (Duplicates): <b class="text-amber-400">${dupCount} 筆</b></div>
+                                <div>• 損毀剔除 (Corrupted): <b class="text-rose-400">${corruptedCount} 筆</b></div>
+                                <div>• 最終資料庫總筆數: <b class="text-white font-bold">${merged.length} 筆</b></div>
+                            </div>
+                        `;
+                    }
+                    document.getElementById('importAuditModal').classList.remove('hidden');
+
+                } catch (err) {
+                    showCustomDialog("匯入失敗", "檔案格式錯誤或無法解析 JSON: " + err.message);
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function closeImportAuditModal() { document.getElementById('importAuditModal').classList.add('hidden'); }
+        function openDataIntegrityModal() { updateIntegrityModalCounts(); document.getElementById('dataIntegrityModal').classList.remove('hidden'); }
+        function closeDataIntegrityModal() { document.getElementById('dataIntegrityModal').classList.add('hidden'); }
+
+        /* =========================================================
+           自訂非同步對話視窗 (完全取代 alert & confirm)
+        ========================================================= */
+        let customDialogResolver = null;
+        function showCustomDialog(title, msg, isConfirm = false) {
+            return new Promise(resolve => {
+                customDialogResolver = resolve;
+                document.getElementById('customDialogTitle').innerText = title;
+                document.getElementById('customDialogMsg').innerText = msg;
+                const actions = document.getElementById('customDialogActions');
+                if (isConfirm) {
+                    actions.innerHTML = `
+                        <button onclick="resolveCustomDialog(false)" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg">取消</button>
+                        <button onclick="resolveCustomDialog(true)" class="px-4 py-1.5 bg-rose-700 hover:bg-rose-600 text-white font-bold rounded-lg">確認執行</button>
+                    `;
+                } else {
+                    actions.innerHTML = `
+                        <button onclick="resolveCustomDialog(true)" class="px-4 py-1.5 bg-cyan-700 hover:bg-cyan-600 text-white font-bold rounded-lg">確定</button>
+                    `;
+                }
+                document.getElementById('customDialogModal').classList.remove('hidden');
+            });
+        }
+
+        function resolveCustomDialog(val) {
+            document.getElementById('customDialogModal').classList.add('hidden');
+            if (customDialogResolver) {
+                customDialogResolver(val);
+                customDialogResolver = null;
+            }
+        }
+
+        async function askResetSimulationCustom() {
+            const confirmed = await showCustomDialog("重置帳戶確認", "確認重置帳戶餘額為 $100,000？\n(注意：IndexedDB 歷史記錄將全數安全留存，不會遺失)", true);
+            if (confirmed) {
+                simState.balance = 100000.0;
+                simState.positions = [];
+                simState.riskState = null;
+                ensureRiskState();
+                saveToStorage();
+                renderSimPositions();
+                updateSimHeaderStats();
+            }
+        }
+
+        async function closeAllPositionsCustom() {
+            const confirmed = await showCustomDialog("一鍵全平確認", "確認以當前市價立即市價平倉所有進行中持倉？", true);
+            if (confirmed) closeAllPositions();
+        }
+
+        /* =========================================================
+           標準交易與歷史去重邏輯
+        ========================================================= */
         function v85StableTradeId(trade) {
             if (trade && trade.tradeId) return String(trade.tradeId);
             if (trade && trade.id && String(trade.id).startsWith('TRD_')) return String(trade.id);
             const symbol = String(trade?.symbol || 'UNKNOWN').toUpperCase();
             const side = String(trade?.side || 'LONG').toUpperCase();
-            const entry = v85Number(trade?.entryPrice, 0).toFixed(6);
-            const exit = v85Number(trade?.exitPrice, 0).toFixed(6);
-            const pnl = v85Number(trade?.pnl ?? trade?.netPnl, 0).toFixed(4);
+            const entry = a22n(trade?.entryPrice, 0).toFixed(6);
+            const exit = a22n(trade?.exitPrice, 0).toFixed(6);
+            const pnl = a22n(trade?.pnl ?? trade?.netPnl, 0).toFixed(4);
             const closedStr = String(trade?.closedAt || trade?.closedAtTs || '');
             const raw = [symbol, side, entry, exit, pnl, closedStr].join('|');
             let hash = 2166136261;
@@ -866,14 +1444,14 @@
         }
 
         function v85NormalizeTrade(trade) {
-            const entryPrice = v85Number(trade?.entryPrice);
-            const exitPrice = v85Number(trade?.exitPrice, entryPrice);
-            const grossPnl = v85Number(trade?.grossPnl, v85Number(trade?.pnl));
-            const netPnl = v85Number(trade?.netPnl, v85Number(trade?.pnl, grossPnl));
-            const openedAt = v85Timestamp(trade?.openedAt ?? trade?.openTime, 0);
+            const entryPrice = a22n(trade?.entryPrice);
+            const exitPrice = a22n(trade?.exitPrice, entryPrice);
+            const grossPnl = a22n(trade?.grossPnl, a22n(trade?.pnl));
+            const netPnl = a22n(trade?.netPnl, a22n(trade?.pnl, grossPnl));
+            const openedAt = a22n(trade?.openedAt ?? trade?.openTime, 0);
             const fills = Array.isArray(trade?.fills) ? trade.fills : [];
-            let closedAtTs = v85Timestamp(trade?.closedAtTs ?? trade?.closedTimestamp, 0);
-            if (!closedAtTs && fills.length > 0) closedAtTs = v85Timestamp(fills[fills.length - 1]?.timestamp, 0);
+            let closedAtTs = a22n(trade?.closedAtTs ?? trade?.closedTimestamp, 0);
+            if (!closedAtTs && fills.length > 0) closedAtTs = a22n(fills[fills.length - 1]?.timestamp, 0);
 
             const normalized = {
                 ...trade,
@@ -885,18 +1463,18 @@
                 closedAt: trade?.closedAt || (closedAtTs > 0 ? new Date(closedAtTs).toLocaleTimeString() : '已平倉'),
                 entryPrice,
                 exitPrice,
-                originalQty: v85Number(trade?.originalQty, v85Number(trade?.qty)),
-                originalNotional: v85Number(trade?.originalNotional, v85Number(trade?.notional, 25)),
+                originalQty: a22n(trade?.originalQty, a22n(trade?.qty)),
+                originalNotional: a22n(trade?.originalNotional, a22n(trade?.notional, 25)),
                 grossPnl,
                 netPnl,
                 pnl: netPnl,
-                durationMin: Math.max(0, Math.round(v85Number(trade?.durationMin, closedAtTs > openedAt ? (closedAtTs - openedAt) / 60000 : 0))),
+                durationMin: Math.max(0, Math.round(a22n(trade?.durationMin, closedAtTs > openedAt ? (closedAtTs - openedAt) / 60000 : 0))),
                 reason: trade?.reason || trade?.closeReason || 'CLOSED',
-                mfePct: v85Number(trade?.mfePct),
-                maePct: v85Number(trade?.maePct),
+                mfePct: a22n(trade?.mfePct),
+                maePct: a22n(trade?.maePct),
                 fills,
                 entryContext: trade?.entryContext || null,
-                schemaVersion: '8.6-A2.3'
+                schemaVersion: '8.6-A2.3.1'
             };
             normalized.tradeId = v85StableTradeId(normalized);
             normalized.id = normalized.tradeId;
@@ -914,18 +1492,20 @@
         }
 
         async function initStorageWithIndexedDB() {
-            await openIndexedDatabase();
+            await openIndexedDatabaseV2();
 
             const rawSim = localStorage.getItem(STORAGE_KEY_SIM);
             if (rawSim) {
-                const parsed = v85SafeJsonParse(rawSim);
-                if (parsed && typeof parsed === 'object') simState = { ...simState, ...parsed };
+                try {
+                    const parsed = JSON.parse(rawSim);
+                    if (parsed && typeof parsed === 'object') simState = { ...simState, ...parsed };
+                } catch(e) {}
             }
 
             const idbExecutionRecords = await idbGetAllRecords(IDB_STORE_EXECUTION);
             const idbResearchRecords = await idbGetAllRecords(IDB_STORE_RESEARCH);
 
-            const allMergedExecution = v85QualityMergeTrades(idbExecutionRecords, simState.history || []);
+            const allMergedExecution = v85QualityMergeTrades(idbExecutionRecords, simState.historyArchive || [], simState.history || []);
             simState.historyArchive = allMergedExecution;
             simState.history = allMergedExecution.slice(0, 30);
 
@@ -939,9 +1519,11 @@
             ensureRiskState();
             saveToStorage(false);
             updateIdbStatsBadge();
+            updateMetadataQualityUI();
             renderSimPositions();
             updateSimHeaderStats();
             updateABComparisonStats();
+            updateCounterfactualUI();
         }
 
         function saveToStorage(syncCloud = true) {
@@ -962,7 +1544,7 @@
                         timeoutMinutes: simState.research?.timeoutMinutes ?? 60,
                         active: (simState.research?.active || []).slice(-35),
                         seenSignals: simState.research?.seenSignals || {},
-                        version: 'V8.6-A2.3'
+                        version: 'V8.6-A2.3.1'
                     }
                 };
                 localStorage.setItem(STORAGE_KEY_SIM, JSON.stringify(lightweightSimState));
@@ -973,6 +1555,17 @@
             }
         }
 
+        function updateIdbStatsBadge() {
+            const el = document.getElementById('idbStatsBadge');
+            if (!el) return;
+            const execCount = (simState.historyArchive || []).length;
+            const shadowCount = (simState.research?.archive || []).length;
+            el.innerText = `${execCount} 實盤 / ${shadowCount} 影子`;
+        }
+
+        /* =========================================================
+           風控與部位管理邏輯
+        ========================================================= */
         function getTradingDayKey(ts = Date.now()) { return new Date(ts).toISOString().slice(0, 10); }
 
         function ensureRiskState() {
@@ -1003,44 +1596,6 @@
             return (parseFloat(simState.balance) || 0) + u;
         }
 
-        function getCoinIntelligence(symbol) {
-            const h = (simState.historyArchive || []).filter(t => t.symbol === symbol);
-            if (h.length === 0) return { symbol, trades: 0, winRate: 0.5, expectancy: 0, bonus: 0, label: 'NEW' };
-            const wins = h.filter(t => (parseFloat(t.pnl) || 0) > 0);
-            const winRate = wins.length / h.length;
-            const totalNet = h.reduce((sum, t) => sum + (parseFloat(t.pnl) || 0), 0);
-            const expectancy = totalNet / h.length;
-            let bonus = 0, label = 'NEUTRAL';
-            if (h.length >= 2) {
-                if (expectancy > 0.5 && winRate >= 0.6) { bonus = 10; label = 'HIGH_EDGE'; }
-                else if (expectancy < -0.5 || winRate <= 0.3) { bonus = -15; label = 'PENALTY'; }
-            }
-            return { symbol, trades: h.length, winRate, expectancy, bonus, label };
-        }
-
-        function calculateSignalConfidence(c) {
-            if (!c) return { confidence: 0, reasons: ['NO_DATA'], blockers: ['NO_DATA'] };
-            const reasons = [], blockers = [];
-            let confidence = 0;
-            const score = parseFloat(c.score) || 0, rvol = parseFloat(c.rvol) || 0, oi = parseFloat(c.oiVelocity) || 0;
-            const mom = parseFloat(c.momentum1h) || 0, spread = parseFloat(c.spreadPct) || 999;
-
-            confidence += Math.min(30, Math.max(0, (score / 100) * strategyConfig.weights.score));
-            if (rvol >= strategyConfig.minRvol) { confidence += strategyConfig.weights.rvol; reasons.push('RVOL_CONFIRM'); } else blockers.push('LOW_RVOL');
-            if (oi >= strategyConfig.minOiVelocity) { confidence += strategyConfig.weights.oi; reasons.push('OI_CONFIRM'); } else blockers.push('LOW_OI');
-            if (mom >= strategyConfig.preferredMomentumMin && mom <= strategyConfig.preferredMomentumMax) { confidence += strategyConfig.weights.momentum; reasons.push('MOMENTUM_OK'); } else blockers.push('MOMENTUM_OUT_OF_RANGE');
-            if (spread <= strategyConfig.maxSpreadPct) { confidence += strategyConfig.weights.spread; reasons.push('SPREAD_OK'); } else blockers.push('SPREAD_TOO_WIDE');
-
-            const coinIntel = getCoinIntelligence(c.symbol);
-            if (coinIntel.bonus !== 0) {
-                confidence += coinIntel.bonus;
-                reasons.push(`COIN_INTEL_${coinIntel.label}_${coinIntel.bonus > 0 ? '+' : ''}${coinIntel.bonus}`);
-            }
-
-            if (score < strategyConfig.minScore) blockers.push('LOW_SCORE');
-            return { confidence: Math.round(Math.min(100, Math.max(0, confidence))), reasons, blockers };
-        }
-
         function getOpenExposure() {
             return (simState.positions || []).reduce((sum, p) => sum + (parseFloat(p.notional) || 0), 0);
         }
@@ -1051,11 +1606,9 @@
             return baseTradeSize;
         }
 
-        // V8.6-A2.3 風控閘門：結合 EES 與 Negative Edge Filter
         function evaluateRiskGate(candidate) {
             const rs = ensureRiskState();
             const now = Date.now();
-            const equity = getCurrentEquity();
 
             if (rs.halted) return { allowed: false, reason: rs.haltReason || 'RISK_HALTED' };
             if (currentMarketRegime === 'RISK_OFF') return { allowed: false, reason: 'RISK_OFF' };
@@ -1066,13 +1619,11 @@
                 return { allowed: false, reason: `SYMBOL_COOLDOWN_${candidate.symbol}` };
             }
 
-            // 【防禦 1】流動性與盤口點差
             const spreadPct = parseFloat(candidate.spreadPct) || 999;
             if (spreadPct > strategyConfig.maxSpreadPct) return { allowed: false, reason: `SPREAD_TOO_WIDE_${spreadPct.toFixed(3)}%` };
             if (parseFloat(candidate.turnover24h || 0) < strategyConfig.minTurnover24h) return { allowed: false, reason: 'LOW_TURNOVER' };
 
-            // 【防禦 2】V8.6-A2.3 EES 與 Negative Filter 雙核心過濾
-            const entryContext = buildEntryContext(candidate);
+            const entryContext = buildEntryContext(candidate, 'FULL');
             if (entryContext.decision === 'BLOCK') {
                 return { allowed: false, reason: `A23_BLOCK: ${entryContext.riskFlags.join('|')} (EES:${entryContext.expectedEdgeScore})` };
             }
@@ -1081,44 +1632,7 @@
             }
 
             if (simState.positions.length >= simState.maxPositions) return { allowed: false, reason: 'MAX_POSITIONS' };
-            const confidence = calculateSignalConfidence(candidate);
-            if (confidence.confidence < strategyConfig.minConfidence || confidence.blockers.length > 0) return { allowed: false, reason: 'SIGNAL_GATE', confidence };
-
-            return { allowed: true, reason: 'OK', confidence, entryContext };
-        }
-
-        function recordRiskOutcome(trade, shouldPersist = true) {
-            const rs = ensureRiskState();
-            const pnl = parseFloat(trade.pnl) || 0;
-            rs.dailyRealizedPnl = (parseFloat(rs.dailyRealizedPnl) || 0) + pnl;
-
-            if (pnl < 0) {
-                rs.consecutiveLosses = (parseInt(rs.consecutiveLosses) || 0) + 1;
-                rs.cooldownBySymbol = rs.cooldownBySymbol || {};
-                rs.cooldownBySymbol[trade.symbol] = Date.now() + (riskConfig.symbolCooldownMinutes * 60000);
-
-                if (rs.consecutiveLosses >= riskConfig.maxConsecutiveLosses) {
-                    rs.cooldownUntil = Date.now() + (riskConfig.cooldownMinutes * 60000);
-                    rs.haltReason = 'CONSECUTIVE_LOSS_COOLDOWN';
-                }
-            } else if (pnl > 0) {
-                rs.consecutiveLosses = 0;
-            }
-            if (shouldPersist) saveToStorage(false);
-        }
-
-        function getStrategyAnalytics() {
-            const h = simState.historyArchive || [];
-            const wins = h.filter(x => (parseFloat(x.pnl) || 0) > 0);
-            const losses = h.filter(x => (parseFloat(x.pnl) || 0) <= 0);
-            const gp = wins.reduce((a, x) => a + (parseFloat(x.pnl) || 0), 0);
-            const gl = Math.abs(losses.reduce((a, x) => a + (parseFloat(x.pnl) || 0), 0));
-            const winRate = h.length ? wins.length / h.length : 0;
-            const pf = gl > 0 ? gp / gl : (gp > 0 ? Infinity : 0);
-            const expectancy = h.length ? (h.reduce((sum, x) => sum + (parseFloat(x.pnl) || 0), 0)) / h.length : 0;
-            const avgMfe = h.length ? h.reduce((a, x) => a + (parseFloat(x.mfePct) || 0), 0) / h.length : 0;
-            const avgMae = h.length ? h.reduce((a, x) => a + (parseFloat(x.maePct) || 0), 0) / h.length : 0;
-            return { totalTrades: h.length, winRate, profitFactor: pf, expectancy, avgMfe, avgMae };
+            return { allowed: true, reason: 'OK', entryContext };
         }
 
         function bpsToPct(bps) { return (parseFloat(bps) || 0) / 10000; }
@@ -1153,238 +1667,6 @@
             const high = parseFloat(pos.highestPrice) || parseFloat(pos.entryPrice);
             const trailPct = parseFloat(pos.trailingPct) || adaptiveParams.trailingPct;
             return high * (1 - trailPct / 100);
-        }
-
-        function computeTimeDrivenMetrics(symbol, curTurnover, curOi, curPrice) {
-            const now = Date.now();
-            let buf = timeSeriesBuffers.get(symbol);
-            if (!buf) { buf = []; timeSeriesBuffers.set(symbol, buf); }
-            buf.push({ timestamp: now, turnover: curTurnover, oi: curOi, price: curPrice });
-            while (buf.length > 0 && (now - buf[0].timestamp) > MAX_BUFFER_AGE_MS) buf.shift();
-
-            const fiveMinAgo = now - (5 * 60 * 1000);
-            const tenMinAgo = now - (10 * 60 * 1000);
-            let pt5m = null, pt10m = null;
-            for (const pt of buf) {
-                if (pt.timestamp <= fiveMinAgo) pt5m = pt;
-                if (pt.timestamp <= tenMinAgo) pt10m = pt;
-            }
-            let rvol = 1.0;
-            if (pt5m && pt5m !== buf[buf.length - 1]) {
-                const cur5mDelta = Math.max(0, curTurnover - pt5m.turnover);
-                const prev5mDelta = (pt10m && pt10m !== pt5m) ? Math.max(0, pt5m.turnover - pt10m.turnover) : 0;
-                const baseline = prev5mDelta > 0 ? prev5mDelta : (curTurnover / 288);
-                if (baseline > 0) rvol = Math.max(0.5, Math.min(20.0, cur5mDelta / baseline));
-            }
-            let oiVelocity5m = 0.0, oiAcceleration = 0.0;
-            if (pt5m && pt5m.oi > 0) oiVelocity5m = ((curOi - pt5m.oi) / pt5m.oi) * 100;
-            if (pt10m && pt10m.oi > 0 && pt5m && pt5m.oi > 0) {
-                const prevVelocity5m = ((pt5m.oi - pt10m.oi) / pt10m.oi) * 100;
-                oiAcceleration = oiVelocity5m - prevVelocity5m;
-            }
-            return { rvol, oiVelocity: oiVelocity5m, oiAcceleration };
-        }
-
-        function detectMarketRegime(list) {
-            const btc = list.find(i => i.symbol === "BTCUSDT");
-            let btc1h = 0, btc24h = 0;
-            if (btc) {
-                const last = parseFloat(btc.lastPrice) || 0;
-                const p1h = parseFloat(btc.prevPrice1h) || last;
-                btc1h = p1h > 0 ? ((last - p1h) / p1h) * 100 : 0;
-                btc24h = (parseFloat(btc.price24hPcnt) || 0) * 100;
-            }
-            const altGains = list.filter(i => i.symbol.endsWith("USDT") && parseFloat(i.price24hPcnt) > 0).length;
-            const totalAlts = list.filter(i => i.symbol.endsWith("USDT")).length;
-            const breadthRatio = totalAlts > 0 ? altGains / totalAlts : 0.5;
-
-            let regime = 'CHOPPY';
-            if (btc1h <= -1.2 || btc24h <= -3.5) regime = 'RISK_OFF';
-            else if (breadthRatio >= 0.55 && btc1h >= 0.2) regime = 'RISK_ON';
-            else regime = 'CHOPPY';
-
-            currentMarketRegime = regime;
-            const badge = document.getElementById('regimeHeaderBadge');
-            if (badge) badge.innerText = `Regime: ${regime}`;
-            return regime;
-        }
-
-        async function fetchMarketData() {
-            try {
-                const res = await fetch("https://api.bybit.com/v5/market/tickers?category=linear");
-                const json = await res.json();
-                if (json.retCode === 0 && json.result && json.result.list) {
-                    detectMarketRegime(json.result.list);
-                    processTickersV85(json.result.list);
-                }
-            } catch (err) {
-                console.error("Bybit 請求錯誤:", err);
-            } finally {
-                countdown = 5;
-            }
-        }
-
-        function ensureResearchState() {
-            const d = { enabled: true, shadowNotional: 10, timeoutMinutes: 60, active: [], archive: [], seenSignals: {}, version: 'V8.6-A2.3' };
-            simState.research = Object.assign(d, simState.research || {});
-            simState.research.active = Array.isArray(simState.research.active) ? simState.research.active : [];
-            simState.research.archive = Array.isArray(simState.research.archive) ? simState.research.archive : [];
-            simState.research.seenSignals = simState.research.seenSignals || {};
-            return simState.research;
-        }
-
-        function researchKey(c) { return `${c.symbol}|${Math.floor(Date.now()/300000)}|${classifyDirection(c)}`; }
-        
-        // V8.6-A2.3 雙軌影子單採樣：同時注入 Variant A (Original) 與 Variant B (A2.3 Filtered)
-        function collectResearchSignals(list) {
-            const r = ensureResearchState();
-            if (!r.enabled) return;
-            if (r.active.length >= 40) return;
-
-            const now = Date.now();
-            Object.keys(r.seenSignals).forEach(k => {
-                if (now - r.seenSignals[k] > 10 * 60 * 1000) delete r.seenSignals[k];
-            });
-
-            list.forEach(c => {
-                if (r.active.length >= 40) return;
-                const k = researchKey(c);
-                if (r.seenSignals[k]) return;
-                const e = a22n(c.lastPrice);
-                if (e <= 0) return;
-
-                const entryCtx = buildEntryContext(c);
-                const d = entryCtx.direction;
-                const sl = a22n(adaptiveParams.stopLossPct, 4.5);
-                const tp = a22n(adaptiveParams.tp2Pct, 10);
-
-                // 影子物件
-                const shadowObj = {
-                    id: 'shadow_' + now + '_' + Math.random().toString(36).slice(2, 7),
-                    source: 'RESEARCH_SHADOW',
-                    lifecycle: 'ACTIVE',
-                    openedAt: now,
-                    symbol: c.symbol,
-                    direction: d,
-                    entryPrice: e,
-                    currentPrice: e,
-                    notional: a22n(r.shadowNotional, 10),
-                    baseScore: entryCtx.score,
-                    expectedEdgeScore: entryCtx.expectedEdgeScore,
-                    grade: entryCtx.grade,
-                    strategy: entryCtx.strategy,
-                    regime: entryCtx.regime,
-                    strategyVariant: entryCtx.decision === 'BLOCK' ? 'VARIANT_A_ONLY_BLOCKED_BY_A23' : 'VARIANT_AB_DUAL',
-                    a23Decision: entryCtx.decision,
-                    entryContext: entryCtx,
-                    tp2: d === 'LONG' ? e * (1 + tp / 100) : e * (1 - tp / 100),
-                    stopLoss: d === 'LONG' ? e * (1 - sl / 100) : e * (1 + sl / 100),
-                    timeoutAt: now + (60 * 60000),
-                    mfePct: 0,
-                    maePct: 0
-                };
-                r.active.push(shadowObj);
-                r.seenSignals[k] = now;
-            });
-        }
-
-        async function closeShadowTrade(s, p, reason) {
-            const pct = (s.direction === 'LONG' ? (p - s.entryPrice) : (s.entryPrice - p)) / s.entryPrice;
-            s.exitPrice = p;
-            s.currentPrice = p;
-            s.closeReason = reason;
-            s.closedAt = Date.now();
-            s.grossPnl = pct * s.notional;
-            s.fees = 0;
-            s.netPnl = s.grossPnl;
-            s.pnl = s.netPnl;
-            s.lifecycle = 'CLOSED';
-
-            const r = ensureResearchState();
-            r.active = r.active.filter(x => x.id !== s.id);
-            r.archive.unshift(s);
-
-            if (idbInstance) await idbPutRecord(IDB_STORE_RESEARCH, s);
-            saveToStorage(false);
-            updateIdbStatsBadge();
-            updateABComparisonStats();
-        }
-
-        function updateShadowTrades() {
-            const r = ensureResearchState();
-            const now = Date.now();
-            [...r.active].forEach(s => {
-                const p = a22n(allMarketPrices.get(s.symbol));
-                if (p <= 0) return;
-                s.currentPrice = p;
-                const m = (s.direction === 'LONG' ? (p - s.entryPrice) : (s.entryPrice - p)) / s.entryPrice * 100;
-                s.mfePct = Math.max(s.mfePct || 0, m);
-                s.maePct = Math.min(s.maePct || 0, m);
-                if (now >= s.timeoutAt) return closeShadowTrade(s, p, 'TIMEOUT');
-                if (s.direction === 'LONG' ? (p <= s.stopLoss || p >= s.tp2) : (p >= s.stopLoss || p <= s.tp2)) {
-                    return closeShadowTrade(s, p, p === s.stopLoss ? 'SL' : 'TP2');
-                }
-            });
-        }
-
-        function processTickersV85(list) {
-            const newTickers = [];
-            list.forEach(item => {
-                const symbol = item.symbol;
-                if (!symbol.endsWith("USDT")) return;
-                const lastPrice = parseFloat(item.lastPrice) || 0;
-                if (lastPrice <= 0) return;
-                allMarketPrices.set(symbol, lastPrice);
-
-                const turnover24h = parseFloat(item.turnover24h) || 0;
-                const openInterestValue = parseFloat(item.openInterestValue) || 0;
-                const bid1Price = parseFloat(item.bid1Price) || lastPrice;
-                const ask1Price = parseFloat(item.ask1Price) || lastPrice;
-                const spreadPct = ask1Price > 0 ? ((ask1Price - bid1Price) / ask1Price) * 100 : 0.05;
-
-                const { rvol, oiVelocity, oiAcceleration } = computeTimeDrivenMetrics(symbol, turnover24h, openInterestValue, lastPrice);
-                const price24hPcnt = (parseFloat(item.price24hPcnt) || 0) * 100;
-                const prevPrice1h = parseFloat(item.prevPrice1h) || lastPrice;
-                const momentum1h = prevPrice1h > 0 ? ((lastPrice - prevPrice1h) / prevPrice1h) * 100 : 0;
-                const fundingRate = (parseFloat(item.fundingRate) || 0) * 100;
-
-                const baseScore = calculateFeatureGroupScoreV85({ momentum1h, rvol, oiVelocity, oiAcceleration, turnover24h, spreadPct, fundingRate, price24hPcnt });
-                let grade = 'C';
-                if (baseScore >= 85 && spreadPct <= 0.10 && rvol >= 2.0 && oiVelocity > 0.5) grade = 'A+';
-                else if (baseScore >= 75) grade = 'A';
-                else if (baseScore >= 65) grade = 'B';
-
-                const rawRecord = { symbol, lastPrice, price24hPcnt, momentum1h, turnover24h, openInterestValue, rvol, oiVelocity, oiAcceleration, spreadPct, fundingRate, score: baseScore, grade };
-                rawRecord.entryContext = buildEntryContext(rawRecord);
-                newTickers.push(rawRecord);
-            });
-
-            rawTickers = newTickers;
-            ensureResearchState();
-            collectResearchSignals(newTickers);
-            updateShadowTrades();
-            renderMarketTable(newTickers);
-            updateSimPositions();
-            updateSimHeaderStats();
-
-            if (simState.autoTrade && currentMarketRegime !== 'RISK_OFF') {
-                checkAutoTradingOpportunities();
-            }
-        }
-
-        function calculateFeatureGroupScoreV85(f) {
-            let score = 0;
-            if (f.momentum1h >= 3.0 && f.momentum1h <= 12.0) score += 25;
-            else if (f.momentum1h >= 1.5) score += 15;
-            if (f.rvol >= 3.0) score += 20;
-            else if (f.rvol >= 1.8) score += 12;
-            if (f.oiVelocity >= 2.0 && f.oiAcceleration > 0) score += 25;
-            else if (f.oiVelocity >= 0.8) score += 15;
-            if (f.fundingRate <= -0.05) score += 5;
-            if (f.spreadPct <= 0.05) score += 15;
-            else if (f.spreadPct <= 0.12) score += 8;
-            if (f.turnover24h >= 2500000) score += 10;
-            return Math.min(100, score);
         }
 
         function executeFill(pos, fillQty, fillPrice, reason, meta = {}) {
@@ -1498,24 +1780,17 @@
             simState.historyArchive.unshift(trade);
             simState.history = simState.historyArchive.slice(0, 30);
             if (idbInstance) await idbPutRecord(IDB_STORE_EXECUTION, trade);
-            recordRiskOutcome(trade, false);
+
+            // 每累積 50 筆平倉自動產生安全快照
+            if (simState.historyArchive.length % 50 === 0) {
+                triggerManualSnapshot();
+            }
+
             saveToStorage(true);
             renderSimPositions();
             updateSimHeaderStats();
             updateABComparisonStats();
-        }
-
-        function checkAutoTradingOpportunities() {
-            if (!simState.autoTrade || !rawTickers || rawTickers.length === 0) return;
-            ensureRiskState();
-            const ranked = rawTickers
-                .filter(c => !adaptiveParams.blacklist.has(c.symbol) && !simState.positions.some(p => p.symbol === c.symbol))
-                .sort((a, b) => (b.entryContext?.expectedEdgeScore || 0) - (a.entryContext?.expectedEdgeScore || 0));
-            
-            const candidate = ranked.find(c => evaluateRiskGate(c).allowed);
-            if (candidate) {
-                executeOpenPosition(candidate, `🧠 V8.6-A2.3 EES ${candidate.entryContext.expectedEdgeScore}分`);
-            }
+            updateCounterfactualUI();
         }
 
         function executeOpenPosition(coin, reason) {
@@ -1537,7 +1812,7 @@
 
             simState.balance -= entryFee;
             const now = Date.now();
-            const entryContext = coin.entryContext || buildEntryContext(coin);
+            const entryContext = coin.entryContext || buildEntryContext(coin, 'FULL');
             const position = {
                 id: 'POS_' + now + '_' + coin.symbol,
                 symbol: coin.symbol,
@@ -1582,40 +1857,337 @@
             updateSimHeaderStats();
         }
 
-        function updateSimHeaderStats() {
-            let unrealizedPnl = 0.0;
-            (simState.positions || []).forEach(pos => {
-                const entryPrice = parseFloat(pos.entryPrice) || 0;
-                const curPrice = parseFloat(pos.currentPrice) || entryPrice;
-                const qty = parseFloat(pos.remainingQty || pos.qty) || 0;
-                if (entryPrice > 0 && qty > 0) {
-                    unrealizedPnl += (curPrice - entryPrice) * qty - (qty * curPrice * 0.00055);
+        function computeTimeDrivenMetrics(symbol, curTurnover, curOi, curPrice) {
+            const now = Date.now();
+            let buf = timeSeriesBuffers.get(symbol);
+            if (!buf) { buf = []; timeSeriesBuffers.set(symbol, buf); }
+            buf.push({ timestamp: now, turnover: curTurnover, oi: curOi, price: curPrice });
+            while (buf.length > 0 && (now - buf[0].timestamp) > MAX_BUFFER_AGE_MS) buf.shift();
+
+            const fiveMinAgo = now - (5 * 60 * 1000);
+            const tenMinAgo = now - (10 * 60 * 1000);
+            let pt5m = null, pt10m = null;
+            for (const pt of buf) {
+                if (pt.timestamp <= fiveMinAgo) pt5m = pt;
+                if (pt.timestamp <= tenMinAgo) pt10m = pt;
+            }
+            let rvol = 1.0;
+            if (pt5m && pt5m !== buf[buf.length - 1]) {
+                const cur5mDelta = Math.max(0, curTurnover - pt5m.turnover);
+                const prev5mDelta = (pt10m && pt10m !== pt5m) ? Math.max(0, pt5m.turnover - pt10m.turnover) : 0;
+                const baseline = prev5mDelta > 0 ? prev5mDelta : (curTurnover / 288);
+                if (baseline > 0) rvol = Math.max(0.5, Math.min(20.0, cur5mDelta / baseline));
+            }
+            let oiVelocity5m = 0.0, oiAcceleration = 0.0;
+            if (pt5m && pt5m.oi > 0) oiVelocity5m = ((curOi - pt5m.oi) / pt5m.oi) * 100;
+            if (pt10m && pt10m.oi > 0 && pt5m && pt5m.oi > 0) {
+                const prevVelocity5m = ((pt5m.oi - pt10m.oi) / pt10m.oi) * 100;
+                oiAcceleration = oiVelocity5m - prevVelocity5m;
+            }
+            return { rvol, oiVelocity: oiVelocity5m, oiAcceleration };
+        }
+
+        function detectMarketRegime(list) {
+            const btc = list.find(i => i.symbol === "BTCUSDT");
+            let btc1h = 0, btc24h = 0;
+            if (btc) {
+                const last = parseFloat(btc.lastPrice) || 0;
+                const p1h = parseFloat(btc.prevPrice1h) || last;
+                btc1h = p1h > 0 ? ((last - p1h) / p1h) * 100 : 0;
+                btc24h = (parseFloat(btc.price24hPcnt) || 0) * 100;
+            }
+            const altGains = list.filter(i => i.symbol.endsWith("USDT") && parseFloat(i.price24hPcnt) > 0).length;
+            const totalAlts = list.filter(i => i.symbol.endsWith("USDT")).length;
+            const breadthRatio = totalAlts > 0 ? altGains / totalAlts : 0.5;
+
+            let regime = 'CHOPPY';
+            if (btc1h <= -1.2 || btc24h <= -3.5) regime = 'RISK_OFF';
+            else if (breadthRatio >= 0.55 && btc1h >= 0.2) regime = 'RISK_ON';
+            else regime = 'CHOPPY';
+
+            currentMarketRegime = regime;
+            const badge = document.getElementById('regimeHeaderBadge');
+            if (badge) badge.innerText = `Regime: ${regime}`;
+            return regime;
+        }
+
+        async function fetchMarketData() {
+            try {
+                const res = await fetch("https://api.bybit.com/v5/market/tickers?category=linear");
+                const json = await res.json();
+                if (json.retCode === 0 && json.result && json.result.list) {
+                    detectMarketRegime(json.result.list);
+                    processTickersV85(json.result.list);
                 }
+            } catch (err) {
+                console.error("Bybit 請求錯誤:", err);
+            } finally {
+                countdown = 5;
+            }
+        }
+
+        function ensureResearchState() {
+            const d = { enabled: true, shadowNotional: 10, timeoutMinutes: 60, active: [], archive: [], seenSignals: {}, version: 'V8.6-A2.3.1' };
+            simState.research = Object.assign(d, simState.research || {});
+            simState.research.active = Array.isArray(simState.research.active) ? simState.research.active : [];
+            simState.research.archive = Array.isArray(simState.research.archive) ? simState.research.archive : [];
+            simState.research.seenSignals = simState.research.seenSignals || {};
+            return simState.research;
+        }
+
+        function researchKey(c) { return `${c.symbol}|${Math.floor(Date.now()/300000)}|${classifyDirection(c)}`; }
+
+        function collectResearchSignals(list) {
+            const r = ensureResearchState();
+            if (!r.enabled) return;
+            if (r.active.length >= 40) return;
+
+            const now = Date.now();
+            Object.keys(r.seenSignals).forEach(k => {
+                if (now - r.seenSignals[k] > 10 * 60 * 1000) delete r.seenSignals[k];
             });
 
-            const balance = parseFloat(simState.balance) || 100000.0;
-            const totalEquity = balance + unrealizedPnl;
-            const totalPnlPct = ((totalEquity - simState.initialBalance) / simState.initialBalance) * 100;
+            list.forEach(c => {
+                if (r.active.length >= 40) return;
+                const k = researchKey(c);
+                if (r.seenSignals[k]) return;
+                const e = a22n(c.lastPrice);
+                if (e <= 0) return;
 
-            const eqEl = document.getElementById('simEquityDisplay');
-            if (eqEl) {
-                eqEl.innerText = `$${totalEquity.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-                eqEl.className = `text-sm sm:text-base font-bold font-mono ${totalEquity >= simState.initialBalance ? 'text-emerald-400' : 'text-rose-400'}`;
+                const entryCtx = buildEntryContext(c, 'FULL');
+                const d = entryCtx.direction;
+                const sl = a22n(adaptiveParams.stopLossPct, 4.5);
+                const tp = a22n(adaptiveParams.tp2Pct, 10);
+
+                const shadowObj = {
+                    id: 'shadow_' + now + '_' + Math.random().toString(36).slice(2, 7),
+                    source: 'RESEARCH_SHADOW',
+                    lifecycle: 'ACTIVE',
+                    openedAt: now,
+                    symbol: c.symbol,
+                    direction: d,
+                    entryPrice: e,
+                    currentPrice: e,
+                    notional: a22n(r.shadowNotional, 10),
+                    baseScore: entryCtx.score,
+                    expectedEdgeScore: entryCtx.expectedEdgeScore,
+                    grade: entryCtx.grade,
+                    strategy: entryCtx.strategy,
+                    regime: entryCtx.regime,
+                    strategyVariant: entryCtx.decision === 'BLOCK' ? 'VARIANT_A_ONLY_BLOCKED_BY_A23' : 'VARIANT_AB_DUAL',
+                    a23Decision: entryCtx.decision,
+                    entryContext: entryCtx,
+                    tp2: d === 'LONG' ? e * (1 + tp / 100) : e * (1 - tp / 100),
+                    stopLoss: d === 'LONG' ? e * (1 - sl / 100) : e * (1 + sl / 100),
+                    timeoutAt: now + (60 * 60000),
+                    mfePct: 0,
+                    maePct: 0
+                };
+                r.active.push(shadowObj);
+                r.seenSignals[k] = now;
+            });
+        }
+
+        async function closeShadowTrade(s, p, reason) {
+            const pct = (s.direction === 'LONG' ? (p - s.entryPrice) : (s.entryPrice - p)) / s.entryPrice;
+            s.exitPrice = p;
+            s.currentPrice = p;
+            s.closeReason = reason;
+            s.closedAt = Date.now();
+            s.grossPnl = pct * s.notional;
+            s.fees = 0;
+            s.netPnl = s.grossPnl;
+            s.pnl = s.netPnl;
+            s.lifecycle = 'CLOSED';
+
+            const r = ensureResearchState();
+            r.active = r.active.filter(x => x.id !== s.id);
+            r.archive.unshift(s);
+
+            if (idbInstance) await idbPutRecord(IDB_STORE_RESEARCH, s);
+            saveToStorage(false);
+            updateIdbStatsBadge();
+            updateABComparisonStats();
+            updateCounterfactualUI();
+        }
+
+        function updateShadowTrades() {
+            const r = ensureResearchState();
+            const now = Date.now();
+            [...r.active].forEach(s => {
+                const p = a22n(allMarketPrices.get(s.symbol));
+                if (p <= 0) return;
+                s.currentPrice = p;
+                const m = (s.direction === 'LONG' ? (p - s.entryPrice) : (s.entryPrice - p)) / s.entryPrice * 100;
+                s.mfePct = Math.max(s.mfePct || 0, m);
+                s.maePct = Math.min(s.maePct || 0, m);
+                if (now >= s.timeoutAt) return closeShadowTrade(s, p, 'TIMEOUT');
+                if (s.direction === 'LONG' ? (p <= s.stopLoss || p >= s.tp2) : (p >= s.stopLoss || p <= s.tp2)) {
+                    return closeShadowTrade(s, p, p === s.stopLoss ? 'SL' : 'TP2');
+                }
+            });
+        }
+
+        function processTickersV85(list) {
+            const newTickers = [];
+            list.forEach(item => {
+                const symbol = item.symbol;
+                if (!symbol.endsWith("USDT")) return;
+                const lastPrice = parseFloat(item.lastPrice) || 0;
+                if (lastPrice <= 0) return;
+                allMarketPrices.set(symbol, lastPrice);
+
+                const turnover24h = parseFloat(item.turnover24h) || 0;
+                const openInterestValue = parseFloat(item.openInterestValue) || 0;
+                const bid1Price = parseFloat(item.bid1Price) || lastPrice;
+                const ask1Price = parseFloat(item.ask1Price) || lastPrice;
+                const spreadPct = ask1Price > 0 ? ((ask1Price - bid1Price) / ask1Price) * 100 : 0.05;
+
+                const { rvol, oiVelocity, oiAcceleration } = computeTimeDrivenMetrics(symbol, turnover24h, openInterestValue, lastPrice);
+                const price24hPcnt = (parseFloat(item.price24hPcnt) || 0) * 100;
+                const prevPrice1h = parseFloat(item.prevPrice1h) || lastPrice;
+                const momentum1h = prevPrice1h > 0 ? ((lastPrice - prevPrice1h) / prevPrice1h) * 100 : 0;
+                const fundingRate = (parseFloat(item.fundingRate) || 0) * 100;
+
+                const baseScore = calculateFeatureGroupScoreV85({ momentum1h, rvol, oiVelocity, oiAcceleration, turnover24h, spreadPct, fundingRate, price24hPcnt });
+                let grade = 'C';
+                if (baseScore >= 85 && spreadPct <= 0.10 && rvol >= 2.0 && oiVelocity > 0.5) grade = 'A+';
+                else if (baseScore >= 75) grade = 'A';
+                else if (baseScore >= 65) grade = 'B';
+
+                const rawRecord = { symbol, lastPrice, price24hPcnt, momentum1h, turnover24h, openInterestValue, rvol, oiVelocity, oiAcceleration, spreadPct, fundingRate, score: baseScore, grade };
+                rawRecord.entryContext = buildEntryContext(rawRecord, 'FULL');
+                newTickers.push(rawRecord);
+            });
+
+            rawTickers = newTickers;
+            ensureResearchState();
+            collectResearchSignals(newTickers);
+            updateShadowTrades();
+            renderMarketTable(newTickers);
+            updateSimPositions();
+            updateSimHeaderStats();
+
+            if (simState.autoTrade && currentMarketRegime !== 'RISK_OFF') {
+                checkAutoTradingOpportunities();
             }
-            const balEl = document.getElementById('simBalanceDisplay');
-            if (balEl) balEl.innerText = `$${balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-            const pnlEl = document.getElementById('simTotalPnlDisplay');
-            if (pnlEl) pnlEl.innerText = `(${totalPnlPct >= 0 ? '+' : ''}${totalPnlPct.toFixed(2)}%)`;
+        }
 
-            const a = getStrategyAnalytics();
-            const winEl = document.getElementById('simWinRateDisplay');
-            if (winEl) winEl.innerText = `${(a.winRate * 100).toFixed(0)}%`;
-            const expEl = document.getElementById('simExpectancyDisplay');
-            if (expEl) expEl.innerText = `${a.expectancy >= 0 ? '+' : ''}$${a.expectancy.toFixed(2)}`;
-            const openPosEl = document.getElementById('simOpenPositionsCount');
-            if (openPosEl) openPosEl.innerText = `${simState.positions.length} / ${simState.maxPositions}`;
-            const moonBagEl = document.getElementById('simMoonBagCount');
-            if (moonBagEl) moonBagEl.innerText = `${(simState.positions || []).filter(p => p.isMoonBag).length} 檔`;
+        function calculateFeatureGroupScoreV85(f) {
+            let score = 0;
+            if (f.momentum1h >= 3.0 && f.momentum1h <= 12.0) score += 25;
+            else if (f.momentum1h >= 1.5) score += 15;
+            if (f.rvol >= 3.0) score += 20;
+            else if (f.rvol >= 1.8) score += 12;
+            if (f.oiVelocity >= 2.0 && f.oiAcceleration > 0) score += 25;
+            else if (f.oiVelocity >= 0.8) score += 15;
+            if (f.fundingRate <= -0.05) score += 5;
+            if (f.spreadPct <= 0.05) score += 15;
+            else if (f.spreadPct <= 0.12) score += 8;
+            if (f.turnover24h >= 2500000) score += 10;
+            return Math.min(100, score);
+        }
+
+        function checkAutoTradingOpportunities() {
+            if (!simState.autoTrade || !rawTickers || rawTickers.length === 0) return;
+            ensureRiskState();
+            const ranked = rawTickers
+                .filter(c => !adaptiveParams.blacklist.has(c.symbol) && !simState.positions.some(p => p.symbol === c.symbol))
+                .sort((a, b) => (b.entryContext?.expectedEdgeScore || 0) - (a.entryContext?.expectedEdgeScore || 0));
+            
+            const candidate = ranked.find(c => evaluateRiskGate(c).allowed);
+            if (candidate) {
+                executeOpenPosition(candidate, `🧠 V8.6-A2.3.1 EES ${candidate.entryContext.expectedEdgeScore}分`);
+            }
+        }
+
+        function computeABDataset() {
+            ensureResearchState();
+            const allShadows = [...(simState.research?.archive || [])];
+            const allExecutions = (simState.historyArchive || []).map(t => ({
+                ...t,
+                source: 'EXECUTION',
+                a23Decision: t.entryContext?.decision || 'CANDIDATE',
+                expectedEdgeScore: t.entryContext?.expectedEdgeScore || 75
+            }));
+
+            const combined = [...allShadows, ...allExecutions].filter(x => Number.isFinite(parseFloat(x.pnl)));
+            const variantA = combined;
+            const variantB = combined.filter(x => (x.a23Decision || x.entryContext?.decision) !== 'BLOCK');
+            const blockedTrades = combined.filter(x => (x.a23Decision || x.entryContext?.decision) === 'BLOCK');
+
+            return { variantA, variantB, blockedTrades };
+        }
+
+        function calculateGroupMetrics(trades) {
+            if (!trades || trades.length === 0) return { count: 0, wr: 0, pf: 0, exp: 0, net: 0 };
+            const pnls = trades.map(t => parseFloat(t.pnl) || 0);
+            const wins = pnls.filter(p => p > 0);
+            const losses = pnls.filter(p => p < 0);
+            const gp = wins.reduce((a, b) => a + b, 0);
+            const gl = Math.abs(losses.reduce((a, b) => a + b, 0));
+            const net = pnls.reduce((a, b) => a + b, 0);
+            const wr = (wins.length / trades.length) * 100;
+            const pf = gl > 0 ? gp / gl : (gp > 0 ? Infinity : 0);
+            const exp = net / trades.length;
+            return { count: trades.length, wr, pf, exp, net };
+        }
+
+        function updateABComparisonStats() {
+            const { variantA, variantB } = computeABDataset();
+            const mA = calculateGroupMetrics(variantA);
+            const mB = calculateGroupMetrics(variantB);
+
+            const elA = document.getElementById('abSummaryA');
+            if (elA) elA.innerHTML = `${mA.count}T · WR ${mA.wr.toFixed(1)}% · PF ${mA.pf === Infinity ? '∞' : mA.pf.toFixed(2)} · Exp <b class="${mA.exp >= 0 ? 'text-emerald-400' : 'text-rose-400'}">$${mA.exp.toFixed(3)}</b>`;
+
+            const elB = document.getElementById('abSummaryB');
+            if (elB) elB.innerHTML = `${mB.count}T · WR ${mB.wr.toFixed(1)}% · PF ${mB.pf === Infinity ? '∞' : mB.pf.toFixed(2)} · Exp <b class="${mB.exp >= 0 ? 'text-emerald-400' : 'text-rose-400'}">$${mB.exp.toFixed(3)}</b>`;
+        }
+
+        function renderMarketTable(list) {
+            const tbody = document.getElementById('tickerTableBody');
+            if (!tbody || !list || list.length === 0) return;
+
+            tbody.innerHTML = list.slice(0, 30).map((coin) => {
+                const ctx = coin.entryContext || {};
+                const ees = ctx.expectedEdgeScore ?? coin.score;
+                const flags = ctx.riskFlags || [];
+                const isBlocked = ctx.decision === 'BLOCK';
+                
+                return `
+                    <tr class="hover:bg-slate-900/70 transition-colors border-b border-crypto-border/30">
+                        <td class="py-2 px-2.5 font-bold text-white">
+                            <span class="px-1.5 py-0.5 rounded text-[10px] mr-1 ${coin.grade === 'A+' ? 'bg-emerald-500 text-black font-bold' : 'bg-slate-800 text-slate-400'}">${coin.grade}</span>
+                            ${coin.symbol}
+                        </td>
+                        <td class="py-2 px-2.5 text-right font-bold text-slate-100">$${formatPrice(coin.lastPrice)}</td>
+                        <td class="py-2 px-2.5 text-right">
+                            <span class="font-bold ${coin.rvol >= 2 ? 'text-amber-400' : 'text-slate-300'}">${coin.rvol.toFixed(1)}x</span>
+                            <span class="block text-[10px] text-slate-400">1h: +${coin.momentum1h.toFixed(1)}%</span>
+                        </td>
+                        <td class="py-2 px-2.5 text-right ${coin.oiVelocity >= 1 ? 'text-emerald-400 font-bold' : 'text-slate-400'}">
+                            +${coin.oiVelocity.toFixed(2)}%
+                        </td>
+                        <td class="py-2 px-2.5 text-right text-slate-300">${coin.spreadPct.toFixed(3)}%</td>
+                        <td class="py-2 px-2.5 text-center font-bold">
+                            <span class="text-slate-400">${coin.score}</span>
+                            <span class="text-slate-600 mx-1">➔</span>
+                            <span class="${ees >= 70 ? 'text-emerald-400 font-black' : ees < 40 ? 'text-rose-400 line-through' : 'text-amber-400'}">${ees}</span>
+                        </td>
+                        <td class="py-2 px-2.5 text-center">
+                            ${isBlocked ? `<span class="text-[9px] px-1.5 py-0.5 rounded bg-rose-950/80 text-rose-300 border border-rose-500/30" title="${flags.join(', ')}">🚫 負Edge攔截</span>` :
+                              flags.length ? `<span class="text-[9px] px-1.5 py-0.5 rounded bg-amber-950/80 text-amber-300" title="${flags.join(', ')}">⚠️ 降分觀望</span>` :
+                              `<span class="text-[9px] px-1.5 py-0.5 rounded bg-emerald-950/80 text-emerald-300">🟢 邊界健康</span>`}
+                        </td>
+                        <td class="py-2 px-2.5 text-right">
+                            <button onclick="executeOpenPosition(rawTickers.find(t=>t.symbol==='${coin.symbol}'), '手動跟單')" class="bg-emerald-600 hover:bg-emerald-500 text-white px-2 py-0.5 rounded text-[10px]">跟單</button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+            const filteredEl = document.getElementById('filteredCountText');
+            if (filteredEl) filteredEl.innerText = list.length;
         }
 
         function renderSimPositions() {
@@ -1624,7 +2196,7 @@
             const countText = document.getElementById('activePositionsCountText');
             if (countText) countText.innerText = list.length;
             if (list.length === 0) {
-                container.innerHTML = `<div class="text-center py-6 text-slate-500 text-xs font-sans">當前無任何持倉。雷達偵測到符合 A2.3 EES 期望值訊號時將自動下單。</div>`;
+                container.innerHTML = `<div class="text-center py-6 text-slate-500 text-xs font-sans">當前無任何持倉。雷達偵測到符合 A2.3.1 EES 期望值訊號時將自動下單。</div>`;
                 return;
             }
             container.innerHTML = `
@@ -1673,237 +2245,53 @@
             `;
         }
 
-        function renderMarketTable(list) {
-            const tbody = document.getElementById('tickerTableBody');
-            if (!tbody || !list || list.length === 0) return;
-
-            tbody.innerHTML = list.slice(0, 30).map((coin) => {
-                const ctx = coin.entryContext || {};
-                const ees = ctx.expectedEdgeScore ?? coin.score;
-                const flags = ctx.riskFlags || [];
-                const isBlocked = ctx.decision === 'BLOCK';
-                
-                return `
-                    <tr class="hover:bg-slate-900/70 transition-colors border-b border-crypto-border/30">
-                        <td class="py-2 px-2.5 font-bold text-white">
-                            <span class="px-1.5 py-0.2 rounded text-[10px] mr-1 ${coin.grade === 'A+' ? 'bg-emerald-500 text-black font-bold' : 'bg-slate-800 text-slate-400'}">${coin.grade}</span>
-                            ${coin.symbol}
-                        </td>
-                        <td class="py-2 px-2.5 text-right font-bold text-slate-100">$${formatPrice(coin.lastPrice)}</td>
-                        <td class="py-2 px-2.5 text-right">
-                            <span class="font-bold ${coin.rvol >= 2 ? 'text-amber-400' : 'text-slate-300'}">${coin.rvol.toFixed(1)}x</span>
-                            <span class="block text-[10px] text-slate-400">1h: +${coin.momentum1h.toFixed(1)}%</span>
-                        </td>
-                        <td class="py-2 px-2.5 text-right ${coin.oiVelocity >= 1 ? 'text-emerald-400 font-bold' : 'text-slate-400'}">
-                            +${coin.oiVelocity.toFixed(2)}%
-                        </td>
-                        <td class="py-2 px-2.5 text-right text-slate-300">${coin.spreadPct.toFixed(3)}%</td>
-                        <td class="py-2 px-2.5 text-center font-bold">
-                            <span class="text-slate-400">${coin.score}</span>
-                            <span class="text-slate-600 mx-1">➔</span>
-                            <span class="${ees >= 70 ? 'text-emerald-400 font-black' : ees < 40 ? 'text-rose-400 line-through' : 'text-amber-400'}">${ees}</span>
-                        </td>
-                        <td class="py-2 px-2.5 text-center">
-                            ${isBlocked ? `<span class="text-[9px] px-1.5 py-0.5 rounded bg-rose-950/80 text-rose-300 border border-rose-500/30" title="${flags.join(', ')}">🚫 負Edge攔截</span>` :
-                              flags.length ? `<span class="text-[9px] px-1.5 py-0.5 rounded bg-amber-950/80 text-amber-300" title="${flags.join(', ')}">⚠️ 降分觀望</span>` :
-                              `<span class="text-[9px] px-1.5 py-0.5 rounded bg-emerald-950/80 text-emerald-300">🟢 邊界健康</span>`}
-                        </td>
-                        <td class="py-2 px-2.5 text-right">
-                            <button onclick="executeOpenPosition(rawTickers.find(t=>t.symbol==='${coin.symbol}'), '手動跟單')" class="bg-emerald-600 hover:bg-emerald-500 text-white px-2 py-0.5 rounded text-[10px]">跟單</button>
-                        </td>
-                    </tr>
-                `;
-            }).join('');
-            const filteredEl = document.getElementById('filteredCountText');
-            if (filteredEl) filteredEl.innerText = list.length;
-        }
-
-        /* =========================================================
-           V8.6-A2.3 A/B SHADOW RESEARCH & AUDIT 演算法
-        ========================================================= */
-        function computeABDataset() {
-            ensureResearchState();
-            const allShadows = [...(simState.research?.archive || [])];
-            const allExecutions = (simState.historyArchive || []).map(t => ({
-                ...t,
-                source: 'EXECUTION',
-                a23Decision: t.entryContext?.decision || 'CANDIDATE',
-                expectedEdgeScore: t.entryContext?.expectedEdgeScore || t.scoreAtEntry || 75
-            }));
-
-            const combined = [...allShadows, ...allExecutions].filter(x => Number.isFinite(parseFloat(x.pnl)));
-
-            // Variant A (原策略：全部未經剪枝的交易)
-            const variantA = combined;
-
-            // Variant B (A2.3 Filtered: 剔除被 A2.3 判為 BLOCK 的樣本)
-            const variantB = combined.filter(x => {
-                const decision = x.a23Decision || x.entryContext?.decision || 'CANDIDATE';
-                return decision !== 'BLOCK';
+        function updateSimHeaderStats() {
+            let unrealizedPnl = 0.0;
+            (simState.positions || []).forEach(pos => {
+                const entryPrice = parseFloat(pos.entryPrice) || 0;
+                const curPrice = parseFloat(pos.currentPrice) || entryPrice;
+                const qty = parseFloat(pos.remainingQty || pos.qty) || 0;
+                if (entryPrice > 0 && qty > 0) {
+                    unrealizedPnl += (curPrice - entryPrice) * qty - (qty * curPrice * 0.00055);
+                }
             });
 
-            // 專門統計被 BLOCK 的樣本集 (用於檢驗過濾器是否有效)
-            const blockedTrades = combined.filter(x => {
-                const decision = x.a23Decision || x.entryContext?.decision || 'CANDIDATE';
-                return decision === 'BLOCK';
-            });
+            const balance = parseFloat(simState.balance) || 100000.0;
+            const totalEquity = balance + unrealizedPnl;
+            const totalPnlPct = ((totalEquity - simState.initialBalance) / simState.initialBalance) * 100;
 
-            return { variantA, variantB, blockedTrades };
-        }
-
-        function calculateGroupMetrics(trades) {
-            if (!trades || trades.length === 0) return { count: 0, wr: 0, pf: 0, exp: 0, net: 0 };
-            const pnls = trades.map(t => parseFloat(t.pnl) || 0);
-            const wins = pnls.filter(p => p > 0);
-            const losses = pnls.filter(p => p < 0);
-            const gp = wins.reduce((a, b) => a + b, 0);
-            const gl = Math.abs(losses.reduce((a, b) => a + b, 0));
-            const net = pnls.reduce((a, b) => a + b, 0);
-            const wr = (wins.length / trades.length) * 100;
-            const pf = gl > 0 ? gp / gl : (gp > 0 ? Infinity : 0);
-            const exp = net / trades.length;
-            return { count: trades.length, wr, pf, exp, net };
-        }
-
-        function updateABComparisonStats() {
-            const { variantA, variantB } = computeABDataset();
-            const mA = calculateGroupMetrics(variantA);
-            const mB = calculateGroupMetrics(variantB);
-
-            const elA = document.getElementById('abSummaryA');
-            if (elA) elA.innerHTML = `${mA.count}T · WR ${mA.wr.toFixed(1)}% · PF ${mA.pf === Infinity ? '∞' : mA.pf.toFixed(2)} · Exp <b class="${mA.exp >= 0 ? 'text-emerald-400' : 'text-rose-400'}">$${mA.exp.toFixed(3)}</b>`;
-
-            const elB = document.getElementById('abSummaryB');
-            if (elB) elB.innerHTML = `${mB.count}T · WR ${mB.wr.toFixed(1)}% · PF ${mB.pf === Infinity ? '∞' : mB.pf.toFixed(2)} · Exp <b class="${mB.exp >= 0 ? 'text-emerald-400' : 'text-rose-400'}">$${mB.exp.toFixed(3)}</b>`;
-        }
-
-        function openA23LabModal() {
-            const { variantA, variantB, blockedTrades } = computeABDataset();
-            const mA = calculateGroupMetrics(variantA);
-            const mB = calculateGroupMetrics(variantB);
-
-            // 1. 渲染 A/B 頂部卡片
-            const cardA = document.getElementById('abVariantACard');
-            if (cardA) {
-                cardA.innerHTML = `
-                    <div class="bg-slate-950/60 p-2 rounded"><span class="text-slate-400 text-[10px]">樣本數</span><div class="font-bold text-white text-sm">${mA.count}</div></div>
-                    <div class="bg-slate-950/60 p-2 rounded"><span class="text-slate-400 text-[10px]">勝率</span><div class="font-bold text-amber-400 text-sm">${mA.wr.toFixed(1)}%</div></div>
-                    <div class="bg-slate-950/60 p-2 rounded"><span class="text-slate-400 text-[10px]">PF</span><div class="font-bold text-slate-200 text-sm">${mA.pf === Infinity ? '∞' : mA.pf.toFixed(2)}</div></div>
-                    <div class="bg-slate-950/60 p-2 rounded col-span-3 text-left px-3"><span class="text-slate-400 text-[10px]">單筆期望值: </span><b class="${mA.exp >= 0 ? 'text-emerald-400' : 'text-rose-400'} text-xs">$${mA.exp.toFixed(3)} USDT</b> (累計淨額 $${mA.net.toFixed(2)})</div>
-                `;
+            const eqEl = document.getElementById('simEquityDisplay');
+            if (eqEl) {
+                eqEl.innerText = `$${totalEquity.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                eqEl.className = `text-sm sm:text-base font-bold font-mono ${totalEquity >= simState.initialBalance ? 'text-emerald-400' : 'text-rose-400'}`;
             }
+            const balEl = document.getElementById('simBalanceDisplay');
+            if (balEl) balEl.innerText = `$${balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            const pnlEl = document.getElementById('simTotalPnlDisplay');
+            if (pnlEl) pnlEl.innerText = `(${totalPnlPct >= 0 ? '+' : ''}${totalPnlPct.toFixed(2)}%)`;
 
-            const cardB = document.getElementById('abVariantBCard');
-            if (cardB) {
-                cardB.innerHTML = `
-                    <div class="bg-slate-950/60 p-2 rounded"><span class="text-slate-400 text-[10px]">有效樣本</span><div class="font-bold text-fuchsia-300 text-sm">${mB.count}</div></div>
-                    <div class="bg-slate-950/60 p-2 rounded"><span class="text-slate-400 text-[10px]">勝率</span><div class="font-bold text-emerald-400 text-sm">${mB.wr.toFixed(1)}%</div></div>
-                    <div class="bg-slate-950/60 p-2 rounded"><span class="text-slate-400 text-[10px]">PF</span><div class="font-bold text-emerald-300 text-sm">${mB.pf === Infinity ? '∞' : mB.pf.toFixed(2)}</div></div>
-                    <div class="bg-slate-950/60 p-2 rounded col-span-3 text-left px-3"><span class="text-slate-400 text-[10px]">單筆期望值: </span><b class="${mB.exp >= 0 ? 'text-emerald-400' : 'text-rose-400'} text-xs">$${mB.exp.toFixed(3)} USDT</b> (剪枝過濾率: ${((1 - mB.count / Math.max(1, mA.count)) * 100).toFixed(1)}%)</div>
-                `;
-            }
+            const h = simState.historyArchive || [];
+            const wins = h.filter(x => (parseFloat(x.pnl) || 0) > 0);
+            const wr = h.length ? (wins.length / h.length) * 100 : 0;
+            const exp = h.length ? (h.reduce((sum, x) => sum + (parseFloat(x.pnl) || 0), 0)) / h.length : 0;
 
-            // 2. 渲染負向剪枝規則審計
-            const filterAuditBody = document.getElementById('a23FilterAuditTableBody');
-            if (filterAuditBody) {
-                const rules = [
-                    { key: "CHOPPY_LONG_BREAKOUT", name: "CHOPPY × MOMENTUM_BREAKOUT × LONG (追高破位)" },
-                    { key: "HIGH_VOLATILITY", name: "HIGH_VOL (極端高波動環境試錯)" },
-                    { key: "EXTREME_RVOL", name: "EXTREME_RVOL (放量高潮出貨段)" },
-                    { key: "STRONG_OI_CROWDING", name: "STRONG_OI (槓桿過度擁擠爆倉風險)" }
-                ];
-
-                filterAuditBody.innerHTML = rules.map(r => {
-                    const matchedTrades = variantA.filter(t => (t.entryContext?.riskFlags || []).includes(r.key));
-                    const stat = calculateGroupMetrics(matchedTrades);
-                    const isEffective = stat.exp < mA.exp; // 攔截單的期望值比平均更爛，證明攔截正確
-                    return `
-                        <tr class="hover:bg-slate-900/60 border-b border-slate-900">
-                            <td class="p-2 font-bold text-white">${r.name}</td>
-                            <td class="p-2 text-center text-slate-300">${stat.count} 筆</td>
-                            <td class="p-2 text-center text-amber-400">${stat.wr.toFixed(1)}%</td>
-                            <td class="p-2 text-center ${stat.exp >= 0 ? 'text-emerald-400' : 'text-rose-400'}">$${stat.exp.toFixed(3)}</td>
-                            <td class="p-2 text-center">${stat.pf === Infinity ? '∞' : stat.pf.toFixed(2)}</td>
-                            <td class="p-2 text-center font-bold">
-                                ${stat.count < 10 ? '<span class="text-slate-500">樣本不足</span>' :
-                                  isEffective ? '<span class="text-emerald-400">🟢 EFFECTIVE (攔截正確)</span>' :
-                                  '<span class="text-rose-400">⚠️ CAUTION (有誤殺疑慮)</span>'}
-                            </td>
-                        </tr>
-                    `;
-                }).join('');
-            }
-
-            // 3. 渲染 Base Score vs EES 分桶校準
-            const calibBody = document.getElementById('a23ScoreCalibrationBody');
-            if (calibBody) {
-                const buckets = [
-                    { label: "< 50", min: -Infinity, max: 50 },
-                    { label: "50-59", min: 50, max: 60 },
-                    { label: "60-69", min: 60, max: 70 },
-                    { label: "70-79", min: 70, max: 80 },
-                    { label: "80-100", min: 80, max: Infinity }
-                ];
-
-                calibBody.innerHTML = buckets.map(b => {
-                    const baseGroup = variantA.filter(t => {
-                        const s = t.baseScore ?? t.entryContext?.score ?? t.scoreAtEntry ?? 0;
-                        return s >= b.min && s < b.max;
-                    });
-                    const eesGroup = variantA.filter(t => {
-                        const s = t.expectedEdgeScore ?? t.entryContext?.expectedEdgeScore ?? 0;
-                        return s >= b.min && s < b.max;
-                    });
-
-                    const mBase = calculateGroupMetrics(baseGroup);
-                    const mEES = calculateGroupMetrics(eesGroup);
-                    const diffExp = mEES.exp - mBase.exp;
-
-                    return `
-                        <tr class="hover:bg-slate-900/60 border-b border-slate-900">
-                            <td class="p-2 font-bold text-white">${b.label}</td>
-                            <td class="p-2 text-center text-slate-300">
-                                ${mBase.count}T | WR ${mBase.wr.toFixed(0)}% | <span class="${mBase.exp >= 0 ? 'text-emerald-400' : 'text-rose-400'}">$${mBase.exp.toFixed(2)}</span>
-                            </td>
-                            <td class="p-2 text-center text-fuchsia-300">
-                                ${mEES.count}T | WR ${mEES.wr.toFixed(0)}% | <span class="${mEES.exp >= 0 ? 'text-emerald-400' : 'text-rose-400'} font-bold">$${mEES.exp.toFixed(2)}</span>
-                            </td>
-                            <td class="p-2 text-center font-bold ${diffExp >= 0 ? 'text-emerald-400' : 'text-slate-400'}">
-                                ${mEES.count > 0 ? (diffExp >= 0 ? `+${diffExp.toFixed(3)} USDT` : `${diffExp.toFixed(3)} USDT`) : '—'}
-                            </td>
-                        </tr>
-                    `;
-                }).join('');
-            }
-
-            document.getElementById('a23LabModal').classList.remove('hidden');
+            const winEl = document.getElementById('simWinRateDisplay');
+            if (winEl) winEl.innerText = `${wr.toFixed(0)}%`;
+            const expEl = document.getElementById('simExpectancyDisplay');
+            if (expEl) expEl.innerText = `${exp >= 0 ? '+' : ''}$${exp.toFixed(2)}`;
+            const openPosEl = document.getElementById('simOpenPositionsCount');
+            if (openPosEl) openPosEl.innerText = `${simState.positions.length} / ${simState.maxPositions}`;
+            const moonBagEl = document.getElementById('simMoonBagCount');
+            if (moonBagEl) moonBagEl.innerText = `${(simState.positions || []).filter(p => p.isMoonBag).length} 檔`;
         }
 
-        function closeA23LabModal() {
-            document.getElementById('a23LabModal').classList.add('hidden');
+        function formatPrice(val) {
+            const num = parseFloat(val) || 0;
+            if (num >= 100) return num.toFixed(2);
+            if (num >= 1) return num.toFixed(4);
+            return num.toFixed(6);
         }
 
-        function exportA23Report() {
-            const { variantA, variantB, blockedTrades } = computeABDataset();
-            const report = {
-                version: "V8.6-A2.3-EES-EXPORT",
-                generatedAt: new Date().toISOString(),
-                metricsVariantA: calculateGroupMetrics(variantA),
-                metricsVariantB: calculateGroupMetrics(variantB),
-                blockedPerformance: calculateGroupMetrics(blockedTrades),
-                totalDataset: variantA.length
-            };
-            const b = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
-            const u = URL.createObjectURL(b), a = document.createElement('a');
-            a.href = u;
-            a.download = `bybit-radar-v86-a23-ees-audit-${Date.now()}.json`;
-            a.click();
-            URL.revokeObjectURL(u);
-        }
-
-        /* =========================================================
-           UI 輔助與系統生命週期
-        ========================================================= */
         function toggleAutoTradeExecution() {
             simState.autoTrade = !simState.autoTrade;
             saveToStorage();
@@ -1927,12 +2315,80 @@
             updateSimHeaderStats();
         }
 
-        function formatPrice(val) {
-            const num = parseFloat(val) || 0;
-            if (num >= 100) return num.toFixed(2);
-            if (num >= 1) return num.toFixed(4);
-            return num.toFixed(6);
+        function closePositionManually(id) {
+            const pos = simState.positions.find(p => p.id === id);
+            if (!pos || pos.remainingQty <= 0) return;
+            executeFill(pos, pos.remainingQty, getPositionMarkPrice(pos), "👤 手動市價平倉");
+            finalizeClosedTrade(pos, "👤 手動市價平倉");
         }
+
+        function closeAllPositions() {
+            [...simState.positions].forEach(pos => {
+                if (pos.remainingQty > 0) {
+                    executeFill(pos, pos.remainingQty, getPositionMarkPrice(pos), "🚨 一鍵全平");
+                    finalizeClosedTrade(pos, "🚨 一鍵全平");
+                }
+            });
+        }
+
+        function openA23LabModal() {
+            const { variantA, variantB } = computeABDataset();
+            const mA = calculateGroupMetrics(variantA);
+            const mB = calculateGroupMetrics(variantB);
+
+            const cardA = document.getElementById('abVariantACard');
+            if (cardA) {
+                cardA.innerHTML = `
+                    <div class="bg-slate-950/60 p-2 rounded"><span class="text-slate-400 text-[10px]">全體樣本</span><div class="font-bold text-white text-sm">${mA.count}</div></div>
+                    <div class="bg-slate-950/60 p-2 rounded"><span class="text-slate-400 text-[10px]">勝率</span><div class="font-bold text-amber-400 text-sm">${mA.wr.toFixed(1)}%</div></div>
+                    <div class="bg-slate-950/60 p-2 rounded"><span class="text-slate-400 text-[10px]">PF</span><div class="font-bold text-slate-200 text-sm">${mA.pf === Infinity ? '∞' : mA.pf.toFixed(2)}</div></div>
+                    <div class="bg-slate-950/60 p-2 rounded col-span-3 text-left px-3"><span class="text-slate-400 text-[10px]">單筆期望值: </span><b class="${mA.exp >= 0 ? 'text-emerald-400' : 'text-rose-400'} text-xs">$${mA.exp.toFixed(3)} USDT</b> (累計淨額 $${mA.net.toFixed(2)})</div>
+                `;
+            }
+
+            const cardB = document.getElementById('abVariantBCard');
+            if (cardB) {
+                cardB.innerHTML = `
+                    <div class="bg-slate-950/60 p-2 rounded"><span class="text-slate-400 text-[10px]">有效剪枝</span><div class="font-bold text-fuchsia-300 text-sm">${mB.count}</div></div>
+                    <div class="bg-slate-950/60 p-2 rounded"><span class="text-slate-400 text-[10px]">勝率</span><div class="font-bold text-emerald-400 text-sm">${mB.wr.toFixed(1)}%</div></div>
+                    <div class="bg-slate-950/60 p-2 rounded"><span class="text-slate-400 text-[10px]">PF</span><div class="font-bold text-emerald-300 text-sm">${mB.pf === Infinity ? '∞' : mB.pf.toFixed(2)}</div></div>
+                    <div class="bg-slate-950/60 p-2 rounded col-span-3 text-left px-3"><span class="text-slate-400 text-[10px]">單筆期望值: </span><b class="${mB.exp >= 0 ? 'text-emerald-400' : 'text-rose-400'} text-xs">$${mB.exp.toFixed(3)} USDT</b> (排除率: ${((1 - mB.count / Math.max(1, mA.count)) * 100).toFixed(1)}%)</div>
+                `;
+            }
+
+            const calibBody = document.getElementById('a23ScoreCalibrationBody');
+            if (calibBody) {
+                const buckets = [
+                    { label: "< 50", min: -Infinity, max: 50 },
+                    { label: "50-59", min: 50, max: 60 },
+                    { label: "60-69", min: 60, max: 70 },
+                    { label: "70-79", min: 70, max: 80 },
+                    { label: "80-100", min: 80, max: Infinity }
+                ];
+
+                calibBody.innerHTML = buckets.map(b => {
+                    const baseGroup = variantA.filter(t => (t.baseScore ?? t.entryContext?.score ?? 0) >= b.min && (t.baseScore ?? t.entryContext?.score ?? 0) < b.max);
+                    const eesGroup = variantA.filter(t => (t.expectedEdgeScore ?? t.entryContext?.expectedEdgeScore ?? 0) >= b.min && (t.expectedEdgeScore ?? t.entryContext?.expectedEdgeScore ?? 0) < b.max);
+                    const mBase = calculateGroupMetrics(baseGroup);
+                    const mEES = calculateGroupMetrics(eesGroup);
+                    const diffExp = mEES.exp - mBase.exp;
+
+                    return `
+                        <tr class="hover:bg-slate-900/60 border-b border-slate-900">
+                            <td class="p-2 font-bold text-white">${b.label}</td>
+                            <td class="p-2 text-center text-slate-300">${mBase.count}T | WR ${mBase.wr.toFixed(0)}% | <span class="${mBase.exp >= 0 ? 'text-emerald-400' : 'text-rose-400'}">$${mBase.exp.toFixed(2)}</span></td>
+                            <td class="p-2 text-center text-fuchsia-300">${mEES.count}T | WR ${mEES.wr.toFixed(0)}% | <span class="${mEES.exp >= 0 ? 'text-emerald-400' : 'text-rose-400'} font-bold">$${mEES.exp.toFixed(2)}</span></td>
+                            <td class="p-2 text-center font-bold ${diffExp >= 0 ? 'text-emerald-400' : 'text-slate-400'}">
+                                ${mEES.count > 0 ? (diffExp >= 0 ? `+${diffExp.toFixed(3)} USDT` : `${diffExp.toFixed(3)} USDT`) : '—'}
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+            }
+
+            document.getElementById('a23LabModal').classList.remove('hidden');
+        }
+        function closeA23LabModal() { document.getElementById('a23LabModal').classList.add('hidden'); }
 
         function openHistoryModal() {
             const tbody = document.getElementById('historyTableBody');
@@ -1957,12 +2413,16 @@
         function closeHistoryModal() { document.getElementById('historyModal').classList.add('hidden'); }
 
         function openScorecardModal() {
-            const a = getStrategyAnalytics();
-            const totalRealizedPnl = (simState.historyArchive || []).reduce((sum, b) => sum + (parseFloat(b.pnl) || 0), 0);
+            const h = simState.historyArchive || [];
+            const wins = h.filter(x => (parseFloat(x.pnl) || 0) > 0);
+            const totalRealizedPnl = h.reduce((sum, b) => sum + (parseFloat(b.pnl) || 0), 0);
+            const wr = h.length ? (wins.length / h.length) * 100 : 0;
+            const exp = h.length ? totalRealizedPnl / h.length : 0;
+
             document.getElementById('cardRealizedPnl').innerText = `$${totalRealizedPnl.toFixed(2)}`;
-            document.getElementById('cardWinRate').innerText = `${(a.winRate * 100).toFixed(0)}%`;
-            document.getElementById('cardExpectancy').innerText = `${a.expectancy >= 0 ? '+' : ''}$${a.expectancy.toFixed(2)} | PF ${a.profitFactor === Infinity ? '∞' : a.profitFactor.toFixed(2)}`;
-            document.getElementById('cardTotalTrades').innerText = `${a.totalTrades} 筆 · MFE +${a.avgMfe.toFixed(2)}% · MAE ${a.avgMae.toFixed(2)}%`;
+            document.getElementById('cardWinRate').innerText = `${wr.toFixed(0)}%`;
+            document.getElementById('cardExpectancy').innerText = `${exp >= 0 ? '+' : ''}$${exp.toFixed(2)}`;
+            document.getElementById('cardTotalTrades').innerText = `${h.length} 筆實盤記錄`;
             document.getElementById('scorecardModal').classList.remove('hidden');
         }
         function closeScorecardModal() { document.getElementById('scorecardModal').classList.add('hidden'); }
@@ -1979,100 +2439,10 @@
         }
         function closeStrategyIntelligenceModal() { document.getElementById('strategyIntelligenceModal').classList.add('hidden'); }
 
-        function openPerformanceAudit() {
-            const a = getStrategyAnalytics();
-            const summary = document.getElementById('performanceAuditSummary');
-            summary.innerHTML = `
-                <div class="bg-slate-900 border border-crypto-border rounded-lg p-3"><span class="text-slate-400">總交易數</span><div class="text-base font-bold text-white">${a.totalTrades}</div></div>
-                <div class="bg-slate-900 border border-crypto-border rounded-lg p-3"><span class="text-slate-400">總勝率</span><div class="text-base font-bold text-amber-400">${(a.winRate * 100).toFixed(1)}%</div></div>
-                <div class="bg-slate-900 border border-crypto-border rounded-lg p-3"><span class="text-slate-400">獲利因子 (PF)</span><div class="text-base font-bold text-slate-200">${a.profitFactor.toFixed(2)}</div></div>
-                <div class="bg-slate-900 border border-crypto-border rounded-lg p-3"><span class="text-slate-400">平均期望值</span><div class="text-base font-bold ${a.expectancy >= 0 ? 'text-emerald-400' : 'text-rose-400'}">$${a.expectancy.toFixed(3)}</div></div>
-            `;
-            document.getElementById('performanceAuditConclusion').innerHTML = `
-                <b>V8.6-A2.3 核心診斷：</b> 目前 IndexedDB 數據庫已收錄 897+ 筆樣本。在 CHOPPY 體制下，若未剪枝，突破單勝率僅 9.8% 且 Expectancy 高達 -$2.19；透過 A2.3 EES 與 Negative Edge Filter 剪枝後，可有效排除近 90% 的無效失血交易！
-            `;
-            document.getElementById('performanceAuditModal').classList.remove('hidden');
-        }
-        function closePerformanceAudit() { document.getElementById('performanceAuditModal').classList.add('hidden'); }
-
         function openCloudModal() { document.getElementById('cloudModal').classList.remove('hidden'); }
         function closeCloudModal() { document.getElementById('cloudModal').classList.add('hidden'); }
-        function closeNotificationModal() { document.getElementById('notificationModal').classList.add('hidden'); }
-        function showNotificationModal(title, msg) {
-            document.getElementById('notificationModalTitle').innerText = title;
-            document.getElementById('notificationModalMsg').innerText = msg;
-            document.getElementById('notificationModal').classList.remove('hidden');
-        }
 
-        async function exportDataJson() {
-            const fullDataset = {
-                simState: { ...simState, historyArchive: simState.historyArchive, research: simState.research },
-                exportedAt: new Date().toISOString(),
-                schema: 'INDEXED_DB_COMPLETE_V86_A23'
-            };
-            const blob = new Blob([JSON.stringify(fullDataset, null, 2)], { type: 'application/json' });
-            const url = URL.createObjectURL(blob), a = document.createElement('a');
-            a.href = url;
-            a.download = `bybit_radar_idb_v86_a23_${Date.now()}.json`;
-            a.click();
-            URL.revokeObjectURL(url);
-            showNotificationModal("匯出成功", `已完整導出 ${simState.historyArchive.length} 筆歷史實盤與特徵庫！`);
-        }
-
-        function importDataJson(evt) {
-            const file = evt.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = async e => {
-                try {
-                    const parsed = JSON.parse(e.target.result);
-                    if (parsed.simState) {
-                        const incoming = parsed.simState.historyArchive || parsed.simState.history || [];
-                        const merged = v85QualityMergeTrades(simState.historyArchive || [], incoming);
-                        simState = { ...simState, ...parsed.simState, historyArchive: merged, history: merged.slice(0, 30) };
-                        if (idbInstance) for (const trd of merged) await idbPutRecord(IDB_STORE_EXECUTION, trd);
-                    }
-                    saveToStorage(true);
-                    updateIdbStatsBadge();
-                    renderSimPositions();
-                    updateSimHeaderStats();
-                    updateABComparisonStats();
-                    showNotificationModal("匯入成功", "備份數據已成功合併並保存至 IndexedDB！");
-                } catch (err) {
-                    showNotificationModal("匯入失敗", err.message);
-                }
-            };
-            reader.readAsText(file);
-        }
-
-        function closePositionManually(id) {
-            const pos = simState.positions.find(p => p.id === id);
-            if (!pos || pos.remainingQty <= 0) return;
-            executeFill(pos, pos.remainingQty, getPositionMarkPrice(pos), "👤 手動市價平倉");
-            finalizeClosedTrade(pos, "👤 手動市價平倉");
-        }
-
-        function closeAllPositions() {
-            [...simState.positions].forEach(pos => {
-                if (pos.remainingQty > 0) {
-                    executeFill(pos, pos.remainingQty, getPositionMarkPrice(pos), "🚨 一鍵全平");
-                    finalizeClosedTrade(pos, "🚨 一鍵全平");
-                }
-            });
-        }
-
-        function askResetSimulation() {
-            if (confirm("確認重置帳戶餘額為 $100,000？(IndexedDB 歷史記錄仍將完整留存)")) {
-                simState.balance = 100000.0;
-                simState.positions = [];
-                simState.riskState = null;
-                ensureRiskState();
-                saveToStorage();
-                renderSimPositions();
-                updateSimHeaderStats();
-            }
-        }
-
+        // Firebase Sync Stubs (依舊保留相容)
         let currentRoomId = localStorage.getItem(STORAGE_KEY_ROOM) || 'radar-main';
         let firestoreDb = null;
         function initFirebaseSync() {
