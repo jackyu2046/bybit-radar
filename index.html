@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bybit 小幣高精度狙擊交易系統 V8.6-A2.3.2.3 (Final Integrity + FastUI Edition)</title>
+    <title>Bybit 小幣高精度狙擊交易系統 V8.6-A2.3.2.4 (Final Integrity + Multi-Device Cloud Hardening)</title>
     <!-- Tailwind CSS CDN --> 
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -109,9 +109,9 @@
                                 <span id="cloudRoomBadgeText">房間: radar-usr-uzk44xx</span>
                             </span>
                             <span class="text-[9px] bg-purple-500/20 text-purple-300 font-mono font-semibold px-1.5 py-0.5 rounded border border-purple-500/30" id="regimeHeaderBadge">Regime: CHOPPY</span>
-                            <span class="text-[9px] bg-emerald-500/20 text-emerald-300 font-mono font-semibold px-1.5 py-0.5 rounded border border-emerald-500/30">V8.6-A2.3.2.3 Final</span>
+                            <span class="text-[9px] bg-emerald-500/20 text-emerald-300 font-mono font-semibold px-1.5 py-0.5 rounded border border-emerald-500/30">V8.6-A2.3.2.4 Hardened</span>
                         </div>
-                        <p class="text-[11px] text-slate-400 hidden sm:block">A2.3 負向邊緣剪枝 · 預期邊際評分 (EES) 重構 · 影子 A/B 雙軌校準 · 完整資料校驗 + FastUI</p>
+                        <p class="text-[11px] text-slate-400 hidden sm:block">A2.3 負向邊緣剪枝 · 預期邊際評分 (EES) 重構 · 影子 A/B 雙軌校準 · Multi-Device Revision 防護</p>
                     </div>
                 </div>
             </div>
@@ -1158,7 +1158,20 @@
             lists.flat(Infinity).filter(Boolean).forEach(raw => {
                 if (!raw || typeof raw !== 'object') return;
                 const normalized = v85NormalizeTrade(raw);
-                if (!map.has(normalized.tradeId)) map.set(normalized.tradeId, normalized);
+                if (!map.has(normalized.tradeId)) {
+                    map.set(normalized.tradeId, normalized);
+                } else {
+                    /* V8.6-A2.3.2.4: 欄位級歷史交易衝突仲裁 (Conflict Arbitration) */
+                    const existing = map.get(normalized.tradeId);
+                    const existingFills = Array.isArray(existing.fills) ? existing.fills.length : 0;
+                    const newFills = Array.isArray(normalized.fills) ? normalized.fills.length : 0;
+                    const existingTs = existing.closedAtTs || existing.openedAt || 0;
+                    const newTs = normalized.closedAtTs || normalized.openedAt || 0;
+                    // 若新資料成交紀錄更完整、或時間戳較新，則以保留完整明細為原則進行融合
+                    if (newFills > existingFills || (newFills === existingFills && newTs >= existingTs)) {
+                        map.set(normalized.tradeId, { ...existing, ...normalized });
+                    }
+                }
             });
             return Array.from(map.values()).sort((a, b) => b.closedAtTs - a.closedAtTs);
         }
@@ -2478,7 +2491,19 @@
         let lastCloudSyncAt = 0;
         let storageHealthy = true;
 
-        const CLOUD_SYNC_VERSION = 'V8.6-A2.3.2.3';
+        /* V8.6-A2.3.2.4: 多裝置唯一識別碼 (Device Fingerprint) 與修訂版本跟蹤 */
+        function getOrCreateDeviceId() {
+            let devId = safeGetStorage('bybit_radar_device_id');
+            if (!devId) {
+                devId = 'dev_' + (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID().slice(0, 8) : Date.now().toString(36));
+                safeSetStorage('bybit_radar_device_id', devId);
+            }
+            return devId;
+        }
+        const currentDeviceId = getOrCreateDeviceId();
+        let lastKnownCloudRevision = 0;
+
+        const CLOUD_SYNC_VERSION = 'V8.6-A2.3.2.4';
         const CLOUD_PROTOCOL = 'manifest-chunk-v3';
         const CLOUD_TIMEOUT_MS = 12000;
         const CLOUD_RETRY_DELAYS = [5000, 10000, 20000, 40000, 60000];
@@ -2612,6 +2637,8 @@
                 checksum: datasetFullChecksum(),
                 fastFingerprint: datasetFastFingerprint(),
                 storageHealthy,
+                deviceId: currentDeviceId,
+                lastKnownRevision: lastKnownCloudRevision,
                 cloudState, lastCloudSyncAt, cloudRetryAttempt
             };
             if (idbInstance) await idbPutRecord(IDB_STORE_DATASET_METADATA, meta);
@@ -2738,6 +2765,13 @@
             }
         }
 
+        function bindCloudRoom(roomId) {
+            if (typeof cloudUnsubscribe === 'function') { try { cloudUnsubscribe(); } catch (_) {} }
+            cloudUnsubscribe = null;
+            currentRoomId = DEFAULT_PERMANENT_ROOM;
+            if (firestoreDb && roomId) updateCloudStatus('CONNECTING', 'Cloud Room 已設定');
+        }
+
         function initFirebaseSync() {
             try {
                 if (typeof firebase === 'undefined') { updateCloudStatus('OFFLINE', 'Firebase SDK 未載入；本機模式正常'); return; }
@@ -2749,19 +2783,26 @@
                 });
                 firestoreDb = firebase.firestore();
                 enforcePermanentCloudRoomUI();
-                updateCloudStatus('CONNECTING', '等待 Firestore 回應');
                 bindCloudRoom(DEFAULT_PERMANENT_ROOM);
+                updateCloudStatus('CONNECTING', '等待 Firestore 回應');
+                scheduleCloudRetry('INIT_PROBE');
             } catch (err) {
                 console.warn('[Cloud] init failed', err);
                 markCloudFailure(err, 'INIT');
             }
         }
 
-        function bindCloudRoom(roomId) {
-            if (typeof cloudUnsubscribe === 'function') { try { cloudUnsubscribe(); } catch (_) {} }
-            cloudUnsubscribe = null;
-            currentRoomId = DEFAULT_PERMANENT_ROOM;
-            if (firestoreDb && roomId) updateCloudStatus('CONNECTING', 'Cloud Room 已設定；等待同步探測');
+        /* V8.6-A2.3.2.4: 智慧研究樣本衝突解決 (Research Arbitration) */
+        function resolveResearchConflict(local, remote) {
+            if (!local) return remote;
+            if (!remote) return local;
+            // 規則 1: CLOSED 永遠優於 ACTIVE，防止已結束的交易被舊裝置的進行中狀態覆蓋
+            if (remote.lifecycle === 'CLOSED' && local.lifecycle !== 'CLOSED') return remote;
+            if (local.lifecycle === 'CLOSED' && remote.lifecycle !== 'CLOSED') return local;
+            // 規則 2: 若生命週期相同，依最新時間戳與特徵完整性覆蓋
+            const localTs = local.closedAt || local.openedAt || 0;
+            const remoteTs = remote.closedAt || remote.openedAt || 0;
+            return remoteTs >= localTs ? { ...local, ...remote } : { ...remote, ...local };
         }
 
         async function mergeCloudPayload(payload) {
@@ -2773,14 +2814,26 @@
             const remoteActive = payload.activeResearch;
             const nextHistory = v85QualityMergeTrades(simState.historyArchive || [], remoteExec);
             ensureResearchState();
+            
             const rm = new Map();
-            [...(simState.research.archive || []), ...remoteResearch].forEach(x => { if (x?.id) rm.set(x.id, ({ ...(rm.get(x.id) || {}), ...x })); });
+            (simState.research.archive || []).forEach(x => { if (x?.id) rm.set(x.id, x); });
+            remoteResearch.forEach(x => {
+                if (x?.id) rm.set(x.id, resolveResearchConflict(rm.get(x.id), x));
+            });
             const nextResearch = Array.from(rm.values());
+
             const am = new Map();
-            [...(simState.research.active || []), ...remoteActive].forEach(x => { if (x?.id) am.set(x.id, ({ ...(am.get(x.id) || {}), ...x })); });
+            (simState.research.active || []).forEach(x => { if (x?.id) am.set(x.id, x); });
+            remoteActive.forEach(x => {
+                if (x?.id) am.set(x.id, resolveResearchConflict(am.get(x.id), x));
+            });
             const nextActive = Array.from(am.values());
+
             const nextPositions = new Map();
-            [...(simState.positions || []), ...(payload.state?.positions || [])].forEach(x => { if (x?.id) nextPositions.set(x.id, ({ ...(nextPositions.get(x.id) || {}), ...x })); });
+            (simState.positions || []).forEach(x => { if (x?.id) nextPositions.set(x.id, x); });
+            (payload.state?.positions || []).forEach(x => {
+                if (x?.id) nextPositions.set(x.id, { ...(nextPositions.get(x.id) || {}), ...x });
+            });
 
             if (idbInstance) {
                 for (const x of nextHistory) await idbPutRecord(IDB_STORE_EXECUTION, x);
@@ -2855,13 +2908,25 @@
             isSyncing = true;
             lastCloudOperationAt = now;
             try {
-                updateCloudStatus('CONNECTING', '正在安全推送完整 Context 雲端快照');
+                updateCloudStatus('CONNECTING', '正在檢查修訂版本並安全推送');
                 const recovered = await ensureFirestoreNetwork('PUSH');
                 if (!recovered) throw new Error('Firestore 暫時處於 offline 狀態；已排入自動重試');
                 const roomId = getActiveRoomIdFromUI();
                 const room = cloudRoomRef();
                 const previousSnap = await withCloudTimeout(room.get(), 'Read current manifest');
                 const previous = previousSnap.exists ? (previousSnap.data() || {}) : {};
+
+                /* V8.6-A2.3.2.4: 樂觀鎖衝突保護 (Optimistic Concurrency Protection)
+                   若雲端存在其他裝置產生的較新 Revision，先自動拉取該修訂版融合，再執行推送，防範跨電腦 Stale Overwrite */
+                const remoteRevision = Number(previous.revision || 0);
+                if (remoteRevision > lastKnownCloudRevision && previous.deviceId && previous.deviceId !== currentDeviceId) {
+                    console.warn(`[Cloud] 偵測到雲端存在裝置 ${previous.deviceId} 的較新修訂版 (Rev ${remoteRevision} > 本地已知 ${lastKnownCloudRevision})，先執行保護性拉取合併...`);
+                    const pullPayload = await readCommittedCloudPayload(room, previous);
+                    await mergeCloudPayload(pullPayload);
+                    lastKnownCloudRevision = remoteRevision;
+                }
+
+                const nextRevision = Math.max(lastKnownCloudRevision, remoteRevision) + 1;
                 const syncId = `sync_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
                 const records = [
                     ...(simState.historyArchive || []).map(x => ({ type: 'execution', data: x })),
@@ -2870,7 +2935,6 @@
                 ];
                 const chunks = chunkPayload(records);
                 const state = { balance: simState.balance, positions: simState.positions || [], riskState: simState.riskState || {} };
-                /* FIX 1: Push 採用完整 Context-Aware Checksum */
                 const fullHash = datasetFullChecksum();
                 const roomData = {
                     roomId, appVersion: CLOUD_SYNC_VERSION, schemaVersion: CLOUD_SYNC_VERSION,
@@ -2879,17 +2943,23 @@
                     researchCount: (simState.research?.archive || []).length,
                     activeResearchCount: (simState.research?.active || []).length,
                     checksum: fullHash, state, updatedAt: Date.now(),
-                    syncProtocol: CLOUD_PROTOCOL, commitState: 'COMMITTED'
+                    syncProtocol: CLOUD_PROTOCOL, commitState: 'COMMITTED',
+                    revision: nextRevision,
+                    parentRevision: remoteRevision,
+                    parentSyncId: previous.syncId || null,
+                    deviceId: currentDeviceId
                 };
                 await writeCloudChunks(room, syncId, chunks);
                 await commitCloudManifestLast(room, roomData);
+                
+                lastKnownCloudRevision = nextRevision;
                 lastCloudSyncAt = Date.now(); 
                 cloudPushQueued = false;
                 await persistDatasetMetadata('CLOUD_PUSH');
-                markCloudOnline(`同步成功：${roomData.executionCount} Execution / ${roomData.researchCount} Research`);
+                markCloudOnline(`同步成功 (Rev ${nextRevision})：${roomData.executionCount} Execution / ${roomData.researchCount} Research`);
                 cleanupPreviousCloudChunks(room, previous.syncId, Number(previous.chunkCount || 0));
                 if (!silent) {
-                    showNotificationModal('雲端推送成功', `完整性驗證已完成。Execution：${roomData.executionCount}；Research：${roomData.researchCount} (Checksum: ${fullHash.slice(0, 8)})。`);
+                    showNotificationModal('雲端推送成功', `完整性與修訂號已提交 (Rev ${nextRevision})。Execution：${roomData.executionCount}；Research：${roomData.researchCount} (Checksum: ${fullHash.slice(0, 8)})。`);
                 }
                 return true;
             } catch (err) {
@@ -2908,8 +2978,9 @@
         }
 
         /* 
-           FIX 2: Pull 強制執行 Count Validation + Full Checksum + Legacy Fallback 
-           拒絕損壞或截斷的 Payload 寫入本機 IndexedDB
+           V8.6-A2.3.2.4: 嚴格拒絕未知 Checksum
+           移除 COUNT_VERIFIED_MIGRATION 的無條件放行後門。
+           Checksum 必須通過 CURRENT_FULL 或已知的 Legacy 演算法，否則嚴格拒絕寫入本機！
         */
         async function readCommittedCloudPayload(room, meta) {
             if (!meta) throw new Error('雲端 Manifest 缺失；已拒絕合併');
@@ -2948,7 +3019,7 @@
                 throw new Error(`雲端資料 Count 驗證失敗 (預期 ${expectedExec}/${expectedResearch}/${expectedActive}，實際 ${payload.execution.length}/${payload.research.length}/${payload.activeResearch.length})；已拒絕變更本機資料`);
             }
 
-            // 2. 多層 Checksum 相容校驗 (Current Full -> V2.1 Context -> Fast Fingerprint -> Legacy V2 -> Legacy V2 Stable -> Legacy V1)
+            // 2. 多層已知 Checksum 校驗
             const remoteFullHash = datasetFullChecksum(payload.execution, payload.research, payload.activeResearch);
             const legacyV21Hash = legacyContextChecksumV21(payload.execution, payload.research, payload.activeResearch);
             const fastHash = datasetFastFingerprint(payload.execution, payload.research, payload.activeResearch);
@@ -2961,27 +3032,27 @@
                 checksumMode = 'CURRENT_FULL';
             } else if (meta.checksum === legacyV21Hash) {
                 checksumMode = 'LEGACY_V21_CONTEXT';
-                console.warn(`[Cloud] 舊版 V2.1 Checksum 驗證通過 (${meta.checksum})，即將升級為 V3 規範`);
+                console.warn(`[Cloud] 舊版 V2.1 Checksum 驗證通過 (${meta.checksum})，即將升級為最新規範`);
             } else if (meta.checksum === fastHash) {
                 checksumMode = 'FAST_FINGERPRINT';
-                console.warn(`[Cloud] Fast Fingerprint Checksum 驗證通過 (${meta.checksum})，即將升級為 V3 規範`);
+                console.warn(`[Cloud] Fast Fingerprint Checksum 驗證通過 (${meta.checksum})，即將升級為最新規範`);
             } else if (meta.checksum === legacyHash) {
                 checksumMode = 'LEGACY_V2';
-                console.warn(`[Cloud] 舊版 V2 Checksum 驗證通過 (${meta.checksum})，即將升級為 V3 規範`);
+                console.warn(`[Cloud] 舊版 V2 Checksum 驗證通過 (${meta.checksum})，即將升級為最新規範`);
             } else if (meta.checksum === legacyStableHash) {
                 checksumMode = 'LEGACY_V2_STABLE';
-                console.warn(`[Cloud] 舊版 V2 Stable Checksum 驗證通過 (${meta.checksum})，即將升級為 V3 規範`);
+                console.warn(`[Cloud] 舊版 V2 Stable Checksum 驗證通過 (${meta.checksum})，即將升級為最新規範`);
             } else if (meta.checksum === legacyV1Hash) {
                 checksumMode = 'LEGACY_V1';
-                console.warn(`[Cloud] 舊版 V1 Checksum 驗證通過 (${meta.checksum})，即將升級為 V3 規範`);
+                console.warn(`[Cloud] 舊版 V1 Checksum 驗證通過 (${meta.checksum})，即將升級為最新規範`);
             } else {
-                // 若全部區塊完整無損且筆數 100% 精確吻合，代表為跨版本 schema 演進所產生的校驗碼差異
-                checksumMode = 'COUNT_VERIFIED_MIGRATION';
-                console.warn(`[Cloud] 偵測到雲端歷史校驗碼格式更動 (雲端: ${meta.checksum} vs 實算: ${remoteFullHash})。全部 ${chunkCount} 個區塊完整且筆數完全一致 (${payload.execution.length}/${payload.research.length}/${payload.activeResearch.length})，已安全合併並安排平滑遷移升級。`);
+                /* V8.6-A2.3.2.4: 徹底關閉無條件放行後門。若無任何已知 Checksum 吻合，直接拒絕變更本地資料！ */
+                throw new Error(`雲端資料 Checksum 驗證失敗 (無任何已知校驗碼匹配: 雲端 ${meta.checksum} vs 實算 ${remoteFullHash})；已拒絕變更本機資料以確保完整性`);
             }
             
             payload._cloudChecksumMode = checksumMode;
             payload._cloudMeta = meta;
+            lastKnownCloudRevision = Math.max(lastKnownCloudRevision, Number(meta.revision || 0));
             return payload;
         }
 
@@ -3026,11 +3097,11 @@
                 lastCloudSyncAt = Date.now(); 
                 cloudPullQueued = false;
                 await persistDatasetMetadata('CLOUD_PULL');
-                markCloudOnline(`已安全合併 Room ${roomId}`);
+                markCloudOnline(`已安全合併 Room ${roomId} (Rev ${lastKnownCloudRevision})`);
                 if (!silent) {
-                    showNotificationModal('雲端同步成功', `完整性驗證通過。Execution ${payload.execution.length}、Research ${payload.research.length}、Active ${payload.activeResearch.length}。`);
+                    showNotificationModal('雲端同步成功', `完整性驗證通過 (Rev ${lastKnownCloudRevision})。Execution ${payload.execution.length}、Research ${payload.research.length}、Active ${payload.activeResearch.length}。`);
                 }
-                // 若本次拉取為跨版本相容模式，在合併後自動排程一次靜默推送，將雲端 Manifest 升級為最新 V3 Checksum
+                // 若拉取為跨版本舊 Checksum，在合併後自動排程一次靜默推送，將雲端 Manifest 升級為最新 V4 Checksum
                 if (payload._cloudChecksumMode && payload._cloudChecksumMode !== 'CURRENT_FULL') {
                     setTimeout(() => {
                         pushToCloudForce(true);
