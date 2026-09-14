@@ -2544,6 +2544,9 @@
                 cloudRetryTimer = null;
                 if (!isNetworkLikelyAvailable()) { scheduleCloudRetry('BROWSER_OFFLINE'); return; }
                 try {
+                    // First recover Firebase's internal network state, then probe the backend.
+                    const recovered = await ensureFirestoreNetwork('RETRY');
+                    if (!recovered) throw new Error('Firestore network recovery failed');
                     // Probe first; no local data is touched by the probe.
                     await withCloudTimeout(cloudRoomRef().get({ source: 'server' }), 'Cloud health probe', 10000);
                     cloudRetryAttempt = 0;
@@ -2569,6 +2572,26 @@
             updateCloudStatus('ONLINE', detail);
         }
 
+        async function ensureFirestoreNetwork(reason = 'SYNC') {
+            if (!firestoreDb) return false;
+            if (!isNetworkLikelyAvailable()) {
+                updateCloudStatus('OFFLINE', '瀏覽器網路離線');
+                return false;
+            }
+            try {
+                // Firebase can remain in its internal offline state after a transient
+                // backend timeout. Explicitly re-enable the network before a new probe.
+                if (typeof firestoreDb.enableNetwork === 'function') {
+                    await withCloudTimeout(firestoreDb.enableNetwork(), `Firestore network recovery (${reason})`, 8000);
+                }
+                return true;
+            } catch (err) {
+                cloudLastError = err;
+                updateCloudStatus('RETRYING', `Firestore network recovery 失敗 · ${cloudErrorMessage(err)}`);
+                return false;
+            }
+        }
+
         function initFirebaseSync() {
             try {
                 if (typeof firebase === 'undefined') { updateCloudStatus('OFFLINE', 'Firebase SDK 未載入；本機模式正常'); return; }
@@ -2579,8 +2602,15 @@
                     appId: '1:72603303245:web:c0102b58cb20cdb663cb04'
                 });
                 firestoreDb = firebase.firestore();
-                // Do not call settings() after Firestore has started. Existing SDK defaults are safer
-                // than repeatedly overriding transport/host settings and causing console warnings.
+                // Improve compatibility with restrictive proxies/VPNs/firewalls. This must be
+                // configured immediately after creating the Firestore instance, before any reads.
+                try {
+                    if (typeof firestoreDb.settings === 'function') {
+                        firestoreDb.settings({ experimentalAutoDetectLongPolling: true });
+                    }
+                } catch (settingsErr) {
+                    console.warn('[Cloud] long-polling compatibility setting unavailable', settingsErr);
+                }
                 enforcePermanentCloudRoomUI();
                 updateCloudStatus('CONNECTING', '等待 Firestore 回應');
                 bindCloudRoom(DEFAULT_PERMANENT_ROOM);
@@ -2676,7 +2706,9 @@
             if (!isNetworkLikelyAvailable()) { cloudPushQueued = true; markCloudFailure(new Error('Browser offline'), 'PUSH'); return false; }
             isSyncing = true;
             try {
-                updateCloudStatus('CONNECTING', '正在安全推送');
+                updateCloudStatus('CONNECTING', '正在恢復 Firestore 網路並安全推送');
+                const recovered = await ensureFirestoreNetwork('PUSH');
+                if (!recovered) throw new Error('Firestore 暫時處於 offline 狀態；已排入自動重試');
                 const roomId = getActiveRoomIdFromUI();
                 const room = cloudRoomRef();
                 const previousSnap = await withCloudTimeout(room.get({ source: 'server' }), 'Read current manifest');
@@ -2755,7 +2787,9 @@
             if (!isNetworkLikelyAvailable()) { cloudPullQueued = true; markCloudFailure(new Error('Browser offline'), 'PULL'); return false; }
             isSyncing = true;
             try {
-                updateCloudStatus('CONNECTING', '正在驗證雲端 Manifest');
+                updateCloudStatus('CONNECTING', '正在恢復 Firestore 網路並驗證雲端 Manifest');
+                const recovered = await ensureFirestoreNetwork('PULL');
+                if (!recovered) throw new Error('Firestore 暫時處於 offline 狀態；已排入自動重試');
                 const roomId = getActiveRoomIdFromUI();
                 const room = cloudRoomRef();
                 const snap = await withCloudTimeout(room.get({ source: 'server' }), 'Cloud manifest read');
