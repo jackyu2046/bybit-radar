@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bybit 小幣高精度狙擊交易系統 V8.6-A2.3.2.4 (Final Integrity + Multi-Device Cloud Hardening)</title>
+    <title>Bybit 小幣高精度狙擊交易系統 V8.6-A2.3.2.5 (Final Cloud Atomic Commit & Transactional Revision)</title>
     <!-- Tailwind CSS CDN --> 
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -109,9 +109,9 @@
                                 <span id="cloudRoomBadgeText">房間: radar-usr-uzk44xx</span>
                             </span>
                             <span class="text-[9px] bg-purple-500/20 text-purple-300 font-mono font-semibold px-1.5 py-0.5 rounded border border-purple-500/30" id="regimeHeaderBadge">Regime: CHOPPY</span>
-                            <span class="text-[9px] bg-emerald-500/20 text-emerald-300 font-mono font-semibold px-1.5 py-0.5 rounded border border-emerald-500/30">V8.6-A2.3.2.4 Hardened</span>
+                            <span class="text-[9px] bg-emerald-500/20 text-emerald-300 font-mono font-semibold px-1.5 py-0.5 rounded border border-emerald-500/30">V8.6-A2.3.2.5 Atomic Commit</span>
                         </div>
-                        <p class="text-[11px] text-slate-400 hidden sm:block">A2.3 負向邊緣剪枝 · 預期邊際評分 (EES) 重構 · 影子 A/B 雙軌校準 · Multi-Device Revision 防護</p>
+                        <p class="text-[11px] text-slate-400 hidden sm:block">A2.3 負向邊緣剪枝 · 預期邊際評分 (EES) 重構 · 影子 A/B 雙軌校準 · Transactional Revision 防護</p>
                     </div>
                 </div>
             </div>
@@ -2503,7 +2503,7 @@
         const currentDeviceId = getOrCreateDeviceId();
         let lastKnownCloudRevision = 0;
 
-        const CLOUD_SYNC_VERSION = 'V8.6-A2.3.2.4';
+        const CLOUD_SYNC_VERSION = 'V8.6-A2.3.2.5';
         const CLOUD_PROTOCOL = 'manifest-chunk-v3';
         const CLOUD_TIMEOUT_MS = 12000;
         const CLOUD_RETRY_DELAYS = [5000, 10000, 20000, 40000, 60000];
@@ -2865,8 +2865,19 @@
             }
         }
 
-        async function commitCloudManifestLast(room, roomData) {
-            await withCloudTimeout(room.set(roomData, { merge: true }), 'Cloud manifest commit', CLOUD_TIMEOUT_MS);
+        async function commitCloudManifestAtomic(room, roomData, expectedRemoteRevision) {
+            return await withCloudTimeout(firestoreDb.runTransaction(async (transaction) => {
+                const doc = await transaction.get(room);
+                const current = doc.exists ? (doc.data() || {}) : {};
+                const currentRev = Number(current.revision || 0);
+                if (currentRev !== expectedRemoteRevision) {
+                    const mismatchErr = new Error(`CONCURRENCY_REVISION_MISMATCH: expected Rev ${expectedRemoteRevision}, found Rev ${currentRev}`);
+                    mismatchErr.code = 'CONCURRENCY_REVISION_MISMATCH';
+                    mismatchErr.remoteData = current;
+                    throw mismatchErr;
+                }
+                transaction.set(room, roomData, { merge: true });
+            }), 'Cloud manifest atomic transaction', CLOUD_TIMEOUT_MS);
         }
 
         async function cleanupPreviousCloudChunks(room, previousSyncId, previousChunkCount) {
@@ -2883,19 +2894,19 @@
             }
         }
 
-        async function pushToCloudForce(silent = false) {
+        async function pushToCloudForce(silent = false, retryAttempts = 0) {
             if (!firestoreDb) { 
                 cloudPushQueued = true; 
                 updateCloudStatus('OFFLINE', 'Firebase 尚未建立；已保留本機資料'); 
                 if (!silent) showNotificationModal('雲端未連線', '資料仍安全保留於本機 IndexedDB，系統會在連線恢復後重試。'); 
                 return false; 
             }
-            if (isSyncing) { 
+            if (isSyncing && retryAttempts === 0) { 
                 cloudPushQueued = true; 
                 return false; 
             }
             const now = Date.now();
-            if (now - lastCloudOperationAt < CLOUD_OPERATION_COOLDOWN_MS) {
+            if (retryAttempts === 0 && (now - lastCloudOperationAt < CLOUD_OPERATION_COOLDOWN_MS)) {
                 cloudPushQueued = true;
                 return false;
             }
@@ -2908,7 +2919,7 @@
             isSyncing = true;
             lastCloudOperationAt = now;
             try {
-                updateCloudStatus('CONNECTING', '正在檢查修訂版本並安全推送');
+                updateCloudStatus('CONNECTING', retryAttempts > 0 ? `競態保護重試中 (${retryAttempts}/3)...` : '正在檢查修訂版本並安全推送');
                 const recovered = await ensureFirestoreNetwork('PUSH');
                 if (!recovered) throw new Error('Firestore 暫時處於 offline 狀態；已排入自動重試');
                 const roomId = getActiveRoomIdFromUI();
@@ -2916,9 +2927,8 @@
                 const previousSnap = await withCloudTimeout(room.get(), 'Read current manifest');
                 const previous = previousSnap.exists ? (previousSnap.data() || {}) : {};
 
-                /* V8.6-A2.3.2.4: 樂觀鎖衝突保護 (Optimistic Concurrency Protection)
-                   若雲端存在其他裝置產生的較新 Revision，先自動拉取該修訂版融合，再執行推送，防範跨電腦 Stale Overwrite */
-                const remoteRevision = Number(previous.revision || 0);
+                /* 樂觀鎖前置檢查：若雲端存在其他裝置產生的更新版本，先拉取合併 */
+                let remoteRevision = Number(previous.revision || 0);
                 if (remoteRevision > lastKnownCloudRevision && previous.deviceId && previous.deviceId !== currentDeviceId) {
                     console.warn(`[Cloud] 偵測到雲端存在裝置 ${previous.deviceId} 的較新修訂版 (Rev ${remoteRevision} > 本地已知 ${lastKnownCloudRevision})，先執行保護性拉取合併...`);
                     const pullPayload = await readCommittedCloudPayload(room, previous);
@@ -2949,8 +2959,12 @@
                     parentSyncId: previous.syncId || null,
                     deviceId: currentDeviceId
                 };
+
+                // 步驟 1: 寫入分塊（具備唯一 syncId，絕不發生衝突）
                 await writeCloudChunks(room, syncId, chunks);
-                await commitCloudManifestLast(room, roomData);
+
+                // 步驟 2: 以 Firestore runTransaction 進行原子性條件提交 (ACID Precondition: remoteRevision 未被更改)
+                await commitCloudManifestAtomic(room, roomData, remoteRevision);
                 
                 lastKnownCloudRevision = nextRevision;
                 lastCloudSyncAt = Date.now(); 
@@ -2959,10 +2973,25 @@
                 markCloudOnline(`同步成功 (Rev ${nextRevision})：${roomData.executionCount} Execution / ${roomData.researchCount} Research`);
                 cleanupPreviousCloudChunks(room, previous.syncId, Number(previous.chunkCount || 0));
                 if (!silent) {
-                    showNotificationModal('雲端推送成功', `完整性與修訂號已提交 (Rev ${nextRevision})。Execution：${roomData.executionCount}；Research：${roomData.researchCount} (Checksum: ${fullHash.slice(0, 8)})。`);
+                    showNotificationModal('雲端推送成功', `完整性與事務修訂已提交 (Rev ${nextRevision})。Execution：${roomData.executionCount}；Research：${roomData.researchCount}。`);
                 }
                 return true;
             } catch (err) {
+                // 核心補強：若發生跨設備微秒級碰撞 (CONCURRENCY_REVISION_MISMATCH)，自動拉取新版合併並重試
+                if (err?.code === 'CONCURRENCY_REVISION_MISMATCH' && retryAttempts < 3) {
+                    console.warn(`[Cloud Concurrency] 偵測到並行衝突！雲端已由其他裝置搶先寫入，正在執行自動融合重試 (${retryAttempts + 1}/3)...`);
+                    isSyncing = false;
+                    try {
+                        const room = cloudRoomRef();
+                        const pullPayload = await readCommittedCloudPayload(room, err.remoteData);
+                        await mergeCloudPayload(pullPayload);
+                        lastKnownCloudRevision = Math.max(lastKnownCloudRevision, Number(err.remoteData.revision || 0));
+                    } catch (mergeErr) {
+                        console.warn('[Cloud Concurrency] 合併新版本失敗，將直接嘗試重試', mergeErr);
+                    }
+                    return await pushToCloudForce(silent, retryAttempts + 1);
+                }
+
                 console.error('[Cloud] push failed', err);
                 cloudPushQueued = true;
                 cloudLastError = err;
