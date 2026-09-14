@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bybit 小幣高精度狙擊交易系統 V8.6-A2.3.2.1 Final Regression + Cloud Data Integrity Fix — Permanent Room</title>
+    <title>Bybit 小幣高精度狙擊交易系統 V8.6-A2.3.2.1 Final Regression + Feature Preservation + Cloud Data Integrity — Permanent Room</title>
     <!-- Tailwind CSS CDN --> 
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -269,13 +269,13 @@
                 <div class="flex items-center gap-2">
                     <span class="text-xl">🧠</span>
                     <div>
-                        <h3 class="font-bold text-white text-sm sm:text-base">V8.6-A2.3 Expected Edge & Negative Filter Lab</h3>
-                        <p class="text-[11px] text-fuchsia-300">原策略 vs Filtered 新策略 A/B 影子對比 · 負向特徵剪枝審計 (897+ 樣本)</p>
+                        <h3 class="font-bold text-white text-sm sm:text-base">V8.6-A2.3.2 Dataset Integrity & Contextual Edge Lab</h3>
+                        <p class="text-[11px] text-fuchsia-300">資料完整性分層 · Execution / Shadow 分離 · Contextual Edge 校準 · Block Attribution · Walk-forward 驗證</p>
                     </div>
                 </div>
                 <div class="flex gap-2">
                     <button onclick="exportA23Report()" class="px-3 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-[11px] font-bold border border-crypto-border">
-                        匯出 A2.3 JSON
+                        匯出 A2.3.2 JSON
                     </button>
                     <button onclick="closeA23LabModal()" class="text-slate-400 hover:text-white text-lg p-1">✕</button>
                 </div>
@@ -328,6 +328,44 @@
                             </tbody>
                         </table>
                     </div>
+                </div>
+
+                <!-- V8.6-A2.3.2 Dataset Integrity Summary -->
+                <div class="p-3.5 rounded-xl border border-sky-500/30 bg-sky-950/15 space-y-2">
+                    <div class="flex justify-between items-center gap-2 flex-wrap">
+                        <span class="font-bold text-white text-xs">🛡️ Dataset Integrity & Source Segregation</span>
+                        <span id="a232IntegrityStatus" class="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-300">計算中</span>
+                    </div>
+                    <div id="a232IntegrityCards" class="grid grid-cols-2 md:grid-cols-4 gap-2 text-[11px]"></div>
+                    <div id="a232IntegrityNotes" class="text-[10px] text-slate-400 leading-relaxed"></div>
+                </div>
+
+                <!-- V8.6-A2.3.2 Contextual Edge Recalibration -->
+                <div class="p-3.5 rounded-xl border border-emerald-500/30 bg-emerald-950/10 space-y-2">
+                    <div class="flex justify-between items-center gap-2 flex-wrap">
+                        <span class="font-bold text-white text-xs">🧠 Contextual Edge Recalibration</span>
+                        <span id="a232ModelSource" class="text-[10px] text-emerald-300">模型來源：計算中</span>
+                    </div>
+                    <div id="a232ContextTable" class="overflow-x-auto"></div>
+                </div>
+
+                <!-- V8.6-A2.3.2 Block Attribution -->
+                <div class="p-3.5 rounded-xl border border-amber-500/30 bg-amber-950/10 space-y-2">
+                    <span class="font-bold text-white text-xs">🔍 Blocked Trade Attribution — 被攔截樣本到底有沒有更差？</span>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-[11px]">
+                            <thead class="text-slate-400 border-b border-slate-800 bg-slate-950"><tr>
+                                <th class="p-2">原因</th><th class="p-2 text-center">N</th><th class="p-2 text-center">Exp</th><th class="p-2 text-center">vs 全體</th><th class="p-2 text-center">PF</th><th class="p-2 text-center">結論</th>
+                            </tr></thead>
+                            <tbody id="a232AttributionTable" class="divide-y divide-slate-900"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- V8.6-A2.3.2 Walk-forward Validation -->
+                <div class="p-3.5 rounded-xl border border-purple-500/30 bg-purple-950/10 space-y-2">
+                    <span class="font-bold text-white text-xs">📈 Walk-forward Validation — 訓練 70% / 驗證 30%</span>
+                    <div id="a232WalkForward" class="text-[11px] font-mono text-slate-300"></div>
                 </div>
 
                 <!-- 第三部分：Base Score vs Expected Edge Score (EES) 校準分佈 -->
@@ -540,7 +578,7 @@
                 active: [], 
                 archive: [], 
                 seenSignals: {}, 
-                version: 'V8.6-A2.3' 
+                version: 'V8.6-A2.3.2' 
             }
         };
 
@@ -680,103 +718,6 @@
         }
 
         // 基於歷史統計的分段權重計算 (Empirical Historical Weight)
-        function calculateHistoricalSegmentEdge(ctx) {
-            const h = simState.historyArchive || [];
-            if (h.length < 30) return 0; // 歷史平倉數據不足時給 0 修正
-
-            const key = `${ctx.strategy} × ${ctx.regime} × ${ctx.direction}`;
-            const subset = h.filter(t => {
-                const c = t.entryContext || {};
-                const k = `${t.strategy || c.strategy || 'UNKNOWN'} × ${t.regimeAtEntry || c.regime || 'UNKNOWN'} × ${t.direction || c.direction || 'UNKNOWN'}`;
-                return k === key;
-            });
-
-            if (subset.length < 15) return 0; // 樣本信心不足
-
-            const wins = subset.filter(t => (parseFloat(t.pnl) || 0) > 0);
-            const wr = wins.length / subset.length;
-            const net = subset.reduce((acc, t) => acc + (parseFloat(t.pnl) || 0), 0);
-            const exp = net / subset.length;
-
-            // 信心度採 log 遞增
-            const confidence = Math.min(1.0, Math.log(subset.length) / Math.log(100));
-            let weight = (exp * 10) + ((wr - 0.40) * 20);
-            weight = Math.max(-20, Math.min(20, weight * confidence));
-            return Math.round(weight);
-        }
-
-        // 計算 V8.6-A2.3 預期邊際評分 (Expected Edge Score, EES)
-        function calculateExpectedEdgeScore(baseScore, ctx) {
-            const neg = evaluateNegativeEdge(ctx);
-            const histWeight = calculateHistoricalSegmentEdge(ctx);
-
-            let ees = baseScore + histWeight - neg.penalty;
-            ees = Math.max(0, Math.min(100, Math.round(ees)));
-
-            let decision = "CANDIDATE";
-            if (neg.blockCandidate || ees < A23_CONFIG.decisions.BLOCK) {
-                decision = "BLOCK";
-            } else if (ees < A23_CONFIG.decisions.SHADOW) {
-                decision = "SHADOW_ONLY";
-            } else if (ees < A23_CONFIG.decisions.WATCH) {
-                decision = "WATCH";
-            } else if (ees >= A23_CONFIG.decisions.CANDIDATE) {
-                decision = "HIGH_EXPECTED_EDGE";
-            }
-
-            return {
-                baseScore,
-                expectedEdgeScore: ees,
-                penalty: neg.penalty,
-                flags: neg.flags,
-                severity: neg.severity,
-                blockCandidate: neg.blockCandidate,
-                histWeight,
-                decision
-            };
-        }
-
-        function buildEntryContext(c) {
-            const f = { 
-                momentum1h: a22n(c.momentum1h), 
-                rvol: a22n(c.rvol), 
-                oiVelocity: a22n(c.oiVelocity), 
-                oiAcceleration: a22n(c.oiAcceleration), 
-                spreadPct: a22n(c.spreadPct), 
-                fundingRate: a22n(c.fundingRate), 
-                turnover24h: a22n(c.turnover24h), 
-                price24hPcnt: a22n(c.price24hPcnt) 
-            };
-            
-            const rawCtx = {
-                schema: 'A2.3-IDB',
-                capturedAt: Date.now(),
-                score: a22n(c.score),
-                grade: c.grade || 'C',
-                direction: classifyDirection(c),
-                regime: classifyRegime(),
-                strategy: classifyStrategy(c),
-                volatility: classifyVolatility(c),
-                liquidity: classifyLiquidity(c),
-                scoreBucket: a22Bucket(a22n(c.score), [['<50',-Infinity,50],['50-59',50,60],['60-69',60,70],['70-79',70,80],['80-89',80,90],['90-100',90,Infinity]]),
-                momentumBucket: a22Bucket(Math.abs(f.momentum1h), [['LOW',0,1],['MED',1,3],['HIGH',3,Infinity]]),
-                rvolBucket: a22Bucket(f.rvol, [['LOW',-Infinity,1],['NORMAL',1,1.5],['HIGH',1.5,3],['EXTREME',3,Infinity]]),
-                oiBucket: a22Bucket(f.oiVelocity, [['NEGATIVE',-Infinity,0],['POSITIVE',0,0.5],['STRONG',0.5,Infinity]]),
-                spreadBucket: a22Bucket(f.spreadPct, [['TIGHT',-Infinity,0.03],['NORMAL',0.03,0.08],['WIDE',0.08,Infinity]]),
-                features: f
-            };
-
-            // 注入 A2.3 EES 計算核心
-            const eesResult = calculateExpectedEdgeScore(rawCtx.score, rawCtx);
-            rawCtx.ees = eesResult;
-            rawCtx.expectedEdgeScore = eesResult.expectedEdgeScore;
-            rawCtx.decision = eesResult.decision;
-            rawCtx.riskFlags = eesResult.flags;
-            rawCtx.eesBucket = a22Bucket(eesResult.expectedEdgeScore, [['<40',-Infinity,40],['40-59',40,60],['60-69',60,70],['70-79',70,80],['80-100',80,Infinity]]);
-
-            return rawCtx;
-        }
-
         /* =========================================================
            INDEXED-DB 倉儲基礎層
         ========================================================= */
@@ -974,7 +915,7 @@
                         timeoutMinutes: simState.research?.timeoutMinutes ?? 60,
                         active: (simState.research?.active || []).slice(-35),
                         seenSignals: simState.research?.seenSignals || {},
-                        version: 'V8.6-A2.3'
+                        version: 'V8.6-A2.3.2'
                     }
                 };
                 localStorage.setItem(STORAGE_KEY_SIM, JSON.stringify(lightweightSimState));
@@ -1237,7 +1178,7 @@
         }
 
         function ensureResearchState() {
-            const d = { enabled: true, shadowNotional: 10, timeoutMinutes: 60, active: [], archive: [], seenSignals: {}, version: 'V8.6-A2.3' };
+            const d = { enabled: true, shadowNotional: 10, timeoutMinutes: 60, active: [], archive: [], seenSignals: {}, version: 'V8.6-A2.3.2' };
             simState.research = Object.assign(d, simState.research || {});
             simState.research.active = Array.isArray(simState.research.active) ? simState.research.active : [];
             simState.research.archive = Array.isArray(simState.research.archive) ? simState.research.archive : [];
@@ -1746,35 +1687,344 @@
 
         /* =========================================================
            V8.6-A2.3 A/B SHADOW RESEARCH & AUDIT 演算法
+        ========================================================= */        /* =========================================================
+           V8.6-A2.3.2 — DATASET INTEGRITY + CONTEXTUAL EDGE RECALIBRATION
+           Design principles:
+           1) Never mix Execution and Shadow evidence as one training population.
+           2) Legacy / incomplete metadata is quarantined from edge training.
+           3) Context effects use shrinkage toward the baseline to reduce overfitting.
+           4) Shadow evidence may calibrate research, but Execution remains preferred for live candidates.
+           5) Every decision remains auditable and exportable.
+        ========================================================= */
+        const A232_CONFIG = {
+            version: 'V8.6-A2.3.2',
+            requiredContextFields: ['strategy','regime','direction','volatility','liquidity','rvolBucket','oiBucket','spreadBucket'],
+            minContextSamples: 20,
+            targetTrainingSamples: 120,
+            maxDimensionAdjustment: 8,
+            maxTotalAdjustment: 24,
+            incompleteContextPenalty: 8,
+            partialContextPenalty: 4,
+            executionPreferredMinSamples: 80,
+            walkForwardTrainRatio: 0.70
+        };
+
+        function a232Num(v, d = 0) { const n = Number(v); return Number.isFinite(n) ? n : d; }
+        function a232ContextOf(t) {
+            const c = t?.entryContext || t?.context || {};
+            return {
+                strategy: String(t?.strategy || c.strategy || 'UNKNOWN').toUpperCase(),
+                regime: String(t?.regimeAtEntry || t?.regime || c.regime || 'UNKNOWN').toUpperCase(),
+                direction: String(t?.direction || t?.side || c.direction || 'UNKNOWN').toUpperCase(),
+                volatility: String(t?.volatility || c.volatility || 'UNKNOWN').toUpperCase(),
+                liquidity: String(t?.liquidity || c.liquidity || 'UNKNOWN').toUpperCase(),
+                rvolBucket: String(t?.rvolBucket || c.rvolBucket || 'UNKNOWN').toUpperCase(),
+                oiBucket: String(t?.oiBucket || c.oiBucket || 'UNKNOWN').toUpperCase(),
+                spreadBucket: String(t?.spreadBucket || c.spreadBucket || 'UNKNOWN').toUpperCase(),
+                baseScore: a232Num(t?.baseScore ?? c.score ?? t?.scoreAtEntry ?? t?.score, 0),
+                expectedEdgeScore: a232Num(t?.expectedEdgeScore ?? c.expectedEdgeScore, 0),
+                riskFlags: Array.isArray(t?.riskFlags) ? t.riskFlags : (Array.isArray(c.riskFlags) ? c.riskFlags : []),
+                decision: String(t?.a23Decision || c.decision || 'CANDIDATE').toUpperCase()
+            };
+        }
+
+        function a232StableRecordId(t, source, idx) {
+            if (t?.tradeId) return `${source}:${t.tradeId}`;
+            if (t?.id) return `${source}:${t.id}`;
+            const c = a232ContextOf(t);
+            return `${source}:${t?.symbol || 'UNKNOWN'}:${t?.openedAt || t?.openTime || t?.closedAtTs || idx}:${t?.entryPrice || 0}:${t?.pnl ?? t?.netPnl ?? 0}:${c.direction}`;
+        }
+
+        function a232Completeness(t) {
+            const c = a232ContextOf(t);
+            let present = 0;
+            const missing = [];
+            A232_CONFIG.requiredContextFields.forEach(k => {
+                const v = c[k];
+                if (v && v !== 'UNKNOWN' && v !== 'UNCLASSIFIED' && v !== 'NULL') present++;
+                else missing.push(k);
+            });
+            const score = Math.round((present / A232_CONFIG.requiredContextFields.length) * 100);
+            return { score, present, missing, complete: present === A232_CONFIG.requiredContextFields.length,
+                quality: present === A232_CONFIG.requiredContextFields.length ? 'COMPLETE' : (present >= 5 ? 'PARTIAL' : 'LEGACY') };
+        }
+
+        function a232NormalizedEdge(t) {
+            const pnl = a232Num(t?.pnl ?? t?.netPnl, 0);
+            const notional = Math.max(1, a232Num(t?.notional ?? t?.originalNotional, 10));
+            // Normalize to a 10 USDT notional so Execution and Shadow can be compared in separate views.
+            return pnl / notional * 10;
+        }
+
+        function buildA232Dataset() {
+            ensureResearchState();
+            const buckets = {
+                executionComplete: [], executionPartial: [], shadowComplete: [], shadowPartial: [], legacy: []
+            };
+            const seen = new Set();
+            const add = (raw, source, idx) => {
+                if (!raw || !Number.isFinite(a232Num(raw.pnl ?? raw.netPnl, NaN))) return;
+                const id = a232StableRecordId(raw, source, idx);
+                if (seen.has(id)) return;
+                seen.add(id);
+                const quality = a232Completeness(raw);
+                const rec = { ...raw, __a232: { id, source, quality, ctx: a232ContextOf(raw), edgeUnit: a232NormalizedEdge(raw) } };
+                if (quality.complete) buckets[source === 'EXECUTION' ? 'executionComplete' : 'shadowComplete'].push(rec);
+                else if (quality.quality === 'PARTIAL') buckets[source === 'EXECUTION' ? 'executionPartial' : 'shadowPartial'].push(rec);
+                else buckets.legacy.push(rec);
+            };
+            (simState.historyArchive || []).forEach((t,i) => add(t, 'EXECUTION', i));
+            (simState.research?.archive || []).forEach((t,i) => add(t, 'SHADOW', i));
+            const executionTrain = buckets.executionComplete;
+            const shadowTrain = buckets.shadowComplete;
+            const preferred = executionTrain.length >= A232_CONFIG.executionPreferredMinSamples ? executionTrain : shadowTrain;
+            const preferredSource = executionTrain.length >= A232_CONFIG.executionPreferredMinSamples ? 'EXECUTION' : 'SHADOW_RESEARCH_FALLBACK';
+            return {
+                ...buckets,
+                executionTrain, shadowTrain, preferred, preferredSource,
+                allComplete: [...executionTrain, ...shadowTrain],
+                total: executionTrain.length + buckets.executionPartial.length + shadowTrain.length + buckets.shadowPartial.length + buckets.legacy.length
+            };
+        }
+
+        function a232GroupStats(trades, normalized = false) {
+            const arr = (trades || []).filter(Boolean);
+            if (!arr.length) return { count: 0, wins: 0, wr: 0, pf: 0, exp: 0, net: 0, mean: 0 };
+            const values = arr.map(t => normalized ? (t.__a232?.edgeUnit ?? a232NormalizedEdge(t)) : a232Num(t.pnl ?? t.netPnl, 0));
+            const wins = values.filter(v => v > 0);
+            const losses = values.filter(v => v < 0);
+            const gp = wins.reduce((a,b)=>a+b,0), gl = Math.abs(losses.reduce((a,b)=>a+b,0));
+            const net = values.reduce((a,b)=>a+b,0);
+            return { count: arr.length, wins: wins.length, wr: arr.length ? wins.length / arr.length * 100 : 0,
+                pf: gl > 0 ? gp / gl : (gp > 0 ? Infinity : 0), exp: net / arr.length, net, mean: net / arr.length };
+        }
+
+        function a232BuildContextModel(trades, sourceLabel = 'UNKNOWN') {
+            const rows = (trades || []).filter(t => t?.__a232?.quality?.complete);
+            const baseline = a232GroupStats(rows, true);
+            const dimensions = ['strategy','regime','direction','volatility','liquidity','rvolBucket','oiBucket','spreadBucket'];
+            const model = { version: A232_CONFIG.version, source: sourceLabel, samples: rows.length, baseline, dimensions: {} };
+            dimensions.forEach(dim => {
+                const map = new Map();
+                rows.forEach(t => {
+                    const key = t.__a232.ctx[dim] || 'UNKNOWN';
+                    if (!map.has(key)) map.set(key, []);
+                    map.get(key).push(t);
+                });
+                model.dimensions[dim] = {};
+                map.forEach((group, key) => {
+                    const st = a232GroupStats(group, true);
+                    const confidence = Math.min(1, Math.sqrt(st.count / A232_CONFIG.targetTrainingSamples));
+                    const sampleFactor = Math.min(1, st.count / A232_CONFIG.minContextSamples);
+                    const rawDelta = st.exp - baseline.exp;
+                    const adjustment = Math.max(-A232_CONFIG.maxDimensionAdjustment,
+                        Math.min(A232_CONFIG.maxDimensionAdjustment, rawDelta * 10 * confidence * sampleFactor));
+                    model.dimensions[dim][key] = { ...st, rawDelta, confidence, adjustment };
+                });
+            });
+            return model;
+        }
+
+        let a232ModelCache = { key: '', execution: null, shadow: null, active: null };
+        function a232DatasetCacheKey(ds) {
+            const e = ds.executionTrain.map(x=>x.__a232.id).sort().join('|');
+            const r = ds.shadowTrain.map(x=>x.__a232.id).sort().join('|');
+            return `${e.length}:${e.slice(-2000)}::${r.length}:${r.slice(-2000)}`;
+        }
+        function a232GetModels() {
+            const ds = buildA232Dataset();
+            const key = a232DatasetCacheKey(ds);
+            if (a232ModelCache.key !== key) {
+                const execution = a232BuildContextModel(ds.executionTrain, 'EXECUTION_COMPLETE');
+                const shadow = a232BuildContextModel(ds.shadowTrain, 'SHADOW_COMPLETE');
+                const active = ds.preferredSource === 'EXECUTION' ? execution : shadow;
+                a232ModelCache = { key, execution, shadow, active, dataset: ds };
+            }
+            return a232ModelCache;
+        }
+
+        function a232ContextAdjustment(ctx, model = null) {
+            const m = model || a232GetModels().active;
+            if (!m || !m.samples) return { total: 0, contributions: [], modelSource: 'NONE' };
+            const contributions = [];
+            Object.entries(m.dimensions || {}).forEach(([dim, table]) => {
+                const key = String(ctx?.[dim] || 'UNKNOWN').toUpperCase();
+                const stat = table?.[key];
+                if (!stat || stat.count < A232_CONFIG.minContextSamples) return;
+                contributions.push({ dimension: dim, key, adjustment: stat.adjustment, count: stat.count, exp: stat.exp, confidence: stat.confidence });
+            });
+            const raw = contributions.reduce((sum,x)=>sum+x.adjustment,0);
+            const total = Math.max(-A232_CONFIG.maxTotalAdjustment, Math.min(A232_CONFIG.maxTotalAdjustment, raw));
+            return { total, contributions, modelSource: m.source, modelSamples: m.samples };
+        }
+
+        function a232QualityPenalty(ctx) {
+            const quality = ctx?.dataQuality || ctx?.metadataQuality || 'COMPLETE';
+            if (quality === 'LEGACY') return A232_CONFIG.incompleteContextPenalty;
+            if (quality === 'PARTIAL') return A232_CONFIG.partialContextPenalty;
+            return 0;
+        }
+
+        // Override the old single-segment weight with source-aware contextual shrinkage.
+        function calculateHistoricalSegmentEdge(ctx) {
+            return Math.round(a232ContextAdjustment(ctx).total);
+        }
+
+        // Override A2.3 EES: Base signal + contextual evidence - negative edge - data uncertainty.
+        function calculateExpectedEdgeScore(baseScore, ctx) {
+            const neg = evaluateNegativeEdge(ctx);
+            const context = a232ContextAdjustment(ctx);
+            const qualityPenalty = a232QualityPenalty(ctx);
+            const histWeight = Math.round(context.total);
+            let ees = a232Num(baseScore) + histWeight - neg.penalty - qualityPenalty;
+            ees = Math.max(0, Math.min(100, Math.round(ees)));
+            let decision = 'CANDIDATE';
+            if (neg.blockCandidate || ees < A23_CONFIG.decisions.BLOCK) decision = 'BLOCK';
+            else if (ees < A23_CONFIG.decisions.SHADOW) decision = 'SHADOW_ONLY';
+            else if (ees < A23_CONFIG.decisions.WATCH) decision = 'WATCH';
+            else if (ees >= A23_CONFIG.decisions.CANDIDATE) decision = 'HIGH_EXPECTED_EDGE';
+            return { baseScore, expectedEdgeScore: ees, penalty: neg.penalty, qualityPenalty,
+                flags: neg.flags, severity: neg.severity, blockCandidate: neg.blockCandidate,
+                histWeight, contextAdjustment: context.total, contextContributions: context.contributions,
+                modelSource: context.modelSource, modelSamples: context.modelSamples || 0, decision };
+        }
+
+        // Override entry context with explicit metadata quality and model provenance.
+        function buildEntryContext(c) {
+            const f = {
+                momentum1h: a22n(c.momentum1h), rvol: a22n(c.rvol), oiVelocity: a22n(c.oiVelocity),
+                oiAcceleration: a22n(c.oiAcceleration), spreadPct: a22n(c.spreadPct), fundingRate: a22n(c.fundingRate),
+                turnover24h: a22n(c.turnover24h), price24hPcnt: a22n(c.price24hPcnt)
+            };
+            const rawCtx = {
+                schema: 'A2.3.2-CONTEXTUAL-IDB', datasetVersion: A232_CONFIG.version, capturedAt: Date.now(),
+                score: a22n(c.score), grade: c.grade || 'C', direction: classifyDirection(c), regime: classifyRegime(),
+                strategy: classifyStrategy(c), volatility: classifyVolatility(c), liquidity: classifyLiquidity(c),
+                scoreBucket: a22Bucket(a22n(c.score), [['<50',-Infinity,50],['50-59',50,60],['60-69',60,70],['70-79',70,80],['80-89',80,90],['90-100',90,Infinity]]),
+                momentumBucket: a22Bucket(Math.abs(f.momentum1h), [['LOW',0,1],['MED',1,3],['HIGH',3,Infinity]]),
+                rvolBucket: a22Bucket(f.rvol, [['LOW',-Infinity,1],['NORMAL',1,1.5],['HIGH',1.5,3],['EXTREME',3,Infinity]]),
+                oiBucket: a22Bucket(f.oiVelocity, [['NEGATIVE',-Infinity,0],['POSITIVE',0,0.5],['STRONG',0.5,Infinity]]),
+                spreadBucket: a22Bucket(f.spreadPct, [['TIGHT',-Infinity,0.03],['NORMAL',0.03,0.08],['WIDE',0.08,Infinity]]),
+                features: f, dataQuality: 'COMPLETE'
+            };
+            const eesResult = calculateExpectedEdgeScore(rawCtx.score, rawCtx);
+            rawCtx.ees = eesResult; rawCtx.expectedEdgeScore = eesResult.expectedEdgeScore; rawCtx.decision = eesResult.decision;
+            rawCtx.riskFlags = eesResult.flags; rawCtx.modelSource = eesResult.modelSource; rawCtx.modelSamples = eesResult.modelSamples;
+            rawCtx.contextContributions = eesResult.contextContributions;
+            rawCtx.eesBucket = a22Bucket(eesResult.expectedEdgeScore, [['<40',-Infinity,40],['40-59',40,60],['60-69',60,70],['70-79',70,80],['80-100',80,Infinity]]);
+            return rawCtx;
+        }
+
+        function a232BlockedAttribution(variantA) {
+            const baseline = calculateGroupMetrics(variantA);
+            const reasons = new Map();
+            (variantA || []).forEach(t => {
+                const c = a232ContextOf(t);
+                const decision = c.decision;
+                if (decision !== 'BLOCK') return;
+                const flags = c.riskFlags?.length ? c.riskFlags : ['BLOCK_NO_FLAG'];
+                flags.forEach(flag => { if (!reasons.has(flag)) reasons.set(flag, []); reasons.get(flag).push(t); });
+            });
+            return Array.from(reasons.entries()).map(([reason,trades]) => {
+                const m = calculateGroupMetrics(trades);
+                const delta = m.exp - baseline.exp;
+                const sufficient = m.count >= A232_CONFIG.minContextSamples;
+                const verdict = !sufficient ? 'INSUFFICIENT' : (delta < -0.005 ? 'NEGATIVE_CONFIRMED' : (delta > 0.005 ? 'POSSIBLE_OVERBLOCK' : 'NEUTRAL'));
+                return { reason, ...m, delta, sufficient, verdict };
+            }).sort((a,b)=>a.exp-b.exp);
+        }
+
+        function a232WalkForward(trades) {
+            const rows = [...(trades || [])].filter(t => t?.__a232?.quality?.complete).sort((a,b)=>{
+                const ta = a232Num(a.closedAtTs ?? a.closedAt ?? a.openedAt ?? a.openTime, 0);
+                const tb = a232Num(b.closedAtTs ?? b.closedAt ?? b.openedAt ?? b.openTime, 0);
+                return ta - tb;
+            });
+            if (rows.length < 60) return { ok:false, samples:rows.length, reason:'完整樣本不足 60，暫不做 Walk-forward 結論' };
+            const split = Math.max(30, Math.min(rows.length-20, Math.floor(rows.length * A232_CONFIG.walkForwardTrainRatio)));
+            const train = rows.slice(0, split), test = rows.slice(split);
+            const model = a232BuildContextModel(train, 'WALK_FORWARD_TRAIN');
+            const scored = test.map(t => {
+                const adj = a232ContextAdjustment(t.__a232.ctx, model).total;
+                return { ...t, __score: a232Num(t.__a232.ctx.baseScore, 0) + adj };
+            });
+            const median = [...scored].map(x=>x.__score).sort((a,b)=>a-b)[Math.floor(scored.length/2)] || 0;
+            const high = scored.filter(x=>x.__score>=median), low=scored.filter(x=>x.__score<median);
+            return { ok:true, train:a232GroupStats(train), test:a232GroupStats(test), high:a232GroupStats(high), low:a232GroupStats(low), split, samples:rows.length, medianScore:median };
+        }
+
+        async function persistA232Metadata(reason = 'A232_REFRESH') {
+            if (!idbInstance) return false;
+            try {
+                const models = a232GetModels();
+                const ds = models.dataset;
+                const integrity = {
+                    id: 'a232_dataset_integrity_latest', schemaVersion: A232_CONFIG.version, reason, updatedAt: Date.now(),
+                    total: ds.total, executionComplete: ds.executionComplete.length, executionPartial: ds.executionPartial.length,
+                    shadowComplete: ds.shadowComplete.length, shadowPartial: ds.shadowPartial.length, legacy: ds.legacy.length,
+                    preferredSource: ds.preferredSource, modelSamples: models.active?.samples || 0
+                };
+                return await idbPutRecord(IDB_STORE_DATASET_METADATA, integrity);
+            } catch (_) { return false; }
+        }
+
+        function a232RenderLab() {
+            const models = a232GetModels();
+            const ds = models.dataset;
+            const cards = document.getElementById('a232IntegrityCards');
+            const notes = document.getElementById('a232IntegrityNotes');
+            const status = document.getElementById('a232IntegrityStatus');
+            if (cards) cards.innerHTML = [
+                ['Execution 完整', ds.executionComplete.length, 'text-emerald-300'],
+                ['Execution 部分', ds.executionPartial.length, 'text-amber-300'],
+                ['Shadow 完整', ds.shadowComplete.length, 'text-sky-300'],
+                ['Legacy / 缺失', ds.legacy.length + ds.shadowPartial.length, 'text-rose-300']
+            ].map(([k,v,c])=>`<div class="p-2 rounded bg-slate-950/60 border border-slate-800"><div class="text-slate-500 text-[10px]">${k}</div><div class="font-bold ${c} text-sm">${v}</div></div>`).join('');
+            if (status) status.textContent = ds.legacy.length + ds.executionPartial.length + ds.shadowPartial.length === 0 ? '🟢 完整度健康' : '🟡 已隔離不完整資料';
+            if (notes) notes.innerHTML = `訓練資料採 <b class="text-white">${ds.preferredSource}</b>；Execution 與 Shadow 不直接混合。Legacy / metadata 缺失資料仍保存與可審計，但不進入 Contextual Edge 訓練。`;
+
+            const modelSource = document.getElementById('a232ModelSource');
+            if (modelSource) modelSource.textContent = `模型來源：${models.active?.source || 'NONE'} · 完整樣本 ${models.active?.samples || 0}`;
+            const contextTable = document.getElementById('a232ContextTable');
+            if (contextTable) {
+                const rows = [];
+                Object.entries(models.active?.dimensions || {}).forEach(([dim, table]) => {
+                    Object.entries(table).filter(([,st])=>st.count>=A232_CONFIG.minContextSamples).sort((a,b)=>a[1].adjustment-b[1].adjustment).slice(0,6).forEach(([key,st])=>rows.push({dim,key,...st}));
+                });
+                contextTable.innerHTML = `<table class="w-full text-left text-[11px]"><thead class="text-slate-400 border-b border-slate-800 bg-slate-950"><tr><th class="p-2">Context</th><th class="p-2 text-center">N</th><th class="p-2 text-center">Normalized Exp</th><th class="p-2 text-center">Score Adj</th><th class="p-2 text-center">Confidence</th></tr></thead><tbody>${rows.length?rows.map(r=>`<tr class="border-b border-slate-900"><td class="p-2 text-white">${r.dim} × ${r.key}</td><td class="p-2 text-center">${r.count}</td><td class="p-2 text-center ${r.exp>=0?'text-emerald-400':'text-rose-400'}">${r.exp.toFixed(3)}</td><td class="p-2 text-center ${r.adjustment>=0?'text-emerald-400':'text-rose-400'}">${r.adjustment>=0?'+':''}${r.adjustment.toFixed(2)}</td><td class="p-2 text-center">${(r.confidence*100).toFixed(0)}%</td></tr>`).join(''):`<tr><td colspan="5" class="p-3 text-center text-slate-500">目前沒有達最低樣本門檻的完整 Context。</td></tr>`}</tbody></table>`;
+            }
+
+            const { variantA } = computeABDataset();
+            const attribution = a232BlockedAttribution(variantA);
+            const attrEl = document.getElementById('a232AttributionTable');
+            if (attrEl) attrEl.innerHTML = attribution.length ? attribution.map(r=>`<tr><td class="p-2 text-white">${r.reason}</td><td class="p-2 text-center">${r.count}</td><td class="p-2 text-center ${r.exp>=0?'text-emerald-400':'text-rose-400'}">$${r.exp.toFixed(3)}</td><td class="p-2 text-center ${r.delta<=0?'text-emerald-400':'text-rose-400'}">${r.delta>=0?'+':''}$${r.delta.toFixed(3)}</td><td class="p-2 text-center">${r.pf===Infinity?'∞':r.pf.toFixed(2)}</td><td class="p-2 text-center ${r.verdict==='NEGATIVE_CONFIRMED'?'text-emerald-400':r.verdict==='POSSIBLE_OVERBLOCK'?'text-rose-400':'text-slate-400'}">${r.verdict}</td></tr>`).join('') : '<tr><td colspan="6" class="p-3 text-center text-slate-500">暫無可歸因 BLOCK 樣本。</td></tr>';
+
+            const wf = a232WalkForward(ds.preferred);
+            const wfEl = document.getElementById('a232WalkForward');
+            if (wfEl) wfEl.innerHTML = !wf.ok ? `<span class="text-amber-300">${wf.reason}</span>` : `完整樣本 ${wf.samples} · Train ${wf.split} · Test ${wf.test.count}<br>Test Exp: <b class="${wf.test.exp>=0?'text-emerald-400':'text-rose-400'}">$${wf.test.exp.toFixed(3)}</b> · 高分半部 Exp: <b class="${wf.high.exp>=0?'text-emerald-400':'text-rose-400'}">$${wf.high.exp.toFixed(3)}</b> · 低分半部 Exp: <b class="${wf.low.exp>=0?'text-emerald-400':'text-rose-400'}">$${wf.low.exp.toFixed(3)}</b><br><span class="text-slate-500">只作 out-of-sample 校驗，不把驗證期資料回灌訓練模型。</span>`;
+            persistA232Metadata('A232_LAB_REFRESH');
+        }
+
+
+        /* =========================================================
+           V8.6-A2.3 A/B SHADOW RESEARCH & AUDIT 演算法
         ========================================================= */
         function computeABDataset() {
             ensureResearchState();
-            const allShadows = [...(simState.research?.archive || [])];
-            const allExecutions = (simState.historyArchive || []).map(t => ({
-                ...t,
-                source: 'EXECUTION',
-                a23Decision: t.entryContext?.decision || 'CANDIDATE',
-                expectedEdgeScore: t.entryContext?.expectedEdgeScore || t.scoreAtEntry || 75
-            }));
-
-            const combined = [...allShadows, ...allExecutions].filter(x => Number.isFinite(parseFloat(x.pnl)));
-
-            // Variant A (原策略：全部未經剪枝的交易)
-            const variantA = combined;
-
-            // Variant B (A2.3 Filtered: 剔除被 A2.3 判為 BLOCK 的樣本)
-            const variantB = combined.filter(x => {
-                const decision = x.a23Decision || x.entryContext?.decision || 'CANDIDATE';
-                return decision !== 'BLOCK';
+            // A2.3.2 integrity rule: A/B evaluation uses Shadow Research only.
+            // Execution is a separate evidence population and must not be mixed into counterfactual A/B metrics.
+            const seen = new Set();
+            const variantA = (simState.research?.archive || []).filter((x, i) => {
+                if (!Number.isFinite(parseFloat(x?.pnl ?? x?.netPnl))) return false;
+                const id = a232StableRecordId(x, 'AB_SHADOW', i);
+                if (seen.has(id)) return false;
+                seen.add(id);
+                return true;
             });
-
-            // 專門統計被 BLOCK 的樣本集 (用於檢驗過濾器是否有效)
-            const blockedTrades = combined.filter(x => {
-                const decision = x.a23Decision || x.entryContext?.decision || 'CANDIDATE';
-                return decision === 'BLOCK';
-            });
-
-            return { variantA, variantB, blockedTrades };
+            const variantB = variantA.filter(x => String(x.a23Decision || x.entryContext?.decision || 'CANDIDATE').toUpperCase() !== 'BLOCK');
+            const blockedTrades = variantA.filter(x => String(x.a23Decision || x.entryContext?.decision || 'CANDIDATE').toUpperCase() === 'BLOCK');
+            const execution = (simState.historyArchive || []).filter(x => Number.isFinite(parseFloat(x?.pnl ?? x?.netPnl)));
+            return { variantA, variantB, blockedTrades, execution };
         }
 
         function calculateGroupMetrics(trades) {
@@ -1902,6 +2152,7 @@
                 }).join('');
             }
 
+            a232RenderLab();
             document.getElementById('a23LabModal').classList.remove('hidden');
         }
 
@@ -1911,21 +2162,36 @@
 
         function exportA23Report() {
             const { variantA, variantB, blockedTrades } = computeABDataset();
+            const models = a232GetModels();
+            const ds = models.dataset;
             const report = {
-                version: "V8.6-A2.3-EES-EXPORT",
+                version: "V8.6-A2.3.2-DATASET-INTEGRITY-CONTEXTUAL-EDGE",
                 generatedAt: new Date().toISOString(),
                 metricsVariantA: calculateGroupMetrics(variantA),
                 metricsVariantB: calculateGroupMetrics(variantB),
                 blockedPerformance: calculateGroupMetrics(blockedTrades),
+                blockedAttribution: a232BlockedAttribution(variantA),
+                datasetIntegrity: {
+                    total: ds.total,
+                    executionComplete: ds.executionComplete.length,
+                    executionPartial: ds.executionPartial.length,
+                    shadowComplete: ds.shadowComplete.length,
+                    shadowPartial: ds.shadowPartial.length,
+                    legacy: ds.legacy.length,
+                    preferredSource: ds.preferredSource
+                },
+                activeContextModel: models.active,
+                walkForward: a232WalkForward(ds.preferred),
                 totalDataset: variantA.length
             };
             const b = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
             const u = URL.createObjectURL(b), a = document.createElement('a');
             a.href = u;
-            a.download = `bybit-radar-v86-a23-ees-audit-${Date.now()}.json`;
+            a.download = `bybit-radar-v86-a232-integrity-edge-audit-${Date.now()}.json`;
             a.click();
             URL.revokeObjectURL(u);
         }
+
 
         /* =========================================================
            UI 輔助與系統生命週期
@@ -2174,10 +2440,33 @@
             return (h >>> 0).toString(16);
         }
         function datasetChecksum(exec = simState.historyArchive || [], research = simState.research?.archive || [], active = simState.research?.active || []) {
-            const e = exec.map(x => `${x.tradeId || x.id}|${x.closedAtTs || x.closedAt || ''}|${x.pnl ?? x.netPnl ?? 0}`).sort();
-            const r = research.map(x => `${x.id}|${x.closedAt || x.openedAt || ''}|${x.pnl ?? x.netPnl ?? 0}`).sort();
-            const a = active.map(x => `${x.id}|${x.openedAt || ''}|${x.entryPrice || ''}|${x.currentPrice || ''}`).sort();
-            return stableHash({ e, r, a });
+            const normalize = (t, source) => {
+                const c = t?.entryContext || t?.context || {};
+                const ctx = {
+                    strategy: t?.strategy || c.strategy || '', regime: t?.regimeAtEntry || t?.regime || c.regime || '',
+                    direction: t?.direction || t?.side || c.direction || '', volatility: t?.volatility || c.volatility || '',
+                    liquidity: t?.liquidity || c.liquidity || '', rvolBucket: t?.rvolBucket || c.rvolBucket || '',
+                    oiBucket: t?.oiBucket || c.oiBucket || '', spreadBucket: t?.spreadBucket || c.spreadBucket || '',
+                    baseScore: t?.baseScore ?? c.score ?? t?.scoreAtEntry ?? t?.score ?? null,
+                    expectedEdgeScore: t?.expectedEdgeScore ?? c.expectedEdgeScore ?? null,
+                    decision: t?.a23Decision || c.decision || '', riskFlags: t?.riskFlags || c.riskFlags || []
+                };
+                return {
+                    source, id: t?.tradeId || t?.id || '', symbol: t?.symbol || '',
+                    openedAt: t?.openedAt || t?.openTime || 0, closedAt: t?.closedAtTs || t?.closedAt || t?.closeTime || 0,
+                    pnl: t?.pnl ?? t?.netPnl ?? 0, notional: t?.notional ?? t?.originalNotional ?? 0,
+                    ctx
+                };
+            };
+            const all = [
+                ...(exec || []).map(t => normalize(t, 'EXECUTION')),
+                ...(research || []).map(t => normalize(t, 'SHADOW')),
+                ...(active || []).map(t => normalize(t, 'SHADOW_ACTIVE'))
+            ].sort((a,b) => JSON.stringify(a).localeCompare(JSON.stringify(b)));
+            const payload = JSON.stringify({ schema: 'V8.6-A2.3.2.1-CONTEXT-AWARE', researchVersion: simState.research?.version || 'V8.6-A2.3.2', records: all });
+            let hash = 2166136261;
+            for (let i=0; i<payload.length; i++) { hash ^= payload.charCodeAt(i); hash = Math.imul(hash, 16777619); }
+            return (hash >>> 0).toString(16).padStart(8, '0');
         }
         async function persistDatasetMetadata(reason = 'UPDATE') {
             const meta = {
