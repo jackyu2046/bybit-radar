@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bybit 小幣高精度狙擊交易系統 V8.6-A2.3.2.1 Final Regression + Feature Preservation + Cloud Data Integrity — Permanent Room</title>
+    <title>Bybit 小幣高精度狙擊交易系統 V8.6-A2.3.2.2 (Permanent Room + Contextual Edge Edition)</title>
     <!-- Tailwind CSS CDN --> 
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -15,7 +15,7 @@
 
     <script>
         window.tailwind = window.tailwind || {};
-        tailwind.config = {
+        window.tailwind.config = {
             darkMode: 'class',
             theme: {
                 extend: {
@@ -41,7 +41,7 @@
     </script>
 
     <script>
-        /* Early Window Binding to prevent ReferenceError in sandboxed iframe */
+        /* Early Window Binding: 確保沙盒環境中無論任何時機點擊按鈕都不會觸發 ReferenceError */
         const earlyModalKeys = [
             'openCloudModal', 'closeCloudModal',
             'openA23LabModal', 'closeA23LabModal',
@@ -80,7 +80,7 @@
     </script>
 
     <style>
-        body { background-color: #080b11; color: #f1f5f9; }
+        body { background-color: #080b11; color: #f1f5f9; min-height: 100vh; }
         ::-webkit-scrollbar { width: 5px; height: 5px; }
         ::-webkit-scrollbar-track { background: #080b11; }
         ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 4px; }
@@ -110,7 +110,7 @@
                                 <span id="cloudRoomBadgeText">房間: radar-usr-uzk44xx</span>
                             </span>
                             <span class="text-[9px] bg-purple-500/20 text-purple-300 font-mono font-semibold px-1.5 py-0.5 rounded border border-purple-500/30" id="regimeHeaderBadge">Regime: CHOPPY</span>
-                            <span class="text-[9px] bg-rose-500/20 text-rose-300 font-mono font-semibold px-1.5 py-0.5 rounded border border-rose-500/30">V8.6-A2.3.2.1 Cloud Integrity</span>
+                            <span class="text-[9px] bg-rose-500/20 text-rose-300 font-mono font-semibold px-1.5 py-0.5 rounded border border-rose-500/30">V8.6-A2.3.2.2 Cloud Integrity</span>
                         </div>
                         <p class="text-[11px] text-slate-400 hidden sm:block">A2.3 負向邊緣剪枝 · 預期邊際評分 (EES) 重構 · 影子 A/B 雙軌校準 · 深度防禦穿價</p>
                     </div>
@@ -175,7 +175,7 @@
     </header>
 
     <main class="flex-1 p-3 md:p-5 max-w-[1750px] mx-auto w-full space-y-4">
-        <section class="bg-gradient-to-r from-slate-900 via-crypto-card to-slate-900 border border-crypto-border rounded-xl p-3 flex flex-wrap items-center justify-between gap-3 text-xs">
+        <section class="bg-gradient-to-r from-slate-900 via-crypto-card to-slate-900 border border-crypto-border rounded-xl p-3 flex flex-wrap items-center justify-between gap-3 text-xs shadow-md">
             <div class="flex items-center flex-wrap gap-3 sm:gap-4">
                 <div class="flex items-center gap-1.5">
                     <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
@@ -230,7 +230,7 @@
                 <div class="font-mono">
                     <span class="text-white font-bold">A/B Shadow Research:</span>
                     <span class="text-slate-400 ml-2">原策略 (Variant A):</span>
-                    <span id="abSummaryA" class="font-bold text-slate-300">計算中...</span>
+                    <span id="abSummaryA" class="font-bold text-slate-300">載入歷史運算中...</span>
                     <span class="text-slate-500 mx-2">|</span>
                     <span class="text-fuchsia-300 font-bold">A2.3 Filtered (Variant B):</span>
                     <span id="abSummaryB" class="font-bold text-emerald-400">計算中...</span>
@@ -261,7 +261,7 @@
             </div>
 
             <div id="simPositionsContainer" class="p-3">
-                <div class="text-center py-6 text-slate-500 text-xs font-sans">當前無任何持倉。雷達偵測到 A+ 級高精度突破訊號時將自動下單。</div>
+                <div class="text-center py-6 text-slate-500 text-xs font-sans">當前無任何持倉。雷達偵測到符合高精度訊號時將自動下單。</div>
             </div>
         </section>
 
@@ -290,7 +290,7 @@
                     <tbody id="tickerTableBody" class="divide-y divide-crypto-border/40 font-mono">
                         <tr>
                             <td colspan="8" class="py-12 text-center text-slate-500 font-sans">
-                                正在計算真實時間序列數據 (RVOL & OI Velocity)...
+                                正在連線 Bybit API 獲取真實市場行情...
                             </td>
                         </tr>
                     </tbody>
@@ -522,16 +522,16 @@
                 <div class="flex justify-between items-center"><span class="text-slate-400">連線狀態:</span><span class="font-bold text-emerald-400 font-mono" id="cloudModalStatus">已連線至雲端</span></div>
             </div>
             <div>
-                <label class="block text-slate-300 font-medium mb-1">同步房間名稱 (Room ID)</label>
+                <label class="block text-slate-300 font-medium mb-1">同步房間名稱 (Room ID - 永久鎖定)</label>
                 <div class="flex gap-2">
-                    <input type="text" id="cloudRoomInput" class="flex-1 bg-slate-900 border border-crypto-border rounded-lg px-3 py-1.5 text-white font-mono text-xs focus:outline-none focus:border-sky-500" value="radar-usr-uzk44xx">
+                    <input type="text" id="cloudRoomInput" class="flex-1 bg-slate-900 border border-crypto-border rounded-lg px-3 py-1.5 text-white font-mono text-xs focus:outline-none focus:border-sky-500" value="radar-usr-uzk44xx" readonly>
                     <button onclick="window.copyRoomIdToClipboard()" class="px-3 py-1.5 rounded-lg bg-sky-700 hover:bg-sky-600 text-white text-[11px] font-bold whitespace-nowrap">📋 複製</button>
-                    <button onclick="window.saveRoomConfig()" class="px-3 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-500 text-white text-[11px] font-bold whitespace-nowrap">儲存</button>
+                    <button onclick="window.saveRoomConfig()" class="px-3 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-500 text-white text-[11px] font-bold whitespace-nowrap">確認</button>
                 </div>
             </div>
             <div class="grid grid-cols-2 gap-2">
-                <button onclick="window.pullFromCloudForce()" class="py-2 px-2 rounded-lg bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs flex items-center justify-center gap-1 transition"><span>📥</span> 拉取合併</button>
-                <button onclick="window.pushToCloudForce()" class="py-2 px-2 rounded-lg bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs flex items-center justify-center gap-1 transition"><span>⚡</span> 強制推送</button>
+                <button onclick="window.pullFromCloudForce(false)" class="py-2 px-2 rounded-lg bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs flex items-center justify-center gap-1 transition"><span>📥</span> 手動拉取合併</button>
+                <button onclick="window.pushToCloudForce(false)" class="py-2 px-2 rounded-lg bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs flex items-center justify-center gap-1 transition"><span>⚡</span> 手動強制推送</button>
             </div>
         </div>
     </div>
@@ -929,10 +929,6 @@
             return 0;
         }
 
-        function calculateHistoricalSegmentEdge(ctx) {
-            return Math.round(a232ContextAdjustment(ctx).total);
-        }
-
         function calculateExpectedEdgeScore(baseScore, ctx) {
             const neg = evaluateNegativeEdge(ctx);
             const context = a232ContextAdjustment(ctx);
@@ -1219,7 +1215,8 @@
                     }
                 };
                 safeSetStorage(STORAGE_KEY_SIM, JSON.stringify(lightweightSimState));
-                if (syncCloud && firestoreDb) pushToCloudForce();
+                // V8.6-A2.3.2.2: Background auto-sync is 100% silent (silent = true)
+                if (syncCloud && firestoreDb) pushToCloudForce(true);
                 updateIdbStatsBadge();
             } catch (e) {
                 console.warn('LocalStorage save warning:', e);
@@ -1555,7 +1552,7 @@
             s.netPnl = s.grossPnl - fees - slippage;
             s.pnl = s.netPnl;
             s.lifecycle = 'CLOSED';
-            s.datasetVersion = 'V8.6-A2.3.2.1';
+            s.datasetVersion = 'V8.6-A2.3.2.2';
             s.metadataQuality = s.entryContext?.schema === 'A2.3-IDB' ? 'FULL_A23' : 'PARTIAL';
 
             const r = ensureResearchState();
@@ -1570,37 +1567,6 @@
             updateABComparisonStats();
         }
 
-        function saveToStorage(syncCloud = true) {
-            try {
-                ensureResearchState();
-                const lightweightSimState = {
-                    balance: simState.balance,
-                    initialBalance: simState.initialBalance,
-                    autoTrade: simState.autoTrade,
-                    maxPositions: simState.maxPositions,
-                    tradeSize: simState.tradeSize,
-                    positions: simState.positions,
-                    history: (simState.historyArchive || []).slice(0, 20),
-                    riskState: simState.riskState,
-                    research: {
-                        enabled: simState.research?.enabled ?? true,
-                        shadowNotional: simState.research?.shadowNotional ?? 10,
-                        timeoutMinutes: simState.research?.timeoutMinutes ?? 60,
-                        active: (simState.research?.active || []).slice(-35),
-                        seenSignals: simState.research?.seenSignals || {},
-                        version: 'V8.6-A2.3.2'
-                    }
-                };
-                safeSetStorage(STORAGE_KEY_SIM, JSON.stringify(lightweightSimState));
-                // V8.6-A2.3.2.2: Background auto-sync MUST BE SILENT (silent = true) to never disturb users with popups.
-                if (syncCloud && firestoreDb) pushToCloudForce(true);
-                updateIdbStatsBadge();
-            } catch (e) {
-                console.warn('LocalStorage save warning:', e);
-            }
-        }
-
-        function getTradingDayKey(ts = Date.now()) { return new Date(ts).toISOString().slice(0, 10); }
         function updateShadowTrades() {
             const r = ensureResearchState();
             const now = Date.now();
@@ -2461,12 +2427,6 @@
         let lastCloudSyncAt = 0;
         let storageHealthy = true;
 
-        /* =========================================================
-           V8.6-A2.3.2.2 — CLOUD TRANSPORT & SILENT BACKGROUND SYNC
-           1. Remove runtime settings override to eliminate host collision warnings.
-           2. Strict Single-Flight lock + cooldown to prevent concurrent WebChannel collisions.
-           3. Background auto-sync is 100% silent; alerts ONLY on manual button triggers.
-        ========================================================= */
         const CLOUD_SYNC_VERSION = 'V8.6-A2.3.2.2';
         const CLOUD_PROTOCOL = 'manifest-chunk-v3';
         const CLOUD_TIMEOUT_MS = 12000;
@@ -2475,7 +2435,6 @@
         let cloudState = 'INIT';
         let cloudRetryTimer = null;
         let cloudRetryAttempt = 0;
-        let cloudListenerStarted = false;
         let cloudLastError = null;
         let cloudPushQueued = false;
         let cloudPullQueued = false;
@@ -2614,7 +2573,6 @@
                 try {
                     const recovered = await ensureFirestoreNetwork('RETRY');
                     if (!recovered) throw new Error('Firestore network recovery failed');
-                    // Avoid target-id conflict: use standard get() without forcing server source
                     await withCloudTimeout(cloudRoomRef().get(), 'Cloud health probe', 8000);
                     cloudRetryAttempt = 0;
                     updateCloudStatus('ONLINE', '雲端連線已恢復');
@@ -2669,7 +2627,6 @@
                     appId: '1:72603303245:web:c0102b58cb20cdb663cb04'
                 });
                 firestoreDb = firebase.firestore();
-                // Deliberately no settings({ ... }) override here to prevent "overriding original host" warnings
                 enforcePermanentCloudRoomUI();
                 updateCloudStatus('CONNECTING', '等待 Firestore 回應');
                 bindCloudRoom(DEFAULT_PERMANENT_ROOM);
@@ -2682,7 +2639,6 @@
         function bindCloudRoom(roomId) {
             if (typeof cloudUnsubscribe === 'function') { try { cloudUnsubscribe(); } catch (_) {} }
             cloudUnsubscribe = null;
-            cloudListenerStarted = false;
             currentRoomId = DEFAULT_PERMANENT_ROOM;
             if (firestoreDb && roomId) updateCloudStatus('CONNECTING', 'Cloud Room 已設定；等待同步探測');
         }
@@ -2764,7 +2720,6 @@
                 cloudPushQueued = true; 
                 return false; 
             }
-            // Cooldown throttle to avoid overlapping cloud writes
             const now = Date.now();
             if (now - lastCloudOperationAt < CLOUD_OPERATION_COOLDOWN_MS) {
                 cloudPushQueued = true;
@@ -2810,7 +2765,6 @@
                 await persistDatasetMetadata('CLOUD_PUSH');
                 markCloudOnline(`同步成功：${roomData.executionCount} Execution / ${roomData.researchCount} Research`);
                 cleanupPreviousCloudChunks(room, previous.syncId, Number(previous.chunkCount || 0));
-                // Only alert if the user explicitly clicked the button (silent === false)
                 if (!silent) {
                     showNotificationModal('雲端推送成功', `完整性驗證已完成。Execution：${roomData.executionCount}；Research：${roomData.researchCount}。`);
                 }
@@ -2916,7 +2870,6 @@
                 cloudPullQueued = false;
                 await persistDatasetMetadata('CLOUD_PULL');
                 markCloudOnline(`已安全合併 Room ${roomId}`);
-                // Only alert if explicitly requested by manual user click
                 if (!silent) {
                     showNotificationModal('雲端同步成功', `完整性驗證通過。Execution ${payload.execution.length}、Research ${payload.research.length}、Active ${payload.activeResearch.length}。`);
                 }
@@ -2990,14 +2943,21 @@
             }, 1000);
         }
 
-        window.addEventListener('DOMContentLoaded', async () => {
+        /* Dual-phase bootstrap: 解決沙盒環境 DOMContentLoaded 提早觸發導致永遠不渲染的問題 */
+        async function bootApp() {
             await initStorageWithIndexedDB();
             await persistDatasetMetadata('STARTUP');
             initFirebaseSync();
             setTimeout(() => { if (firestoreDb) pullFromCloudForce(true); }, 350);
             fetchMarketData();
             initTimer();
-        });
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', bootApp);
+        } else {
+            bootApp();
+        }
     </script>
 </body>
 </html>
