@@ -1570,6 +1570,37 @@
             updateABComparisonStats();
         }
 
+        function saveToStorage(syncCloud = true) {
+            try {
+                ensureResearchState();
+                const lightweightSimState = {
+                    balance: simState.balance,
+                    initialBalance: simState.initialBalance,
+                    autoTrade: simState.autoTrade,
+                    maxPositions: simState.maxPositions,
+                    tradeSize: simState.tradeSize,
+                    positions: simState.positions,
+                    history: (simState.historyArchive || []).slice(0, 20),
+                    riskState: simState.riskState,
+                    research: {
+                        enabled: simState.research?.enabled ?? true,
+                        shadowNotional: simState.research?.shadowNotional ?? 10,
+                        timeoutMinutes: simState.research?.timeoutMinutes ?? 60,
+                        active: (simState.research?.active || []).slice(-35),
+                        seenSignals: simState.research?.seenSignals || {},
+                        version: 'V8.6-A2.3.2'
+                    }
+                };
+                safeSetStorage(STORAGE_KEY_SIM, JSON.stringify(lightweightSimState));
+                // V8.6-A2.3.2.2: Background auto-sync MUST BE SILENT (silent = true) to never disturb users with popups.
+                if (syncCloud && firestoreDb) pushToCloudForce(true);
+                updateIdbStatsBadge();
+            } catch (e) {
+                console.warn('LocalStorage save warning:', e);
+            }
+        }
+
+        function getTradingDayKey(ts = Date.now()) { return new Date(ts).toISOString().slice(0, 10); }
         function updateShadowTrades() {
             const r = ensureResearchState();
             const now = Date.now();
@@ -1760,6 +1791,7 @@
             simState.history = simState.historyArchive.slice(0, 30);
             if (idbInstance) await idbPutRecord(IDB_STORE_EXECUTION, trade);
             recordRiskOutcome(trade, false);
+            // Save state and trigger silent cloud replication
             saveToStorage(true);
             renderSimPositions();
             updateSimHeaderStats();
@@ -2430,12 +2462,16 @@
         let storageHealthy = true;
 
         /* =========================================================
-           V8.6-A2.3.2.1 — FIREBASE RESILIENCE + CLOUD SYNC INTEGRITY
+           V8.6-A2.3.2.2 — CLOUD TRANSPORT & SILENT BACKGROUND SYNC
+           1. Remove runtime settings override to eliminate host collision warnings.
+           2. Strict Single-Flight lock + cooldown to prevent concurrent WebChannel collisions.
+           3. Background auto-sync is 100% silent; alerts ONLY on manual button triggers.
         ========================================================= */
-        const CLOUD_SYNC_VERSION = 'V8.6-A2.3.2.1';
+        const CLOUD_SYNC_VERSION = 'V8.6-A2.3.2.2';
         const CLOUD_PROTOCOL = 'manifest-chunk-v3';
         const CLOUD_TIMEOUT_MS = 12000;
         const CLOUD_RETRY_DELAYS = [5000, 10000, 20000, 40000, 60000];
+        const CLOUD_OPERATION_COOLDOWN_MS = 4000;
         let cloudState = 'INIT';
         let cloudRetryTimer = null;
         let cloudRetryAttempt = 0;
@@ -2443,7 +2479,7 @@
         let cloudLastError = null;
         let cloudPushQueued = false;
         let cloudPullQueued = false;
-        let firestoreConfigured = false;
+        let lastCloudOperationAt = 0;
 
         function stableHash(input) {
             const str = typeof input === 'string' ? input : JSON.stringify(input);
@@ -2633,18 +2669,10 @@
                     appId: '1:72603303245:web:c0102b58cb20cdb663cb04'
                 });
                 firestoreDb = firebase.firestore();
-                if (!firestoreConfigured) {
-                    try {
-                        firestoreDb.settings({ experimentalAutoDetectLongPolling: true, merge: true });
-                        firestoreConfigured = true;
-                    } catch (settingsErr) {
-                        console.warn('[Cloud] Firestore transport settings skipped', settingsErr);
-                    }
-                }
+                // Deliberately no settings({ ... }) override here to prevent "overriding original host" warnings
                 enforcePermanentCloudRoomUI();
                 updateCloudStatus('CONNECTING', '等待 Firestore 回應');
                 bindCloudRoom(DEFAULT_PERMANENT_ROOM);
-                // Do NOT call scheduleCloudRetry probe here to prevent concurrent WebChannel target collisions with pullFromCloudForce
             } catch (err) {
                 console.warn('[Cloud] init failed', err);
                 markCloudFailure(err, 'INIT');
@@ -2726,12 +2754,32 @@
         }
 
         async function pushToCloudForce(silent = false) {
-            if (!firestoreDb) { cloudPushQueued = true; updateCloudStatus('OFFLINE', 'Firebase 尚未建立；已保留本機資料'); if (!silent) showNotificationModal('雲端未連線', '資料仍安全保留於本機 IndexedDB，系統會在連線恢復後重試。'); return false; }
-            if (isSyncing) { cloudPushQueued = true; return false; }
-            if (!isNetworkLikelyAvailable()) { cloudPushQueued = true; markCloudFailure(new Error('Browser offline'), 'PUSH'); return false; }
+            if (!firestoreDb) { 
+                cloudPushQueued = true; 
+                updateCloudStatus('OFFLINE', 'Firebase 尚未建立；已保留本機資料'); 
+                if (!silent) showNotificationModal('雲端未連線', '資料仍安全保留於本機 IndexedDB，系統會在連線恢復後重試。'); 
+                return false; 
+            }
+            if (isSyncing) { 
+                cloudPushQueued = true; 
+                return false; 
+            }
+            // Cooldown throttle to avoid overlapping cloud writes
+            const now = Date.now();
+            if (now - lastCloudOperationAt < CLOUD_OPERATION_COOLDOWN_MS) {
+                cloudPushQueued = true;
+                return false;
+            }
+            if (!isNetworkLikelyAvailable()) { 
+                cloudPushQueued = true; 
+                markCloudFailure(new Error('Browser offline'), 'PUSH'); 
+                return false; 
+            }
+
             isSyncing = true;
+            lastCloudOperationAt = now;
             try {
-                updateCloudStatus('CONNECTING', '正在恢復 Firestore 網路並安全推送');
+                updateCloudStatus('CONNECTING', '正在安全推送雲端快照');
                 const recovered = await ensureFirestoreNetwork('PUSH');
                 if (!recovered) throw new Error('Firestore 暫時處於 offline 狀態；已排入自動重試');
                 const roomId = getActiveRoomIdFromUI();
@@ -2757,18 +2805,24 @@
                 };
                 await writeCloudChunks(room, syncId, chunks);
                 await commitCloudManifestLast(room, roomData);
-                lastCloudSyncAt = Date.now(); cloudPushQueued = false;
+                lastCloudSyncAt = Date.now(); 
+                cloudPushQueued = false;
                 await persistDatasetMetadata('CLOUD_PUSH');
                 markCloudOnline(`同步成功：${roomData.executionCount} Execution / ${roomData.researchCount} Research`);
                 cleanupPreviousCloudChunks(room, previous.syncId, Number(previous.chunkCount || 0));
-                if (!silent) showNotificationModal('雲端推送成功', `完整性驗證已完成。Execution：${roomData.executionCount}；Research：${roomData.researchCount}。`);
+                // Only alert if the user explicitly clicked the button (silent === false)
+                if (!silent) {
+                    showNotificationModal('雲端推送成功', `完整性驗證已完成。Execution：${roomData.executionCount}；Research：${roomData.researchCount}。`);
+                }
                 return true;
             } catch (err) {
                 console.error('[Cloud] push failed', err);
                 cloudPushQueued = true;
                 cloudLastError = err;
                 updateCloudStatus(isNetworkLikelyAvailable() ? 'RETRYING' : 'OFFLINE', cloudErrorMessage(err));
-                if (!silent) showNotificationModal('雲端推送失敗', `${cloudErrorMessage(err)}。本機 IndexedDB 未被修改，系統將自動重試。`);
+                if (!silent) {
+                    showNotificationModal('雲端推送失敗', `${cloudErrorMessage(err)}。本機 IndexedDB 未被修改，系統將自動重試。`);
+                }
                 return false;
             } finally {
                 isSyncing = false;
@@ -2821,12 +2875,31 @@
         }
 
         async function pullFromCloudForce(silent = false) {
-            if (!firestoreDb) { cloudPullQueued = true; updateCloudStatus('OFFLINE', 'Firebase 尚未建立；本機資料保持不變'); if (!silent) showNotificationModal('雲端未連線', '本機 IndexedDB 保持完整，稍後會自動重試。'); return false; }
-            if (isSyncing) { cloudPullQueued = true; return false; }
-            if (!isNetworkLikelyAvailable()) { cloudPullQueued = true; markCloudFailure(new Error('Browser offline'), 'PULL'); return false; }
+            if (!firestoreDb) { 
+                cloudPullQueued = true; 
+                updateCloudStatus('OFFLINE', 'Firebase 尚未建立；本機資料保持不變'); 
+                if (!silent) showNotificationModal('雲端未連線', '本機 IndexedDB 保持完整，稍後會自動重試。'); 
+                return false; 
+            }
+            if (isSyncing) { 
+                cloudPullQueued = true; 
+                return false; 
+            }
+            const now = Date.now();
+            if (now - lastCloudOperationAt < CLOUD_OPERATION_COOLDOWN_MS) {
+                cloudPullQueued = true;
+                return false;
+            }
+            if (!isNetworkLikelyAvailable()) { 
+                cloudPullQueued = true; 
+                markCloudFailure(new Error('Browser offline'), 'PULL'); 
+                return false; 
+            }
+
             isSyncing = true;
+            lastCloudOperationAt = now;
             try {
-                updateCloudStatus('CONNECTING', '正在恢復 Firestore 網路並驗證雲端 Manifest');
+                updateCloudStatus('CONNECTING', '正在驗證雲端 Manifest 並合併');
                 const recovered = await ensureFirestoreNetwork('PULL');
                 if (!recovered) throw new Error('Firestore 暫時處於 offline 狀態；已排入自動重試');
                 const roomId = getActiveRoomIdFromUI();
@@ -2839,17 +2912,23 @@
                 const meta = snap.data() || {};
                 const payload = await readCommittedCloudPayload(room, meta);
                 await mergeCloudPayload(payload);
-                lastCloudSyncAt = Date.now(); cloudPullQueued = false;
+                lastCloudSyncAt = Date.now(); 
+                cloudPullQueued = false;
                 await persistDatasetMetadata('CLOUD_PULL');
                 markCloudOnline(`已安全合併 Room ${roomId}`);
-                if (!silent) showNotificationModal('雲端同步成功', `完整性驗證通過。Execution ${payload.execution.length}、Research ${payload.research.length}、Active ${payload.activeResearch.length}。`);
+                // Only alert if explicitly requested by manual user click
+                if (!silent) {
+                    showNotificationModal('雲端同步成功', `完整性驗證通過。Execution ${payload.execution.length}、Research ${payload.research.length}、Active ${payload.activeResearch.length}。`);
+                }
                 return true;
             } catch (err) {
                 console.error('[Cloud] pull failed', err);
                 cloudPullQueued = true;
                 cloudLastError = err;
                 updateCloudStatus(isNetworkLikelyAvailable() ? 'RETRYING' : 'OFFLINE', cloudErrorMessage(err));
-                if (!silent) showNotificationModal('雲端同步失敗', `${cloudErrorMessage(err)}。本機資料完全保留，系統將自動重試。`);
+                if (!silent) {
+                    showNotificationModal('雲端同步失敗', `${cloudErrorMessage(err)}。本機資料完全保留，系統將自動重試。`);
+                }
                 return false;
             } finally {
                 isSyncing = false;
