@@ -2439,6 +2439,15 @@
             for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); }
             return (h >>> 0).toString(16);
         }
+        // V8.6-A2.3.2.1: current context-aware checksum.
+        // Keep a legacy V2/V8.6-A2.3.2 verifier so an older committed Room snapshot
+        // can still be read safely and migrated forward instead of being rejected.
+        function legacyDatasetChecksum(exec = [], research = [], active = []) {
+            const e = (exec || []).map(x => `${x.tradeId || x.id}|${x.closedAtTs || x.closedAt || ''}|${x.pnl ?? x.netPnl ?? 0}`).sort();
+            const r = (research || []).map(x => `${x.id}|${x.closedAt || x.openedAt || ''}|${x.pnl ?? x.netPnl ?? 0}`).sort();
+            const a = (active || []).map(x => `${x.id}|${x.openedAt || ''}|${x.entryPrice || ''}|${x.currentPrice || ''}`).sort();
+            return stableHash({ e, r, a });
+        }
         function datasetChecksum(exec = simState.historyArchive || [], research = simState.research?.archive || [], active = simState.research?.active || []) {
             const normalize = (t, source) => {
                 const c = t?.entryContext || t?.context || {};
@@ -2602,15 +2611,10 @@
                     appId: '1:72603303245:web:c0102b58cb20cdb663cb04'
                 });
                 firestoreDb = firebase.firestore();
-                // Improve compatibility with restrictive proxies/VPNs/firewalls. This must be
-                // configured immediately after creating the Firestore instance, before any reads.
-                try {
-                    if (typeof firestoreDb.settings === 'function') {
-                        firestoreDb.settings({ experimentalAutoDetectLongPolling: true });
-                    }
-                } catch (settingsErr) {
-                    console.warn('[Cloud] long-polling compatibility setting unavailable', settingsErr);
-                }
+                // Do not mutate Firestore host/settings here. Firebase v8 can emit
+                // "overriding the original host" warnings when settings() is applied
+                // after the Firestore singleton has been touched. Network recovery below
+                // uses the supported enableNetwork()/disableNetwork() path instead.
                 enforcePermanentCloudRoomUI();
                 updateCloudStatus('CONNECTING', '等待 Firestore 回應');
                 bindCloudRoom(DEFAULT_PERMANENT_ROOM);
@@ -2775,10 +2779,24 @@
                 });
             }
             const remoteHash = datasetChecksum(payload.execution, payload.research, payload.activeResearch);
-            if (!meta.checksum || remoteHash !== meta.checksum) throw new Error('雲端資料 Checksum 驗證失敗；已拒絕變更本機資料');
+            const legacyHash = legacyDatasetChecksum(payload.execution, payload.research, payload.activeResearch);
+            let checksumMode = 'CURRENT';
+            if (!meta.checksum || remoteHash !== meta.checksum) {
+                // Backward-compatible read-only verification for the previous V2 checksum.
+                // It is safe because the payload has already passed chunk/schema/count checks;
+                // a matching legacy hash proves the snapshot was produced by the older protocol.
+                if (meta.checksum && legacyHash === meta.checksum) {
+                    checksumMode = 'LEGACY_V2';
+                    console.warn('[Cloud] legacy checksum accepted; next successful push will migrate the Room');
+                } else {
+                    throw new Error('雲端資料 Checksum 驗證失敗；已拒絕變更本機資料');
+                }
+            }
             if (Number(meta.executionCount) !== payload.execution.length || Number(meta.researchCount) !== payload.research.length || Number(meta.activeResearchCount) !== payload.activeResearch.length) {
                 throw new Error('雲端資料 Count 驗證失敗；已拒絕變更本機資料');
             }
+            payload._cloudChecksumMode = checksumMode;
+            payload._cloudMeta = meta;
             return payload;
         }
         async function pullFromCloudForce(silent = false) {
