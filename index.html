@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bybit 小幣高精度狙擊交易系統 V8.6-A2.3.2.5 (Final Cloud Atomic Commit & Transactional Revision)</title>
+    <title>Bybit 小幣高精度狙擊交易系統 V8.6-A2.3.2.6 (Cloud Payload-Safe Atomic Commit)</title>
     <!-- Tailwind CSS CDN --> 
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -109,7 +109,7 @@
                                 <span id="cloudRoomBadgeText">房間: radar-usr-uzk44xx</span>
                             </span>
                             <span class="text-[9px] bg-purple-500/20 text-purple-300 font-mono font-semibold px-1.5 py-0.5 rounded border border-purple-500/30" id="regimeHeaderBadge">Regime: CHOPPY</span>
-                            <span class="text-[9px] bg-emerald-500/20 text-emerald-300 font-mono font-semibold px-1.5 py-0.5 rounded border border-emerald-500/30">V8.6-A2.3.2.5 Atomic Commit</span>
+                            <span class="text-[9px] bg-emerald-500/20 text-emerald-300 font-mono font-semibold px-1.5 py-0.5 rounded border border-emerald-500/30">V8.6-A2.3.2.6 Payload-Safe Atomic Commit</span>
                         </div>
                         <p class="text-[11px] text-slate-400 hidden sm:block">A2.3 負向邊緣剪枝 · 預期邊際評分 (EES) 重構 · 影子 A/B 雙軌校準 · Transactional Revision 防護</p>
                     </div>
@@ -2503,7 +2503,7 @@
         const currentDeviceId = getOrCreateDeviceId();
         let lastKnownCloudRevision = 0;
 
-        const CLOUD_SYNC_VERSION = 'V8.6-A2.3.2.5';
+        const CLOUD_SYNC_VERSION = 'V8.6-A2.3.2.6';
         const CLOUD_PROTOCOL = 'manifest-chunk-v3';
         const CLOUD_TIMEOUT_MS = 12000;
         const CLOUD_RETRY_DELAYS = [5000, 10000, 20000, 40000, 60000];
@@ -2646,12 +2646,47 @@
         }
 
         function cloudRoomRef() { return firestoreDb.collection('bybit_sync_rooms').doc(currentRoomId); }
-        function chunkPayload(items, maxBytes = 650000) {
-            const chunks = []; let current = []; let size = 2;
+
+        /*
+           V8.6-A2.3.2.6 Cloud Payload-Safe Transport
+           Firestore 的硬上限是「單次 API request」而不只是 operation 數。
+           舊版只限制 400 writes，當 18~20 個約 650KB chunk 同批提交時，仍可能
+           形成 >10MiB request。此版本改為：
+           1) chunk 目標降至 320KiB；
+           2) batch 同時受 operation 數與估算 UTF-8 bytes 限制；
+           3) 單一 document 超過安全上限立即拒絕，不進入無限 retry。
+        */
+        const CLOUD_CHUNK_TARGET_BYTES = 320 * 1024;
+        const CLOUD_MAX_DOCUMENT_BYTES = 800 * 1024;
+        const CLOUD_MAX_BATCH_BYTES = 6 * 1024 * 1024;
+        const CLOUD_BATCH_FIXED_OVERHEAD_BYTES = 2048;
+        const CLOUD_MAX_BATCH_OPS = 100;
+
+        function utf8ByteLength(value) {
+            const str = typeof value === 'string' ? value : JSON.stringify(value);
+            if (typeof TextEncoder !== 'undefined') return new TextEncoder().encode(str).length;
+            return unescape(encodeURIComponent(str)).length;
+        }
+
+        function chunkPayload(items, maxBytes = CLOUD_CHUNK_TARGET_BYTES) {
+            const chunks = [];
+            let current = [];
+            let size = 2;
             for (const item of items) {
                 const encoded = JSON.stringify(item);
-                if (current.length && size + encoded.length + 1 > maxBytes) { chunks.push(current); current = []; size = 2; }
-                current.push(item); size += encoded.length + 1;
+                const encodedBytes = utf8ByteLength(encoded);
+                if (encodedBytes + CLOUD_BATCH_FIXED_OVERHEAD_BYTES > CLOUD_MAX_DOCUMENT_BYTES) {
+                    const err = new Error(`CLOUD_DOCUMENT_TOO_LARGE: single record is ${encodedBytes} bytes`);
+                    err.code = 'CLOUD_DOCUMENT_TOO_LARGE';
+                    throw err;
+                }
+                if (current.length && size + encodedBytes + 1 > maxBytes) {
+                    chunks.push(current);
+                    current = [];
+                    size = 2;
+                }
+                current.push(item);
+                size += encodedBytes + 1;
             }
             if (current.length) chunks.push(current);
             return chunks;
@@ -2687,8 +2722,14 @@
             if (btn) btn.title = detail || cloudStateLabel(state);
         }
 
+        function isCloudPayloadSizeError(err) {
+            const msg = String(err?.message || err || '');
+            return /request payload size|payload size.*(exceed|limit)|exceeds the limit|maximum.*(request|payload).*bytes|too large.*(request|payload)/i.test(msg);
+        }
+
         function cloudErrorMessage(err) {
             const msg = String(err?.message || err || 'Unknown cloud error');
+            if (isCloudPayloadSizeError(err)) return 'Firestore 批次請求過大，已停止重試；系統會改用較小分批傳輸';
             if (/deadline|timeout|timed out|backend.*respond|offline|network|unavailable/i.test(msg)) return 'Firestore 暫時無法連線或回應逾時';
             return msg;
         }
@@ -2851,18 +2892,44 @@
         }
 
         async function writeCloudChunks(room, syncId, chunks) {
-            const maxChunkOpsPerBatch = 400;
-            for (let start = 0; start < chunks.length; start += maxChunkOpsPerBatch) {
-                const batch = firestoreDb.batch();
-                const end = Math.min(start + maxChunkOpsPerBatch, chunks.length);
-                for (let i = start; i < end; i++) {
-                    batch.set(room.collection('archives').doc(`${syncId}_${i}`), {
-                        syncId, index: i, payload: JSON.stringify(chunks[i]), updatedAt: Date.now(),
-                        protocol: CLOUD_PROTOCOL
-                    });
+            let batch = firestoreDb.batch();
+            let batchOps = 0;
+            let batchBytes = CLOUD_BATCH_FIXED_OVERHEAD_BYTES;
+            let batchNumber = 0;
+
+            const commitBatch = async () => {
+                if (!batchOps) return;
+                batchNumber++;
+                const pending = batch;
+                batch = firestoreDb.batch();
+                batchOps = 0;
+                batchBytes = CLOUD_BATCH_FIXED_OVERHEAD_BYTES;
+                await withCloudTimeout(pending.commit(), `Cloud chunk batch ${batchNumber}`, CLOUD_TIMEOUT_MS * 2);
+            };
+
+            for (let i = 0; i < chunks.length; i++) {
+                const payload = JSON.stringify(chunks[i]);
+                const docData = {
+                    syncId, index: i, payload, updatedAt: Date.now(), protocol: CLOUD_PROTOCOL
+                };
+                const docBytes = utf8ByteLength(payload) + utf8ByteLength(syncId) + 256;
+
+                if (docBytes > CLOUD_MAX_DOCUMENT_BYTES) {
+                    const err = new Error(`CLOUD_DOCUMENT_TOO_LARGE: chunk ${i} is ${docBytes} bytes`);
+                    err.code = 'CLOUD_DOCUMENT_TOO_LARGE';
+                    throw err;
                 }
-                await withCloudTimeout(batch.commit(), `Cloud chunk batch ${start / maxChunkOpsPerBatch + 1}`, CLOUD_TIMEOUT_MS * 2);
+
+                if (batchOps > 0 && (batchOps >= CLOUD_MAX_BATCH_OPS || batchBytes + docBytes > CLOUD_MAX_BATCH_BYTES)) {
+                    await commitBatch();
+                }
+
+                batch.set(room.collection('archives').doc(`${syncId}_${i}`), docData);
+                batchOps++;
+                batchBytes += docBytes;
             }
+
+            await commitBatch();
         }
 
         async function commitCloudManifestAtomic(room, roomData, expectedRemoteRevision) {
@@ -2883,9 +2950,12 @@
         async function cleanupPreviousCloudChunks(room, previousSyncId, previousChunkCount) {
             if (!previousSyncId || !Number.isFinite(Number(previousChunkCount)) || previousChunkCount <= 0) return;
             try {
-                for (let start = 0; start < previousChunkCount; start += 400) {
+                /* Delete requests are tiny, but keep a conservative op cap so cleanup cannot
+                   become the next oversized batch as the archive grows. */
+                const maxDeleteOpsPerBatch = 100;
+                for (let start = 0; start < previousChunkCount; start += maxDeleteOpsPerBatch) {
                     const batch = firestoreDb.batch();
-                    const end = Math.min(start + 400, previousChunkCount);
+                    const end = Math.min(start + maxDeleteOpsPerBatch, previousChunkCount);
                     for (let i = start; i < end; i++) batch.delete(room.collection('archives').doc(`${previousSyncId}_${i}`));
                     await batch.commit();
                 }
@@ -2977,6 +3047,20 @@
                 }
                 return true;
             } catch (err) {
+                /* V8.6-A2.3.2.6: payload/document size is deterministic, not transient.
+                   Do not queue another automatic retry and spam the console. */
+                if (err?.code === 'CLOUD_DOCUMENT_TOO_LARGE' || isCloudPayloadSizeError(err)) {
+                    cloudPushQueued = false;
+                    cloudLastError = err;
+                    clearCloudRetry();
+                    updateCloudStatus('ERROR', cloudErrorMessage(err));
+                    console.error('[Cloud] push rejected: payload too large; retry disabled', err);
+                    if (!silent) {
+                        showNotificationModal('雲端批次過大', `${cloudErrorMessage(err)}。本機 IndexedDB 未被修改；下次推送會使用較小分批。`);
+                    }
+                    return false;
+                }
+
                 // 核心補強：若發生跨設備微秒級碰撞 (CONCURRENCY_REVISION_MISMATCH)，自動拉取新版合併並重試
                 if (err?.code === 'CONCURRENCY_REVISION_MISMATCH' && retryAttempts < 3) {
                     console.warn(`[Cloud Concurrency] 偵測到並行衝突！雲端已由其他裝置搶先寫入，正在執行自動融合重試 (${retryAttempts + 1}/3)...`);
