@@ -2503,7 +2503,7 @@
         const currentDeviceId = getOrCreateDeviceId();
         let lastKnownCloudRevision = 0;
 
-        const CLOUD_SYNC_VERSION = 'V8.6-A2.3.2.8';
+        const CLOUD_SYNC_VERSION = 'V8.6-A2.3.2.9';
         const CLOUD_PROTOCOL = 'manifest-chunk-v3';
         const CLOUD_TIMEOUT_MS = 12000;
         const CLOUD_RETRY_DELAYS = [5000, 10000, 20000, 40000, 60000];
@@ -2887,10 +2887,10 @@
                     appId: '1:72603303245:web:c0102b58cb20cdb663cb04'
                 });
                 firestoreDb = firebase.firestore();
-                /* V8.6-A2.3.2.8: use long-polling for the known WebChannel closure
+                /* V8.6-A2.3.2.9: merge Firestore settings while enabling long-polling for the known WebChannel closure
                    seen with Firebase 8.10.1. Do not combine with auto-detect. */
                 if (typeof firestoreDb.settings === 'function') {
-                    firestoreDb.settings({ experimentalForceLongPolling: true });
+                    firestoreDb.settings({ merge: true, experimentalForceLongPolling: true });
                 }
                 console.info('[Cloud] Firestore transport:', CLOUD_FIRESTORE_TRANSPORT);
                 enforcePermanentCloudRoomUI();
