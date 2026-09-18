@@ -2503,11 +2503,15 @@
         const currentDeviceId = getOrCreateDeviceId();
         let lastKnownCloudRevision = 0;
 
-        const CLOUD_SYNC_VERSION = 'V8.6-A2.3.2.6';
+        const CLOUD_SYNC_VERSION = 'V8.6-A2.3.2.7';
         const CLOUD_PROTOCOL = 'manifest-chunk-v3';
         const CLOUD_TIMEOUT_MS = 12000;
         const CLOUD_RETRY_DELAYS = [5000, 10000, 20000, 40000, 60000];
         const CLOUD_OPERATION_COOLDOWN_MS = 4000;
+        /* V8.6-A2.3.2.7: Firestore WebChannel resilience. Firebase 8.10.1 supports
+           experimentalForceLongPolling and requires settings() before other Firestore calls. */
+        const CLOUD_FIRESTORE_TRANSPORT = 'FORCE_LONG_POLLING';
+        const CLOUD_TRANSPORT_RECOVERY_COOLDOWN_MS = 15000;
         let cloudState = 'INIT';
         let cloudRetryTimer = null;
         let cloudRetryAttempt = 0;
@@ -2515,6 +2519,8 @@
         let cloudPushQueued = false;
         let cloudPullQueued = false;
         let lastCloudOperationAt = 0;
+        let cloudTransportRecoveryPromise = null;
+        let lastCloudTransportRecoveryAt = 0;
 
         function stableHash(input) {
             const str = typeof input === 'string' ? input : JSON.stringify(input);
@@ -2727,9 +2733,45 @@
             return /request payload size|payload size.*(exceed|limit)|exceeds the limit|maximum.*(request|payload).*bytes|too large.*(request|payload)/i.test(msg);
         }
 
+        function isCloudTransportError(err) {
+            const msg = String(err?.message || err || '');
+            const code = String(err?.code || '');
+            return /ERR_CONNECTION_CLOSED|INTERNAL ASSERTION FAILED|Unexpected state|WebChannelConnection|WebChannel|channelrequest|webchannelbase|transport errored|connection closed|Could not reach Cloud Firestore backend|Failed to fetch|network request failed/i.test(`${code} ${msg}`);
+        }
+
+        async function recoverFirestoreTransport(reason = 'TRANSPORT') {
+            if (!firestoreDb || !isNetworkLikelyAvailable()) return false;
+            if (cloudTransportRecoveryPromise) return cloudTransportRecoveryPromise;
+            const now = Date.now();
+            if (now - lastCloudTransportRecoveryAt < CLOUD_TRANSPORT_RECOVERY_COOLDOWN_MS) return true;
+
+            cloudTransportRecoveryPromise = (async () => {
+                lastCloudTransportRecoveryAt = Date.now();
+                try {
+                    console.warn(`[Cloud] rebuilding Firestore transport (${reason})`);
+                    if (typeof firestoreDb.disableNetwork === 'function') {
+                        await withCloudTimeout(firestoreDb.disableNetwork(), `Firestore transport reset (${reason})`, 8000);
+                    }
+                    await new Promise(resolve => setTimeout(resolve, 250));
+                    if (typeof firestoreDb.enableNetwork === 'function') {
+                        await withCloudTimeout(firestoreDb.enableNetwork(), `Firestore transport restore (${reason})`, 8000);
+                    }
+                    return true;
+                } catch (err) {
+                    cloudLastError = err;
+                    console.warn('[Cloud] Firestore transport recovery failed', err);
+                    return false;
+                } finally {
+                    cloudTransportRecoveryPromise = null;
+                }
+            })();
+            return cloudTransportRecoveryPromise;
+        }
+
         function cloudErrorMessage(err) {
             const msg = String(err?.message || err || 'Unknown cloud error');
             if (isCloudPayloadSizeError(err)) return 'Firestore 批次請求過大，已停止重試；系統會改用較小分批傳輸';
+            if (isCloudTransportError(err)) return 'Firestore WebChannel 連線中斷，正在重建長輪詢傳輸通道';
             if (/deadline|timeout|timed out|backend.*respond|offline|network|unavailable/i.test(msg)) return 'Firestore 暫時無法連線或回應逾時';
             return msg;
         }
@@ -2769,6 +2811,7 @@
                     if (cloudPushQueued) { cloudPushQueued = false; await pushToCloudForce(true); }
                 } catch (err) {
                     cloudLastError = err;
+                    if (isCloudTransportError(err)) await recoverFirestoreTransport(`RETRY:${reason}`);
                     scheduleCloudRetry(reason);
                 }
             }, delay);
@@ -2823,9 +2866,15 @@
                     appId: '1:72603303245:web:c0102b58cb20cdb663cb04'
                 });
                 firestoreDb = firebase.firestore();
+                /* V8.6-A2.3.2.7: use long-polling for the known WebChannel closure
+                   seen with Firebase 8.10.1. Do not combine with auto-detect. */
+                if (typeof firestoreDb.settings === 'function') {
+                    firestoreDb.settings({ experimentalForceLongPolling: true });
+                }
+                console.info('[Cloud] Firestore transport:', CLOUD_FIRESTORE_TRANSPORT);
                 enforcePermanentCloudRoomUI();
                 bindCloudRoom(DEFAULT_PERMANENT_ROOM);
-                updateCloudStatus('CONNECTING', '等待 Firestore 回應');
+                updateCloudStatus('CONNECTING', '等待 Firestore 回應（Long Polling）');
                 scheduleCloudRetry('INIT_PROBE');
             } catch (err) {
                 console.warn('[Cloud] init failed', err);
@@ -3061,6 +3110,17 @@
                     return false;
                 }
 
+                /* V8.6-A2.3.2.7: WebChannel/transport failures are transient.
+                   Rebuild the Firestore network channel once, then let the normal retry
+                   queue continue. No local dataset mutation occurs here. */
+                if (isCloudTransportError(err)) {
+                    cloudPushQueued = true;
+                    cloudLastError = err;
+                    updateCloudStatus(isNetworkLikelyAvailable() ? 'RETRYING' : 'OFFLINE', cloudErrorMessage(err));
+                    await recoverFirestoreTransport(`PUSH:${retryAttempts}`);
+                    return false;
+                }
+
                 // 核心補強：若發生跨設備微秒級碰撞 (CONCURRENCY_REVISION_MISMATCH)，自動拉取新版合併並重試
                 if (err?.code === 'CONCURRENCY_REVISION_MISMATCH' && retryAttempts < 3) {
                     console.warn(`[Cloud Concurrency] 偵測到並行衝突！雲端已由其他裝置搶先寫入，正在執行自動融合重試 (${retryAttempts + 1}/3)...`);
@@ -3225,6 +3285,7 @@
                 console.error('[Cloud] pull failed', err);
                 cloudPullQueued = true;
                 cloudLastError = err;
+                if (isCloudTransportError(err)) await recoverFirestoreTransport('PULL');
                 updateCloudStatus(isNetworkLikelyAvailable() ? 'RETRYING' : 'OFFLINE', cloudErrorMessage(err));
                 if (!silent) {
                     showNotificationModal('雲端同步失敗', `${cloudErrorMessage(err)}。本機資料完全保留，系統將自動重試。`);
