@@ -2503,12 +2503,12 @@
         const currentDeviceId = getOrCreateDeviceId();
         let lastKnownCloudRevision = 0;
 
-        const CLOUD_SYNC_VERSION = 'V8.6-A2.3.2.7';
+        const CLOUD_SYNC_VERSION = 'V8.6-A2.3.2.8';
         const CLOUD_PROTOCOL = 'manifest-chunk-v3';
         const CLOUD_TIMEOUT_MS = 12000;
         const CLOUD_RETRY_DELAYS = [5000, 10000, 20000, 40000, 60000];
         const CLOUD_OPERATION_COOLDOWN_MS = 4000;
-        /* V8.6-A2.3.2.7: Firestore WebChannel resilience. Firebase 8.10.1 supports
+        /* V8.6-A2.3.2.8: Firestore WebChannel resilience. Firebase 8.10.1 supports
            experimentalForceLongPolling and requires settings() before other Firestore calls. */
         const CLOUD_FIRESTORE_TRANSPORT = 'FORCE_LONG_POLLING';
         const CLOUD_TRANSPORT_RECOVERY_COOLDOWN_MS = 15000;
@@ -2739,6 +2739,16 @@
             return /ERR_CONNECTION_CLOSED|INTERNAL ASSERTION FAILED|Unexpected state|WebChannelConnection|WebChannel|channelrequest|webchannelbase|transport errored|connection closed|Could not reach Cloud Firestore backend|Failed to fetch|network request failed/i.test(`${code} ${msg}`);
         }
 
+        /* V8.6-A2.3.2.8: Integrity failures are deterministic data/schema problems.
+           They must NOT enter the transport retry loop, otherwise a legacy/corrupt
+           manifest can create an endless pull -> retry -> pull storm (as observed in
+           the browser console). Local IndexedDB is intentionally left untouched. */
+        function isCloudIntegrityError(err) {
+            const msg = String(err?.message || err || '');
+            const code = String(err?.code || '');
+            return /MANIFEST|Manifest|Checksum|checksum|Count 驗證失敗|Payload Schema|Schema 無效|JSON 損毀|缺少已提交雲端區塊|資料.*完整性|校驗碼|protocol 不匹配/i.test(`${code} ${msg}`);
+        }
+
         async function recoverFirestoreTransport(reason = 'TRANSPORT') {
             if (!firestoreDb || !isNetworkLikelyAvailable()) return false;
             if (cloudTransportRecoveryPromise) return cloudTransportRecoveryPromise;
@@ -2772,6 +2782,7 @@
             const msg = String(err?.message || err || 'Unknown cloud error');
             if (isCloudPayloadSizeError(err)) return 'Firestore 批次請求過大，已停止重試；系統會改用較小分批傳輸';
             if (isCloudTransportError(err)) return 'Firestore WebChannel 連線中斷，正在重建長輪詢傳輸通道';
+            if (isCloudIntegrityError(err)) return 'Firestore Manifest／資料完整性驗證失敗，已停止自動重試；本機資料保持不變';
             if (/deadline|timeout|timed out|backend.*respond|offline|network|unavailable/i.test(msg)) return 'Firestore 暫時無法連線或回應逾時';
             return msg;
         }
@@ -2811,6 +2822,16 @@
                     if (cloudPushQueued) { cloudPushQueued = false; await pushToCloudForce(true); }
                 } catch (err) {
                     cloudLastError = err;
+                    /* Deterministic integrity errors are terminal for this retry cycle.
+                       Do not repeatedly re-read the same broken/legacy manifest. */
+                    if (isCloudIntegrityError(err)) {
+                        cloudPullQueued = false;
+                        cloudPushQueued = false;
+                        clearCloudRetry();
+                        updateCloudStatus('ERROR', cloudErrorMessage(err));
+                        console.error('[Cloud] retry stopped: manifest/data integrity error', err);
+                        return;
+                    }
                     if (isCloudTransportError(err)) await recoverFirestoreTransport(`RETRY:${reason}`);
                     scheduleCloudRetry(reason);
                 }
@@ -2866,7 +2887,7 @@
                     appId: '1:72603303245:web:c0102b58cb20cdb663cb04'
                 });
                 firestoreDb = firebase.firestore();
-                /* V8.6-A2.3.2.7: use long-polling for the known WebChannel closure
+                /* V8.6-A2.3.2.8: use long-polling for the known WebChannel closure
                    seen with Firebase 8.10.1. Do not combine with auto-detect. */
                 if (typeof firestoreDb.settings === 'function') {
                     firestoreDb.settings({ experimentalForceLongPolling: true });
@@ -3110,7 +3131,7 @@
                     return false;
                 }
 
-                /* V8.6-A2.3.2.7: WebChannel/transport failures are transient.
+                /* V8.6-A2.3.2.8: WebChannel/transport failures are transient.
                    Rebuild the Firestore network channel once, then let the normal retry
                    queue continue. No local dataset mutation occurs here. */
                 if (isCloudTransportError(err)) {
@@ -3118,6 +3139,22 @@
                     cloudLastError = err;
                     updateCloudStatus(isNetworkLikelyAvailable() ? 'RETRYING' : 'OFFLINE', cloudErrorMessage(err));
                     await recoverFirestoreTransport(`PUSH:${retryAttempts}`);
+                    return false;
+                }
+
+                /* V8.6-A2.3.2.8: a broken/legacy manifest is not a transport outage.
+                   Stop automatic retries; never overwrite or mutate local data merely
+                   to make an invalid cloud manifest disappear. A manual push can still
+                   upgrade a readable legacy room later. */
+                if (isCloudIntegrityError(err)) {
+                    cloudPushQueued = false;
+                    cloudLastError = err;
+                    clearCloudRetry();
+                    updateCloudStatus('ERROR', cloudErrorMessage(err));
+                    console.error('[Cloud] push stopped: manifest/data integrity error', err);
+                    if (!silent) {
+                        showNotificationModal('雲端資料需要人工處理', `${cloudErrorMessage(err)}。本機 IndexedDB 未被修改；請先確認雲端舊 Manifest，再手動推送升級。`);
+                    }
                     return false;
                 }
 
@@ -3165,7 +3202,13 @@
             if (isLegacyV2) console.warn('[Cloud] reading legacy manifest-chunk-v2; next push will upgrade to v3');
             const chunkCount = Number(meta.chunkCount || 0);
             if (!meta.syncId || !Number.isInteger(chunkCount) || chunkCount < 0 || chunkCount > 5000) {
-                throw new Error('雲端 Manifest 無效；已拒絕合併');
+                const missing = [
+                    !meta.syncId ? 'syncId' : null,
+                    !Number.isInteger(chunkCount) ? 'chunkCount' : null
+                ].filter(Boolean).join(', ');
+                const err = new Error(`雲端 Manifest 無效${missing ? `（${missing}）` : ''}；已拒絕合併`);
+                err.code = 'CLOUD_MANIFEST_INVALID';
+                throw err;
             }
             const payload = { execution: [], research: [], activeResearch: [], state: meta.state || {} };
             for (let i = 0; i < chunkCount; i++) {
@@ -3283,8 +3326,23 @@
                 return true;
             } catch (err) {
                 console.error('[Cloud] pull failed', err);
-                cloudPullQueued = true;
                 cloudLastError = err;
+
+                /* V8.6-A2.3.2.8: do not confuse an invalid legacy/corrupt manifest
+                   with a transient WebChannel failure. This is the exact condition
+                   visible in the reported console: "reading legacy manifest-chunk-v2"
+                   followed by "雲端 Manifest 無效". Retrying cannot repair it. */
+                if (isCloudIntegrityError(err)) {
+                    cloudPullQueued = false;
+                    clearCloudRetry();
+                    updateCloudStatus('ERROR', cloudErrorMessage(err));
+                    if (!silent) {
+                        showNotificationModal('雲端 Manifest 需要處理', `${cloudErrorMessage(err)}。本機 IndexedDB 完全保留，已停止重複重試。`);
+                    }
+                    return false;
+                }
+
+                cloudPullQueued = true;
                 if (isCloudTransportError(err)) await recoverFirestoreTransport('PULL');
                 updateCloudStatus(isNetworkLikelyAvailable() ? 'RETRYING' : 'OFFLINE', cloudErrorMessage(err));
                 if (!silent) {
