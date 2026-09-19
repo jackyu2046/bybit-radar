@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bybit 小幣高精度狙擊交易系統 V8.6-A2.3.2.6 (Cloud Payload-Safe Atomic Commit)</title>
+    <title>Bybit 小幣高精度狙擊交易系統 V8.6-A2.3.3 (Legacy Cloud Recovery + Statistical Confidence + Walk-Forward Edge Calibration)</title>
     <!-- Tailwind CSS CDN --> 
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -55,7 +55,7 @@
             'fetchMarketData', 'exportDataJson', 'importDataJson',
             'setTradeSize', 'setMaxPositions', 'closeAllPositions',
             'closePositionManually', 'copyRoomIdToClipboard',
-            'saveRoomConfig', 'pullFromCloudForce', 'pushToCloudForce',
+            'saveRoomConfig', 'pullFromCloudForce', 'pushToCloudForce', 'recoverLegacyCloudManifest',
             'exportA23Report'
         ];
         earlyModalKeys.forEach(fnName => {
@@ -109,7 +109,7 @@
                                 <span id="cloudRoomBadgeText">房間: radar-usr-uzk44xx</span>
                             </span>
                             <span class="text-[9px] bg-purple-500/20 text-purple-300 font-mono font-semibold px-1.5 py-0.5 rounded border border-purple-500/30" id="regimeHeaderBadge">Regime: CHOPPY</span>
-                            <span class="text-[9px] bg-emerald-500/20 text-emerald-300 font-mono font-semibold px-1.5 py-0.5 rounded border border-emerald-500/30">V8.6-A2.3.2.6 Payload-Safe Atomic Commit</span>
+                            <span class="text-[9px] bg-emerald-500/20 text-emerald-300 font-mono font-semibold px-1.5 py-0.5 rounded border border-emerald-500/30">V8.6-A2.3.3 Legacy Cloud Recovery + Statistical Confidence</span>
                         </div>
                         <p class="text-[11px] text-slate-400 hidden sm:block">A2.3 負向邊緣剪枝 · 預期邊際評分 (EES) 重構 · 影子 A/B 雙軌校準 · Transactional Revision 防護</p>
                     </div>
@@ -302,7 +302,7 @@
                 <div class="flex items-center gap-2">
                     <span class="text-xl">🧠</span>
                     <div>
-                        <h3 class="font-bold text-white text-sm sm:text-base">V8.6-A2.3.2 Dataset Integrity & Contextual Edge Lab</h3>
+                        <h3 class="font-bold text-white text-sm sm:text-base">V8.6-A2.3.3 Dataset Integrity · Statistical Confidence · Walk-Forward Calibration</h3>
                         <p class="text-[11px] text-fuchsia-300">資料完整性分層 · Execution / Shadow 分離 · Contextual Edge 校準 · Block Attribution · Walk-forward 驗證</p>
                     </div>
                 </div>
@@ -387,8 +387,19 @@
                 </div>
 
                 <div class="p-3.5 rounded-xl border border-purple-500/30 bg-purple-950/10 space-y-2">
-                    <span class="font-bold text-white text-xs">📈 Walk-forward Validation — 訓練 70% / 驗證 30%</span>
+                    <div class="flex justify-between items-center gap-2 flex-wrap">
+                        <span class="font-bold text-white text-xs">📈 Walk-forward Validation — Expand/Forward OOS</span>
+                        <span id="a233CalibrationStatus" class="text-[10px] text-purple-300">Calibration 計算中</span>
+                    </div>
                     <div id="a232WalkForward" class="text-[11px] font-mono text-slate-300"></div>
+                </div>
+
+                <div class="p-3.5 rounded-xl border border-cyan-500/30 bg-cyan-950/10 space-y-2">
+                    <div class="flex justify-between items-center gap-2 flex-wrap">
+                        <span class="font-bold text-white text-xs">📐 Statistical Confidence — Edge 不再固定 100%</span>
+                        <span id="a233ConfidenceNote" class="text-[10px] text-cyan-300">Wilson / SE / OOS calibration</span>
+                    </div>
+                    <div id="a233ConfidenceTable" class="overflow-x-auto"></div>
                 </div>
 
                 <div class="p-3.5 rounded-xl border border-crypto-border bg-slate-900/60 space-y-2">
@@ -522,6 +533,7 @@
             <div class="grid grid-cols-2 gap-2">
                 <button onclick="window.pullFromCloudForce(false)" class="py-2 px-2 rounded-lg bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs flex items-center justify-center gap-1 transition"><span>📥</span> 手動拉取合併</button>
                 <button onclick="window.pushToCloudForce(false)" class="py-2 px-2 rounded-lg bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs flex items-center justify-center gap-1 transition"><span>⚡</span> 手動強制推送</button>
+                <button onclick="window.recoverLegacyCloudManifest(false)" class="col-span-2 py-2 px-2 rounded-lg bg-purple-700 hover:bg-purple-600 text-white font-bold text-xs flex items-center justify-center gap-1 transition"><span>🧩</span> 修復 Legacy Manifest → V3</button>
             </div>
         </div>
     </div>
@@ -621,7 +633,7 @@
                 active: [], 
                 archive: [], 
                 seenSignals: {}, 
-                version: 'V8.6-A2.3.2' 
+                version: 'V8.6-A2.3.3' 
             }
         };
 
@@ -751,7 +763,7 @@
         }
 
         const A232_CONFIG = {
-            version: 'V8.6-A2.3.2',
+            version: 'V8.6-A2.3.3',
             requiredContextFields: ['strategy','regime','direction','volatility','liquidity','rvolBucket','oiBucket','spreadBucket'],
             minContextSamples: 20,
             targetTrainingSamples: 120,
@@ -760,7 +772,13 @@
             incompleteContextPenalty: 8,
             partialContextPenalty: 4,
             executionPreferredMinSamples: 80,
-            walkForwardTrainRatio: 0.70
+            walkForwardTrainRatio: 0.70,
+            confidencePriorSamples: 80,
+            confidenceFloor: 0.50,
+            confidenceCap: 0.95,
+            minOosCalibrationSamples: 60,
+            walkForwardFolds: 4,
+            minFoldTestSamples: 20
         };
 
         function a232Num(v, d = 0) { const n = Number(v); return Number.isFinite(n) ? n : d; }
@@ -867,11 +885,58 @@
                 pf: gl > 0 ? gp / gl : (gp > 0 ? Infinity : 0), exp: net / arr.length, net, mean: net / arr.length };
         }
 
+        /* V8.6-A2.3.3: statistical uncertainty helpers.
+           Confidence is derived from sample size + effect uncertainty instead of
+           the old sqrt(N/target) rule which reached 100% too early. */
+        function a233Erf(x) {
+            const sign = x < 0 ? -1 : 1;
+            const ax = Math.abs(x);
+            const t = 1 / (1 + 0.3275911 * ax);
+            const y = 1 - (((((1.061405429 * t - 1.453152027) * t) + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * Math.exp(-ax * ax);
+            return sign * y;
+        }
+        function a233NormalCdf(z) { return 0.5 * (1 + a233Erf(a232Num(z, 0) / Math.SQRT2)); }
+        function a233StdDev(values) {
+            const arr = (values || []).filter(Number.isFinite);
+            if (arr.length < 2) return 0;
+            const mean = arr.reduce((a,b)=>a+b,0) / arr.length;
+            const variance = arr.reduce((a,b)=>a + (b - mean) ** 2, 0) / (arr.length - 1);
+            return Math.sqrt(Math.max(0, variance));
+        }
+        function a233Wilson(wins, n, z = 1.96) {
+            if (!n) return { low: 0, high: 0 };
+            const p = wins / n, z2 = z * z, den = 1 + z2 / n;
+            const center = (p + z2 / (2*n)) / den;
+            const half = z * Math.sqrt((p*(1-p) + z2/(4*n)) / n) / den;
+            return { low: Math.max(0, center-half), high: Math.min(1, center+half) };
+        }
+        function a233UncertaintyStats(trades, normalized = false) {
+            const arr = (trades || []).filter(Boolean);
+            const values = arr.map(t => normalized ? (t.__a232?.edgeUnit ?? a232NormalizedEdge(t)) : a232Num(t.pnl ?? t.netPnl, 0));
+            const n = values.length;
+            const mean = n ? values.reduce((a,b)=>a+b,0)/n : 0;
+            const sd = a233StdDev(values);
+            const se = n > 1 ? sd / Math.sqrt(n) : 0;
+            const ciLow = mean - 1.96 * se, ciHigh = mean + 1.96 * se;
+            const wins = values.filter(v=>v>0).length;
+            const wilson = a233Wilson(wins, n);
+            return { n, mean, sd, se, ciLow, ciHigh, wins, wr: n ? wins/n*100 : 0, wrLow: wilson.low*100, wrHigh: wilson.high*100 };
+        }
+        function a233EffectConfidence(rawDelta, seDelta, n) {
+            if (!Number.isFinite(rawDelta) || !n) return A232_CONFIG.confidenceFloor;
+            const sampleConfidence = n / (n + A232_CONFIG.confidencePriorSamples);
+            const z = seDelta > 0 ? Math.abs(rawDelta) / seDelta : (Math.abs(rawDelta) > 0 ? 6 : 0);
+            const effectConfidence = z > 0 ? a233NormalCdf(z) : 0.5;
+            const blended = 0.5 + 0.45 * sampleConfidence * Math.max(0, (effectConfidence - 0.5) / 0.5);
+            return Math.max(A232_CONFIG.confidenceFloor, Math.min(A232_CONFIG.confidenceCap, blended));
+        }
+
         function a232BuildContextModel(trades, sourceLabel = 'UNKNOWN') {
             const rows = (trades || []).filter(t => t?.__a232?.quality?.complete);
             const baseline = a232GroupStats(rows, true);
+            const baselineU = a233UncertaintyStats(rows, true);
             const dimensions = ['strategy','regime','direction','volatility','liquidity','rvolBucket','oiBucket','spreadBucket'];
-            const model = { version: A232_CONFIG.version, source: sourceLabel, samples: rows.length, baseline, dimensions: {} };
+            const model = { version: A232_CONFIG.version, source: sourceLabel, samples: rows.length, baseline, baselineU, dimensions: {} };
             dimensions.forEach(dim => {
                 const map = new Map();
                 rows.forEach(t => {
@@ -882,12 +947,14 @@
                 model.dimensions[dim] = {};
                 map.forEach((group, key) => {
                     const st = a232GroupStats(group, true);
-                    const confidence = Math.min(1, Math.sqrt(st.count / A232_CONFIG.targetTrainingSamples));
-                    const sampleFactor = Math.min(1, st.count / A232_CONFIG.minContextSamples);
+                    const u = a233UncertaintyStats(group, true);
                     const rawDelta = st.exp - baseline.exp;
+                    const seDelta = Math.sqrt((u.se || 0) ** 2 + (baselineU.se || 0) ** 2);
+                    const confidence = a233EffectConfidence(rawDelta, seDelta, st.count);
+                    const sampleFactor = Math.min(1, st.count / A232_CONFIG.minContextSamples);
                     const adjustment = Math.max(-A232_CONFIG.maxDimensionAdjustment,
                         Math.min(A232_CONFIG.maxDimensionAdjustment, rawDelta * 10 * confidence * sampleFactor));
-                    model.dimensions[dim][key] = { ...st, rawDelta, confidence, adjustment };
+                    model.dimensions[dim][key] = { ...st, ...u, rawDelta, seDelta, confidence, adjustment, confidenceMethod: 'N+SE+WILSON' };
                 });
             });
             return model;
@@ -909,7 +976,7 @@
             return a232ModelCache;
         }
 
-        function a232ContextAdjustment(ctx, model = null) {
+        function a232ContextAdjustment(ctx, model = null, applyOosCalibration = true) {
             const m = model || a232GetModels().active;
             if (!m || !m.samples) return { total: 0, contributions: [], modelSource: 'NONE' };
             const contributions = [];
@@ -920,8 +987,14 @@
                 contributions.push({ dimension: dim, key, adjustment: stat.adjustment, count: stat.count, exp: stat.exp, confidence: stat.confidence });
             });
             const raw = contributions.reduce((sum,x)=>sum+x.adjustment,0);
-            const total = Math.max(-A232_CONFIG.maxTotalAdjustment, Math.min(A232_CONFIG.maxTotalAdjustment, raw));
-            return { total, contributions, modelSource: m.source, modelSamples: m.samples };
+            let oosFactor = 1;
+            if (applyOosCalibration) {
+                const ds = a232GetModels().dataset;
+                const wf = a233GetWalkForwardCalibration(ds);
+                oosFactor = wf.ok ? wf.oosReliability : 0.50;
+            }
+            const total = Math.max(-A232_CONFIG.maxTotalAdjustment, Math.min(A232_CONFIG.maxTotalAdjustment, raw * oosFactor));
+            return { total, rawTotal: raw, oosFactor, contributions, modelSource: m.source, modelSamples: m.samples };
         }
 
         function a232QualityPenalty(ctx) {
@@ -945,7 +1018,7 @@
             else if (ees >= A23_CONFIG.decisions.CANDIDATE) decision = 'HIGH_EXPECTED_EDGE';
             return { baseScore, expectedEdgeScore: ees, penalty: neg.penalty, qualityPenalty,
                 flags: neg.flags, severity: neg.severity, blockCandidate: neg.blockCandidate,
-                histWeight, contextAdjustment: context.total, contextContributions: context.contributions,
+                histWeight, contextAdjustment: context.total, rawContextAdjustment: context.rawTotal || context.total, oosCalibrationFactor: context.oosFactor || 0.50, contextContributions: context.contributions,
                 modelSource: context.modelSource, modelSamples: context.modelSamples || 0, decision };
         }
 
@@ -999,18 +1072,61 @@
                 const tb = a232Num(b.closedAtTs ?? b.closedAt ?? b.openedAt ?? b.openTime, 0);
                 return ta - tb;
             });
-            if (rows.length < 60) return { ok:false, samples:rows.length, reason:'完整樣本不足 60，暫不做 Walk-forward 結論' };
-            const split = Math.max(30, Math.min(rows.length-20, Math.floor(rows.length * A232_CONFIG.walkForwardTrainRatio)));
-            const train = rows.slice(0, split), test = rows.slice(split);
-            const model = a232BuildContextModel(train, 'WALK_FORWARD_TRAIN');
-            const scored = test.map(t => {
-                const adj = a232ContextAdjustment(t.__a232.ctx, model).total;
-                return { ...t, __score: a232Num(t.__a232.ctx.baseScore, 0) + adj };
-            });
-            const median = [...scored].map(x=>x.__score).sort((a,b)=>a-b)[Math.floor(scored.length/2)] || 0;
-            const high = scored.filter(x=>x.__score>=median), low=scored.filter(x=>x.__score<median);
-            return { ok:true, train:a232GroupStats(train), test:a232GroupStats(test), high:a232GroupStats(high), low:a232GroupStats(low), split, samples:rows.length, medianScore:median };
+            if (rows.length < A232_CONFIG.minOosCalibrationSamples) return { ok:false, samples:rows.length, reason:`完整樣本不足 ${A232_CONFIG.minOosCalibrationSamples}，暫不做 OOS Calibration` };
+            const minTrain = Math.max(30, Math.floor(rows.length * 0.50));
+            const remaining = rows.length - minTrain;
+            const foldCount = Math.max(1, Math.min(A232_CONFIG.walkForwardFolds, Math.floor(remaining / A232_CONFIG.minFoldTestSamples)));
+            const foldSize = Math.max(A232_CONFIG.minFoldTestSamples, Math.floor(remaining / foldCount));
+            const folds = [];
+            for (let i=0;i<foldCount;i++) {
+                const testStart = minTrain + i * foldSize;
+                const testEnd = i === foldCount - 1 ? rows.length : Math.min(rows.length, testStart + foldSize);
+                const train = rows.slice(0, testStart);
+                const test = rows.slice(testStart, testEnd);
+                if (train.length < 30 || test.length < A232_CONFIG.minFoldTestSamples) continue;
+                const model = a232BuildContextModel(train, 'WF_TRAIN');
+                const scored = test.map(t => {
+                    const adj = a232ContextAdjustment(t.__a232.ctx, model, false).total;
+                    const score = a232Num(t.__a232.ctx.baseScore, 0) + adj;
+                    return { ...t, __score: score };
+                });
+                const sortedScores = scored.map(x=>x.__score).sort((a,b)=>a-b);
+                const median = sortedScores[Math.floor(sortedScores.length/2)] ?? 0;
+                const high = scored.filter(x=>x.__score >= median);
+                const low = scored.filter(x=>x.__score < median);
+                const testStats = a233UncertaintyStats(test, true);
+                const highStats = a233UncertaintyStats(high, true);
+                const lowStats = a233UncertaintyStats(low, true);
+                folds.push({ index:i+1, trainCount:train.length, testCount:test.length, test:testStats, high:highStats, low:lowStats, lift:highStats.mean-lowStats.mean, medianScore:median });
+            }
+            if (!folds.length) return { ok:false, samples:rows.length, reason:'沒有足夠的連續 OOS fold 可供驗證' };
+            const testRows = folds.reduce((a,f)=>a+f.test.n,0);
+            const positiveTestFolds = folds.filter(f=>f.test.mean>0).length;
+            const positiveLiftFolds = folds.filter(f=>f.lift>0).length;
+            const avgTestExp = folds.reduce((a,f)=>a+f.test.mean*f.test.n,0)/Math.max(1,testRows);
+            const avgLift = folds.reduce((a,f)=>a+f.lift,0)/folds.length;
+            const oosReliability = Math.max(0.50, Math.min(0.95, 0.50 + 0.20*(positiveTestFolds/folds.length) + 0.25*(positiveLiftFolds/folds.length) + (avgTestExp>0 ? 0.05 : 0)));
+            const firstSplit = folds[0].trainCount;
+            return {
+                ok:true, samples:rows.length, split:firstSplit, train:firstSplit, test:testRows, folds,
+                positiveTestFolds, positiveLiftFolds, avgTestExp, avgLift, oosReliability,
+                test:{ count:testRows, exp:avgTestExp },
+                high:{ count:folds.reduce((a,f)=>a+f.high.n,0), exp:folds.reduce((a,f)=>a+f.high.mean*f.high.n,0)/Math.max(1,folds.reduce((a,f)=>a+f.high.n,0)) },
+                low:{ count:folds.reduce((a,f)=>a+f.low.n,0), exp:folds.reduce((a,f)=>a+f.low.mean*f.low.n,0)/Math.max(1,folds.reduce((a,f)=>a+f.low.n,0)) },
+                medianScore:folds[folds.length-1].medianScore
+            };
         }
+
+        let a233CalibrationCache = { key:'', value:null };
+        function a233GetWalkForwardCalibration(ds) {
+            const key = `${ds?.preferredSource || 'NONE'}:${ds?.preferred?.length || 0}:${ds?.executionTrain?.length || 0}:${ds?.shadowTrain?.length || 0}`;
+            if (a233CalibrationCache.key === key && a233CalibrationCache.value) return a233CalibrationCache.value;
+            const wf = a232WalkForward(ds?.preferred || []);
+            const value = wf.ok ? wf : { ok:false, oosReliability:0.50, reason:wf.reason, folds:[] };
+            a233CalibrationCache = { key, value };
+            return value;
+        }
+
         function openIndexedDatabase() {
             return new Promise((resolve) => {
                 try {
@@ -1146,7 +1262,7 @@
                 maePct: v85Number(trade?.maePct),
                 fills,
                 entryContext: trade?.entryContext || null,
-                schemaVersion: '8.6-A2.3.2'
+                schemaVersion: '8.6-A2.3.3'
             };
             normalized.tradeId = v85StableTradeId(normalized);
             normalized.id = normalized.tradeId;
@@ -2089,10 +2205,21 @@
             const attrEl = document.getElementById('a232AttributionTable');
             if (attrEl) attrEl.innerHTML = attribution.length ? attribution.map(r=>`<tr><td class="p-2 text-white">${r.reason}</td><td class="p-2 text-center">${r.count}</td><td class="p-2 text-center ${r.exp>=0?'text-emerald-400':'text-rose-400'}">$${r.exp.toFixed(3)}</td><td class="p-2 text-center ${r.delta<=0?'text-emerald-400':'text-rose-400'}">${r.delta>=0?'+':''}$${r.delta.toFixed(3)}</td><td class="p-2 text-center">${r.pf===Infinity?'∞':r.pf.toFixed(2)}</td><td class="p-2 text-center ${r.verdict==='NEGATIVE_CONFIRMED'?'text-emerald-400':r.verdict==='POSSIBLE_OVERBLOCK'?'text-rose-400':'text-slate-400'}">${r.verdict}</td></tr>`).join('') : '<tr><td colspan="6" class="p-3 text-center text-slate-500">暫無可歸因 BLOCK 樣本。</td></tr>';
 
-            const wf = a232WalkForward(ds.preferred);
+            const wf = a233GetWalkForwardCalibration(ds);
             const wfEl = document.getElementById('a232WalkForward');
-            if (wfEl) wfEl.innerHTML = !wf.ok ? `<span class="text-amber-300">${wf.reason}</span>` : `完整樣本 ${wf.samples} · Train ${wf.split} · Test ${wf.test.count}<br>Test Exp: <b class="${wf.test.exp>=0?'text-emerald-400':'text-rose-400'}">$${wf.test.exp.toFixed(3)}</b> · 高分半部 Exp: <b class="${wf.high.exp>=0?'text-emerald-400':'text-rose-400'}">$${wf.high.exp.toFixed(3)}</b> · 低分半部 Exp: <b class="${wf.low.exp>=0?'text-emerald-400':'text-rose-400'}">$${wf.low.exp.toFixed(3)}</b><br><span class="text-slate-500">只作 out-of-sample 校驗，不把驗證期資料回灌訓練模型。</span>`;
-            persistDatasetMetadata('A232_LAB_REFRESH');
+            const wfStatus = document.getElementById('a233CalibrationStatus');
+            if (wfStatus) wfStatus.textContent = wf.ok ? `OOS Reliability ${(wf.oosReliability*100).toFixed(0)}% · ${wf.folds.length} folds` : 'OOS 資料不足';
+            if (wfEl) wfEl.innerHTML = !wf.ok ? `<span class="text-amber-300">${wf.reason}</span>` : `完整樣本 ${wf.samples} · Expand Train ${wf.train} · OOS Test ${wf.test.count}<br>OOS Exp: <b class="${wf.test.exp>=0?'text-emerald-400':'text-rose-400'}">$${wf.test.exp.toFixed(3)}</b> · High/Low Lift: <b class="${wf.avgLift>=0?'text-emerald-400':'text-rose-400'}">${wf.avgLift>=0?'+':''}$${wf.avgLift.toFixed(3)}</b><br>正 OOS Fold ${wf.positiveTestFolds}/${wf.folds.length} · 正 High/Low Lift ${wf.positiveLiftFolds}/${wf.folds.length} · Calibration <b>${(wf.oosReliability*100).toFixed(0)}%</b><br><span class="text-slate-500">每個 OOS fold 只使用之前資料訓練；驗證期不回灌。Context adjustment 會再乘 OOS Reliability。</span>`;
+
+            const confEl = document.getElementById('a233ConfidenceTable');
+            const activeDims = models.active?.dimensions || {};
+            if (confEl) {
+                const rows = [];
+                Object.entries(activeDims).forEach(([dim, table]) => Object.entries(table).filter(([,st])=>st.count>=A232_CONFIG.minContextSamples).sort((a,b)=>b[1].confidence-a[1].confidence).slice(0,4).forEach(([key,st])=>rows.push({dim,key,...st})));
+                confEl.innerHTML = rows.length ? `<table class="w-full text-left text-[11px]"><thead class="text-slate-400 border-b border-slate-800 bg-slate-950"><tr><th class="p-2">Context</th><th class="p-2 text-center">N</th><th class="p-2 text-center">Exp</th><th class="p-2 text-center">95% CI</th><th class="p-2 text-center">WR Wilson</th><th class="p-2 text-center">Stat Conf.</th></tr></thead><tbody>${rows.map(r=>`<tr class="border-b border-slate-900"><td class="p-2 text-white">${r.dim} × ${r.key}</td><td class="p-2 text-center">${r.count}</td><td class="p-2 text-center ${r.exp>=0?'text-emerald-400':'text-rose-400'}">${r.exp.toFixed(3)}</td><td class="p-2 text-center">[${r.ciLow.toFixed(3)}, ${r.ciHigh.toFixed(3)}]</td><td class="p-2 text-center">${r.wrLow.toFixed(1)}–${r.wrHigh.toFixed(1)}%</td><td class="p-2 text-center font-bold">${(r.confidence*100).toFixed(0)}%</td></tr>`).join('')}</tbody></table>` : '<div class="p-3 text-center text-slate-500">目前沒有達最低樣本門檻的 Context。</div>';
+            }
+            if (document.getElementById('a233ConfidenceNote')) document.getElementById('a233ConfidenceNote').textContent = `Stat confidence = N prior + expectancy SE + Wilson WR；OOS calibration ${(wf.oosReliability*100).toFixed(0)}%`;
+            persistDatasetMetadata('A233_LAB_REFRESH');
         }
 
         function openA23LabModal() {
@@ -2503,7 +2630,7 @@
         const currentDeviceId = getOrCreateDeviceId();
         let lastKnownCloudRevision = 0;
 
-        const CLOUD_SYNC_VERSION = 'V8.6-A2.3.2.9';
+        const CLOUD_SYNC_VERSION = 'V8.6-A2.3.3';
         const CLOUD_PROTOCOL = 'manifest-chunk-v3';
         const CLOUD_TIMEOUT_MS = 12000;
         const CLOUD_RETRY_DELAYS = [5000, 10000, 20000, 40000, 60000];
@@ -3065,14 +3192,16 @@
                 const roomId = getActiveRoomIdFromUI();
                 const room = cloudRoomRef();
                 const previousSnap = await withCloudTimeout(room.get(), 'Read current manifest');
-                const previous = previousSnap.exists ? (previousSnap.data() || {}) : {};
+                let previous = previousSnap.exists ? (previousSnap.data() || {}) : {};
 
                 /* 樂觀鎖前置檢查：若雲端存在其他裝置產生的更新版本，先拉取合併 */
                 let remoteRevision = Number(previous.revision || 0);
                 if (remoteRevision > lastKnownCloudRevision && previous.deviceId && previous.deviceId !== currentDeviceId) {
                     console.warn(`[Cloud] 偵測到雲端存在裝置 ${previous.deviceId} 的較新修訂版 (Rev ${remoteRevision} > 本地已知 ${lastKnownCloudRevision})，先執行保護性拉取合併...`);
-                    const pullPayload = await readCommittedCloudPayload(room, previous);
+                    const pullPayload = await readCloudPayloadWithLegacyRecovery(room, previous);
                     await mergeCloudPayload(pullPayload);
+                    if (pullPayload?._cloudMeta) previous = { ...previous, ...pullPayload._cloudMeta };
+                    remoteRevision = Math.max(remoteRevision, Number(pullPayload?._cloudMeta?.revision || 0));
                     lastKnownCloudRevision = remoteRevision;
                 }
 
@@ -3164,7 +3293,7 @@
                     isSyncing = false;
                     try {
                         const room = cloudRoomRef();
-                        const pullPayload = await readCommittedCloudPayload(room, err.remoteData);
+                        const pullPayload = await readCloudPayloadWithLegacyRecovery(room, err.remoteData);
                         await mergeCloudPayload(pullPayload);
                         lastKnownCloudRevision = Math.max(lastKnownCloudRevision, Number(err.remoteData.revision || 0));
                     } catch (mergeErr) {
@@ -3192,6 +3321,94 @@
            移除 COUNT_VERIFIED_MIGRATION 的無條件放行後門。
            Checksum 必須通過 CURRENT_FULL 或已知的 Legacy 演算法，否則嚴格拒絕寫入本機！
         */
+        /* V8.6-A2.3.3: Legacy Manifest Recovery.
+           If a v2 manifest lost syncId/chunkCount but its archive chunks are still present,
+           reconstruct the candidate from immutable chunk documents. The recovered payload
+           is structurally validated, checksumed locally, then the next successful push
+           upgrades it to the committed v3 manifest. We never overwrite local IndexedDB
+           during recovery. */
+        async function recoverLegacyManifestV2(room, meta = {}) {
+            const base = meta && typeof meta === 'object' ? meta : {};
+            const archiveSnap = await withCloudTimeout(room.collection('archives').limit(5001).get(), 'Legacy manifest archive scan');
+            if (archiveSnap.size > 5000) {
+                const err = new Error('Legacy Manifest archive 超過 5000 chunks；為安全起見拒絕自動恢復');
+                err.code = 'CLOUD_MANIFEST_INVALID';
+                throw err;
+            }
+            const groups = new Map();
+            archiveSnap.forEach(doc => {
+                const d = doc.data() || {};
+                const protocol = String(d.protocol || 'manifest-chunk-v2');
+                if (protocol !== 'manifest-chunk-v2' && protocol !== 'manifest-chunk-v3') return;
+                const syncId = String(d.syncId || doc.id.replace(/_\d+$/, ''));
+                const m = doc.id.match(/_(\d+)$/);
+                const index = Number.isInteger(Number(d.index)) ? Number(d.index) : (m ? Number(m[1]) : NaN);
+                if (!syncId || !Number.isInteger(index) || index < 0 || index > 5000) return;
+                if (!groups.has(syncId)) groups.set(syncId, { syncId, chunks:new Map(), updatedAt:0, protocol });
+                const g = groups.get(syncId);
+                g.chunks.set(index, d);
+                g.updatedAt = Math.max(g.updatedAt, Number(d.updatedAt || 0));
+            });
+            let candidates = Array.from(groups.values()).filter(g => g.chunks.size > 0);
+            if (base.syncId && groups.has(String(base.syncId))) candidates = [groups.get(String(base.syncId))];
+            candidates.sort((a,b)=>b.updatedAt-a.updatedAt);
+            const chosen = candidates[0];
+            if (!chosen) {
+                const err = new Error('Legacy Manifest 無法找到可恢復的 archive chunks；已拒絕合併');
+                err.code = 'CLOUD_MANIFEST_INVALID';
+                throw err;
+            }
+            const indexes = Array.from(chosen.chunks.keys()).sort((a,b)=>a-b);
+            const chunkCount = indexes.length ? indexes[indexes.length-1] + 1 : 0;
+            if (chunkCount <= 0 || chunkCount > 5000 || indexes.some((v,i)=>v !== i)) {
+                const err = new Error(`Legacy Manifest chunks 不連續（${indexes.length}/${chunkCount}）；已拒絕合併`);
+                err.code = 'CLOUD_MANIFEST_INVALID';
+                throw err;
+            }
+            const payload = { execution:[], research:[], activeResearch:[], state: base.state || {} };
+            for (let i=0;i<chunkCount;i++) {
+                const d = chosen.chunks.get(i);
+                let arr;
+                try { arr = JSON.parse(d.payload || '[]'); } catch (_) {
+                    const err = new Error(`Legacy Manifest chunk ${i+1} JSON 損毀；已拒絕合併`);
+                    err.code = 'CLOUD_MANIFEST_INVALID';
+                    throw err;
+                }
+                if (!Array.isArray(arr)) {
+                    const err = new Error(`Legacy Manifest chunk ${i+1} Schema 無效；已拒絕合併`);
+                    err.code = 'CLOUD_MANIFEST_INVALID';
+                    throw err;
+                }
+                arr.forEach(item=>{
+                    if (item?.type === 'execution' && item.data) payload.execution.push(item.data);
+                    else if (item?.type === 'research' && item.data) payload.research.push(item.data);
+                    else if (item?.type === 'activeResearch' && item.data) payload.activeResearch.push(item.data);
+                });
+            }
+            const recovered = {
+                ...base, syncId: chosen.syncId, chunkCount,
+                executionCount: payload.execution.length, researchCount: payload.research.length, activeResearchCount: payload.activeResearch.length,
+                checksum: datasetFullChecksum(payload.execution, payload.research, payload.activeResearch),
+                syncProtocol: 'manifest-chunk-v2', commitState: 'LEGACY_RECONSTRUCTED',
+                revision: Number(base.revision || 0), recoveredAt: Date.now()
+            };
+            payload._cloudChecksumMode = 'LEGACY_RECONSTRUCTED';
+            payload._cloudMeta = recovered;
+            lastKnownCloudRevision = Math.max(lastKnownCloudRevision, Number(recovered.revision || 0));
+            console.warn('[Cloud] legacy manifest reconstructed from archive chunks; next push will upgrade to v3', { syncId: chosen.syncId, chunkCount, execution: payload.execution.length, research: payload.research.length });
+            return payload;
+        }
+
+        async function readCloudPayloadWithLegacyRecovery(room, meta) {
+            try {
+                return await readCommittedCloudPayload(room, meta);
+            } catch (err) {
+                const isLegacy = meta && !meta.commitState && (meta.syncProtocol === 'manifest-chunk-v2' || !meta.syncProtocol);
+                if (isLegacy && err?.code === 'CLOUD_MANIFEST_INVALID') return await recoverLegacyManifestV2(room, meta);
+                throw err;
+            }
+        }
+
         async function readCommittedCloudPayload(room, meta) {
             if (!meta) throw new Error('雲端 Manifest 缺失；已拒絕合併');
             const isV3Committed = meta.commitState === 'COMMITTED' && meta.syncProtocol === CLOUD_PROTOCOL;
@@ -3308,7 +3525,7 @@
                     return await pushToCloudForce(silent);
                 }
                 const meta = snap.data() || {};
-                const payload = await readCommittedCloudPayload(room, meta);
+                const payload = await readCloudPayloadWithLegacyRecovery(room, meta);
                 await mergeCloudPayload(payload);
                 lastCloudSyncAt = Date.now(); 
                 cloudPullQueued = false;
@@ -3359,6 +3576,32 @@
             if (firestoreDb) { clearCloudRetry(); cloudRetryAttempt = 0; scheduleCloudRetry('BROWSER_ONLINE'); }
         });
         window.addEventListener('offline', () => updateCloudStatus('OFFLINE', '瀏覽器離線；IndexedDB 本機模式正常'));
+        async function recoverLegacyCloudManifest(silent = false) {
+            if (!firestoreDb) {
+                updateCloudStatus('OFFLINE', 'Firebase 尚未建立');
+                return false;
+            }
+            try {
+                const room = cloudRoomRef();
+                const snap = await withCloudTimeout(room.get(), 'Legacy manifest read');
+                if (!snap.exists) {
+                    if (!silent) showNotificationModal('Legacy Manifest', '目前 Cloud Room 沒有 Manifest。');
+                    return false;
+                }
+                const meta = snap.data() || {};
+                const payload = await recoverLegacyManifestV2(room, meta);
+                await mergeCloudPayload(payload);
+                if (!silent) showNotificationModal('Legacy Manifest 已恢復', `已從 ${payload._cloudMeta.chunkCount} 個 archive chunks 重建資料；下一次推送會原子升級為 V3。`);
+                setTimeout(() => pushToCloudForce(true), 500);
+                return true;
+            } catch (err) {
+                cloudLastError = err;
+                updateCloudStatus('ERROR', cloudErrorMessage(err));
+                if (!silent) showNotificationModal('Legacy Manifest 恢復失敗', cloudErrorMessage(err));
+                return false;
+            }
+        }
+
         window.addEventListener('beforeunload', () => {
             clearCloudRetry();
             if (typeof cloudUnsubscribe === 'function') { try { cloudUnsubscribe(); } catch (_) {} cloudUnsubscribe = null; }
