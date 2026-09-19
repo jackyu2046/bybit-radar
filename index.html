@@ -2630,7 +2630,7 @@
         const currentDeviceId = getOrCreateDeviceId();
         let lastKnownCloudRevision = 0;
 
-        const CLOUD_SYNC_VERSION = 'V8.6-A2.3.3.1';
+        const CLOUD_SYNC_VERSION = 'V8.6-A2.3.3.2';
         const CLOUD_PROTOCOL = 'manifest-chunk-v3';
         const CLOUD_TIMEOUT_MS = 12000;
         const CLOUD_RETRY_DELAYS = [5000, 10000, 20000, 40000, 60000];
@@ -3399,7 +3399,7 @@
            移除 COUNT_VERIFIED_MIGRATION 的無條件放行後門。
            Checksum 必須通過 CURRENT_FULL 或已知的 Legacy 演算法，否則嚴格拒絕寫入本機！
         */
-        /* V8.6-A2.3.3: Legacy Manifest Recovery.
+        /* V8.6-A2.3.3.2: Legacy Manifest Recovery Candidate Hardening.
            If a v2 manifest lost syncId/chunkCount but its archive chunks are still present,
            reconstruct the candidate from immutable chunk documents. The recovered payload
            is structurally validated, checksumed locally, then the next successful push
@@ -3428,18 +3428,52 @@
                 g.updatedAt = Math.max(g.updatedAt, Number(d.updatedAt || 0));
             });
             let candidates = Array.from(groups.values()).filter(g => g.chunks.size > 0);
-            if (base.syncId && groups.has(String(base.syncId))) candidates = [groups.get(String(base.syncId))];
-            candidates.sort((a,b)=>b.updatedAt-a.updatedAt);
-            const chosen = candidates[0];
+            const expectedChunkCount = Number.isInteger(Number(base.chunkCount)) ? Number(base.chunkCount) : 0;
+
+            // A2.3.3.2: never select the newest partial archive merely because it is newest.
+            // A failed legacy batch can leave e.g. 19/38 chunks behind. That set is an
+            // orphan/partial commit and must not be merged as if it were a complete dataset.
+            const describeCandidate = (g) => {
+                const idx = Array.from(g.chunks.keys()).sort((a,b)=>a-b);
+                const contiguous = idx.length > 0 && idx.every((v,i)=>v === i);
+                const count = contiguous ? idx.length : (idx.length ? idx[idx.length-1] + 1 : 0);
+                return { g, idx, contiguous, count, completeExpected: expectedChunkCount > 0 && contiguous && count === expectedChunkCount };
+            };
+
+            if (base.syncId) {
+                // When the manifest names a syncId, recovery is restricted to that exact
+                // syncId. Never silently substitute a different historical revision.
+                candidates = candidates.filter(g => g.syncId === String(base.syncId));
+            }
+
+            const inspected = candidates.map(describeCandidate);
+            inspected.sort((a,b) => {
+                if (a.completeExpected !== b.completeExpected) return a.completeExpected ? -1 : 1;
+                if (a.contiguous !== b.contiguous) return a.contiguous ? -1 : 1;
+                if (a.count !== b.count) return b.count - a.count;
+                return b.g.updatedAt - a.g.updatedAt;
+            });
+            const chosenInfo = inspected.find(x => x.contiguous && (expectedChunkCount <= 0 || x.count === expectedChunkCount));
+            const chosen = chosenInfo?.g;
             if (!chosen) {
-                const err = new Error('Legacy Manifest 無法找到可恢復的 archive chunks；已拒絕合併');
+                const best = inspected[0];
+                const observed = best ? `${best.idx.length}/${expectedChunkCount || best.count}` : '0/0';
+                const err = new Error(base.syncId
+                    ? `Legacy Manifest 指定 syncId 的 archive 不完整（${observed}）；已拒絕合併，避免以部分資料覆蓋本機`
+                    : `Legacy Manifest 找不到完整 archive chunks（${observed}）；已拒絕合併，避免以部分資料覆蓋本機`);
                 err.code = 'CLOUD_MANIFEST_INVALID';
+                err.cloudRecovery = {
+                    reason: 'INCOMPLETE_ARCHIVE',
+                    syncId: base.syncId || null,
+                    expectedChunkCount,
+                    observedChunkCount: best?.idx.length || 0
+                };
                 throw err;
             }
-            const indexes = Array.from(chosen.chunks.keys()).sort((a,b)=>a-b);
-            const chunkCount = indexes.length ? indexes[indexes.length-1] + 1 : 0;
-            if (chunkCount <= 0 || chunkCount > 5000 || indexes.some((v,i)=>v !== i)) {
-                const err = new Error(`Legacy Manifest chunks 不連續（${indexes.length}/${chunkCount}）；已拒絕合併`);
+            const indexes = chosenInfo.idx;
+            const chunkCount = indexes.length;
+            if (chunkCount <= 0 || chunkCount > 5000 || indexes.some((v,i)=>v !== i) || (expectedChunkCount > 0 && chunkCount !== expectedChunkCount)) {
+                const err = new Error(`Legacy Manifest chunks 不完整（${indexes.length}/${expectedChunkCount || chunkCount}）；已拒絕合併`);
                 err.code = 'CLOUD_MANIFEST_INVALID';
                 throw err;
             }
