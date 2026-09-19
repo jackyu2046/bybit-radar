@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bybit 小幣高精度狙擊交易系統 V8.6-A2.3.3 (Legacy Cloud Recovery + Statistical Confidence + Walk-Forward Edge Calibration)</title>
+    <title>Bybit 小幣高精度狙擊交易系統 V8.6-A2.3.3.1 (Legacy Cloud Recovery + Statistical Confidence + Walk-Forward Edge Calibration + Firestore Transport Hardening)</title>
     <!-- Tailwind CSS CDN --> 
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -109,7 +109,7 @@
                                 <span id="cloudRoomBadgeText">房間: radar-usr-uzk44xx</span>
                             </span>
                             <span class="text-[9px] bg-purple-500/20 text-purple-300 font-mono font-semibold px-1.5 py-0.5 rounded border border-purple-500/30" id="regimeHeaderBadge">Regime: CHOPPY</span>
-                            <span class="text-[9px] bg-emerald-500/20 text-emerald-300 font-mono font-semibold px-1.5 py-0.5 rounded border border-emerald-500/30">V8.6-A2.3.3 Legacy Cloud Recovery + Statistical Confidence</span>
+                            <span class="text-[9px] bg-emerald-500/20 text-emerald-300 font-mono font-semibold px-1.5 py-0.5 rounded border border-emerald-500/30">V8.6-A2.3.3.1 Legacy Cloud Recovery + Statistical Confidence + Transport Hardening</span>
                         </div>
                         <p class="text-[11px] text-slate-400 hidden sm:block">A2.3 負向邊緣剪枝 · 預期邊際評分 (EES) 重構 · 影子 A/B 雙軌校準 · Transactional Revision 防護</p>
                     </div>
@@ -302,7 +302,7 @@
                 <div class="flex items-center gap-2">
                     <span class="text-xl">🧠</span>
                     <div>
-                        <h3 class="font-bold text-white text-sm sm:text-base">V8.6-A2.3.3 Dataset Integrity · Statistical Confidence · Walk-Forward Calibration</h3>
+                        <h3 class="font-bold text-white text-sm sm:text-base">V8.6-A2.3.3.1 Dataset Integrity · Statistical Confidence · Walk-Forward Calibration · Transport Hardening</h3>
                         <p class="text-[11px] text-fuchsia-300">資料完整性分層 · Execution / Shadow 分離 · Contextual Edge 校準 · Block Attribution · Walk-forward 驗證</p>
                     </div>
                 </div>
@@ -633,7 +633,7 @@
                 active: [], 
                 archive: [], 
                 seenSignals: {}, 
-                version: 'V8.6-A2.3.3' 
+                version: 'V8.6-A2.3.3.1' 
             }
         };
 
@@ -763,7 +763,7 @@
         }
 
         const A232_CONFIG = {
-            version: 'V8.6-A2.3.3',
+            version: 'V8.6-A2.3.3.1',
             requiredContextFields: ['strategy','regime','direction','volatility','liquidity','rvolBucket','oiBucket','spreadBucket'],
             minContextSamples: 20,
             targetTrainingSamples: 120,
@@ -1262,7 +1262,7 @@
                 maePct: v85Number(trade?.maePct),
                 fills,
                 entryContext: trade?.entryContext || null,
-                schemaVersion: '8.6-A2.3.3'
+                schemaVersion: '8.6-A2.3.3.1'
             };
             normalized.tradeId = v85StableTradeId(normalized);
             normalized.id = normalized.tradeId;
@@ -2630,7 +2630,7 @@
         const currentDeviceId = getOrCreateDeviceId();
         let lastKnownCloudRevision = 0;
 
-        const CLOUD_SYNC_VERSION = 'V8.6-A2.3.3';
+        const CLOUD_SYNC_VERSION = 'V8.6-A2.3.3.1';
         const CLOUD_PROTOCOL = 'manifest-chunk-v3';
         const CLOUD_TIMEOUT_MS = 12000;
         const CLOUD_RETRY_DELAYS = [5000, 10000, 20000, 40000, 60000];
@@ -2639,6 +2639,12 @@
            experimentalForceLongPolling and requires settings() before other Firestore calls. */
         const CLOUD_FIRESTORE_TRANSPORT = 'FORCE_LONG_POLLING';
         const CLOUD_TRANSPORT_RECOVERY_COOLDOWN_MS = 15000;
+        /* V8.6-A2.3.3.1: soft reset is attempted first; repeated WebChannel
+           closures escalate to a full Firestore client termination/rebuild. This
+           prevents Firebase 8.10.1 from keeping a broken WebChannel alive while
+           the application keeps scheduling health probes. */
+        const CLOUD_TRANSPORT_HARD_RESET_THRESHOLD = 2;
+        const CLOUD_TRANSPORT_ERROR_WINDOW_MS = 30000;
         let cloudState = 'INIT';
         let cloudRetryTimer = null;
         let cloudRetryAttempt = 0;
@@ -2648,6 +2654,9 @@
         let lastCloudOperationAt = 0;
         let cloudTransportRecoveryPromise = null;
         let lastCloudTransportRecoveryAt = 0;
+        let cloudTransportErrorStreak = 0;
+        let cloudTransportErrorWindowStartedAt = 0;
+        let cloudTransportHardResetPromise = null;
 
         function stableHash(input) {
             const str = typeof input === 'string' ? input : JSON.stringify(input);
@@ -2876,10 +2885,78 @@
             return /MANIFEST|Manifest|Checksum|checksum|Count 驗證失敗|Payload Schema|Schema 無效|JSON 損毀|缺少已提交雲端區塊|資料.*完整性|校驗碼|protocol 不匹配/i.test(`${code} ${msg}`);
         }
 
+        function noteCloudTransportError() {
+            const now = Date.now();
+            if (!cloudTransportErrorWindowStartedAt || now - cloudTransportErrorWindowStartedAt > CLOUD_TRANSPORT_ERROR_WINDOW_MS) {
+                cloudTransportErrorWindowStartedAt = now;
+                cloudTransportErrorStreak = 1;
+            } else {
+                cloudTransportErrorStreak += 1;
+            }
+            return cloudTransportErrorStreak;
+        }
+
+        function resetCloudTransportErrorStreak() {
+            cloudTransportErrorStreak = 0;
+            cloudTransportErrorWindowStartedAt = 0;
+        }
+
+        async function rebuildFirestoreClient(reason = 'HARD_RESET') {
+            if (!isNetworkLikelyAvailable() || typeof firebase === 'undefined' || !firebase.apps?.length) return false;
+            if (cloudTransportHardResetPromise) return cloudTransportHardResetPromise;
+
+            cloudTransportHardResetPromise = (async () => {
+                const oldDb = firestoreDb;
+                try {
+                    console.warn(`[Cloud] HARD RESET Firestore client (${reason})`);
+                    clearCloudRetry();
+                    cloudPullQueued = true;
+
+                    /* terminate() is stronger than disable/enable: it closes the
+                       existing WebChannel/XHR stack so stale channel state cannot
+                       keep producing ERR_CONNECTION_CLOSED callbacks. */
+                    if (oldDb && typeof oldDb.terminate === 'function') {
+                        await withCloudTimeout(oldDb.terminate(), `Firestore client terminate (${reason})`, 8000);
+                    } else if (oldDb && typeof oldDb.disableNetwork === 'function') {
+                        await withCloudTimeout(oldDb.disableNetwork(), `Firestore transport reset (${reason})`, 8000);
+                    }
+
+                    await new Promise(resolve => setTimeout(resolve, 350));
+
+                    const newDb = firebase.firestore();
+                    if (typeof newDb.settings === 'function') {
+                        newDb.settings({ merge: true, experimentalForceLongPolling: true });
+                    }
+                    firestoreDb = newDb;
+                    bindCloudRoom(DEFAULT_PERMANENT_ROOM);
+                    console.info('[Cloud] Firestore client rebuilt:', CLOUD_FIRESTORE_TRANSPORT);
+                    resetCloudTransportErrorStreak();
+                    updateCloudStatus('CONNECTING', 'Firestore 傳輸通道已重建');
+                    return true;
+                } catch (err) {
+                    cloudLastError = err;
+                    console.warn('[Cloud] Firestore HARD RESET failed', err);
+                    return false;
+                } finally {
+                    cloudTransportHardResetPromise = null;
+                }
+            })();
+            return cloudTransportHardResetPromise;
+        }
+
         async function recoverFirestoreTransport(reason = 'TRANSPORT') {
             if (!firestoreDb || !isNetworkLikelyAvailable()) return false;
             if (cloudTransportRecoveryPromise) return cloudTransportRecoveryPromise;
             const now = Date.now();
+            const streak = noteCloudTransportError();
+
+            /* Repeated ERR_CONNECTION_CLOSED / WebChannel failures are not helped
+               by another enableNetwork() on the same Firebase 8.10.1 instance.
+               Escalate quickly to a brand-new client after the second failure. */
+            if (streak >= CLOUD_TRANSPORT_HARD_RESET_THRESHOLD) {
+                return rebuildFirestoreClient(`TRANSPORT_STREAK_${streak}:${reason}`);
+            }
+
             if (now - lastCloudTransportRecoveryAt < CLOUD_TRANSPORT_RECOVERY_COOLDOWN_MS) return true;
 
             cloudTransportRecoveryPromise = (async () => {
@@ -2976,6 +3053,7 @@
             clearCloudRetry();
             cloudRetryAttempt = 0;
             cloudLastError = null;
+            resetCloudTransportErrorStreak();
             updateCloudStatus('ONLINE', detail);
         }
 
