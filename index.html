@@ -2630,7 +2630,7 @@
         const currentDeviceId = getOrCreateDeviceId();
         let lastKnownCloudRevision = 0;
 
-        const CLOUD_SYNC_VERSION = 'V8.6-A2.3.3.2';
+        const CLOUD_SYNC_VERSION = 'V8.6-A2.3.3.3';
         const CLOUD_PROTOCOL = 'manifest-chunk-v3';
         const CLOUD_TIMEOUT_MS = 12000;
         const CLOUD_RETRY_DELAYS = [5000, 10000, 20000, 40000, 60000];
@@ -2645,6 +2645,12 @@
            the application keeps scheduling health probes. */
         const CLOUD_TRANSPORT_HARD_RESET_THRESHOLD = 2;
         const CLOUD_TRANSPORT_ERROR_WINDOW_MS = 30000;
+        /* V8.6-A2.3.3.3: Firestore AsyncQueue / queued-write saturation guard.
+           Repeated automatic pushes can overwhelm Firebase 8.10.1's internal queue
+           even when the browser network is healthy. Keep push operations serialized
+           and back off hard when the SDK reports queued-write saturation. */
+        const CLOUD_WRITE_QUEUE_OVERFLOW_COOLDOWN_MS = 60000;
+        let cloudWriteQueueBlockedUntil = 0;
         let cloudState = 'INIT';
         let cloudRetryTimer = null;
         let cloudRetryAttempt = 0;
@@ -2875,6 +2881,12 @@
             return /ERR_CONNECTION_CLOSED|INTERNAL ASSERTION FAILED|Unexpected state|WebChannelConnection|WebChannel|channelrequest|webchannelbase|transport errored|connection closed|Could not reach Cloud Firestore backend|Failed to fetch|network request failed/i.test(`${code} ${msg}`);
         }
 
+        function isCloudWriteQueueOverflowError(err) {
+            const msg = String(err?.message || err || '');
+            const code = String(err?.code || '');
+            return /maximum allowed queued writes|maximum.*queued writes|queued writes.*maximum|queued write.*exceed|too many queued writes|AsyncQueue.*write/i.test(`${code} ${msg}`);
+        }
+
         /* V8.6-A2.3.2.8: Integrity failures are deterministic data/schema problems.
            They must NOT enter the transport retry loop, otherwise a legacy/corrupt
            manifest can create an endless pull -> retry -> pull storm (as observed in
@@ -3009,13 +3021,19 @@
 
         function scheduleCloudRetry(reason = 'RETRY') {
             if (cloudRetryTimer || !firestoreDb || isSyncing) return;
-            const delay = CLOUD_RETRY_DELAYS[Math.min(cloudRetryAttempt, CLOUD_RETRY_DELAYS.length - 1)];
+            const queueBlockedRemaining = Math.max(0, cloudWriteQueueBlockedUntil - Date.now());
+            const baseDelay = CLOUD_RETRY_DELAYS[Math.min(cloudRetryAttempt, CLOUD_RETRY_DELAYS.length - 1)];
+            const delay = Math.max(baseDelay, queueBlockedRemaining);
             cloudRetryAttempt = Math.min(cloudRetryAttempt + 1, CLOUD_RETRY_DELAYS.length - 1);
             updateCloudStatus('RETRYING', `${Math.round(delay / 1000)}s 後重試`);
             cloudRetryTimer = setTimeout(async () => {
                 cloudRetryTimer = null;
                 if (!isNetworkLikelyAvailable()) { scheduleCloudRetry('BROWSER_OFFLINE'); return; }
                 if (isSyncing) return;
+                if (Date.now() < cloudWriteQueueBlockedUntil) {
+                    scheduleCloudRetry('WRITE_QUEUE_COOLDOWN');
+                    return;
+                }
                 try {
                     const recovered = await ensureFirestoreNetwork('RETRY');
                     if (!recovered) throw new Error('Firestore network recovery failed');
@@ -3052,6 +3070,7 @@
         function markCloudOnline(detail = '連線正常') {
             clearCloudRetry();
             cloudRetryAttempt = 0;
+            cloudWriteQueueBlockedUntil = 0;
             cloudLastError = null;
             resetCloudTransportErrorStreak();
             updateCloudStatus('ONLINE', detail);
@@ -3246,11 +3265,20 @@
                 if (!silent) showNotificationModal('雲端未連線', '資料仍安全保留於本機 IndexedDB，系統會在連線恢復後重試。'); 
                 return false; 
             }
-            if (isSyncing && retryAttempts === 0) { 
-                cloudPushQueued = true; 
-                return false; 
+            /* A2.3.3.3: serialize ALL pushes, including retry paths. The previous
+               retryAttempts exception could allow a second push to enter Firebase's
+               AsyncQueue while another operation was still unwinding. */
+            if (isSyncing) {
+                cloudPushQueued = true;
+                return false;
             }
             const now = Date.now();
+            if (now < cloudWriteQueueBlockedUntil) {
+                cloudPushQueued = true;
+                updateCloudStatus('RETRYING', `${Math.ceil((cloudWriteQueueBlockedUntil - now) / 1000)}s 後恢復雲端寫入`);
+                scheduleCloudRetry('WRITE_QUEUE_COOLDOWN');
+                return false;
+            }
             if (retryAttempts === 0 && (now - lastCloudOperationAt < CLOUD_OPERATION_COOLDOWN_MS)) {
                 cloudPushQueued = true;
                 return false;
@@ -3380,6 +3408,20 @@
                     return await pushToCloudForce(silent, retryAttempts + 1);
                 }
 
+                if (isCloudWriteQueueOverflowError(err)) {
+                    cloudPushQueued = true;
+                    cloudLastError = err;
+                    cloudWriteQueueBlockedUntil = Date.now() + CLOUD_WRITE_QUEUE_OVERFLOW_COOLDOWN_MS;
+                    cloudRetryAttempt = Math.max(cloudRetryAttempt, 2);
+                    console.warn('[Cloud] Firestore queued-write saturation detected; serializing and backing off', err);
+                    /* Rebuild once so stale AsyncQueue state is discarded, but do not
+                       immediately issue another write. The retry is delayed by the
+                       explicit saturation cooldown above. */
+                    try { await rebuildFirestoreClient('WRITE_QUEUE_OVERFLOW'); } catch (_) {}
+                    updateCloudStatus('RETRYING', 'Firestore 寫入佇列過載；已停止連續推送，60s 後再試');
+                    return false;
+                }
+
                 console.error('[Cloud] push failed', err);
                 cloudPushQueued = true;
                 cloudLastError = err;
@@ -3399,7 +3441,7 @@
            移除 COUNT_VERIFIED_MIGRATION 的無條件放行後門。
            Checksum 必須通過 CURRENT_FULL 或已知的 Legacy 演算法，否則嚴格拒絕寫入本機！
         */
-        /* V8.6-A2.3.3.2: Legacy Manifest Recovery Candidate Hardening.
+        /* V8.6-A2.3.3.3: Legacy Manifest Recovery Candidate Hardening.
            If a v2 manifest lost syncId/chunkCount but its archive chunks are still present,
            reconstruct the candidate from immutable chunk documents. The recovered payload
            is structurally validated, checksumed locally, then the next successful push
