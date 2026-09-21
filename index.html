@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bybit 小幣高精度狙擊交易系統 V8.6-A2.3.3.1 (Legacy Cloud Recovery + Statistical Confidence + Walk-Forward Edge Calibration + Firestore Transport Hardening)</title>
+    <title>Bybit 小幣高精度狙擊交易系統 V8.6-A2.4.0 (Edge Validation + Dual-Track OOS + Regime Stability + Strategy Safety Gate)</title>
     <!-- Tailwind CSS CDN --> 
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -109,7 +109,7 @@
                                 <span id="cloudRoomBadgeText">房間: radar-usr-uzk44xx</span>
                             </span>
                             <span class="text-[9px] bg-purple-500/20 text-purple-300 font-mono font-semibold px-1.5 py-0.5 rounded border border-purple-500/30" id="regimeHeaderBadge">Regime: CHOPPY</span>
-                            <span class="text-[9px] bg-emerald-500/20 text-emerald-300 font-mono font-semibold px-1.5 py-0.5 rounded border border-emerald-500/30">V8.6-A2.3.3.1 Legacy Cloud Recovery + Statistical Confidence + Transport Hardening</span>
+                            <span class="text-[9px] bg-emerald-500/20 text-emerald-300 font-mono font-semibold px-1.5 py-0.5 rounded border border-emerald-500/30">V8.6-A2.4.0 Edge Validation + Dual-Track OOS + Regime Stability + Safety Gate</span>
                         </div>
                         <p class="text-[11px] text-slate-400 hidden sm:block">A2.3 負向邊緣剪枝 · 預期邊際評分 (EES) 重構 · 影子 A/B 雙軌校準 · Transactional Revision 防護</p>
                     </div>
@@ -302,7 +302,7 @@
                 <div class="flex items-center gap-2">
                     <span class="text-xl">🧠</span>
                     <div>
-                        <h3 class="font-bold text-white text-sm sm:text-base">V8.6-A2.3.3.1 Dataset Integrity · Statistical Confidence · Walk-Forward Calibration · Transport Hardening</h3>
+                        <h3 class="font-bold text-white text-sm sm:text-base">V8.6-A2.4.0 Edge Validation · Dual-Track OOS · Regime Stability · Safety Gate</h3>
                         <p class="text-[11px] text-fuchsia-300">資料完整性分層 · Execution / Shadow 分離 · Contextual Edge 校準 · Block Attribution · Walk-forward 驗證</p>
                     </div>
                 </div>
@@ -400,6 +400,19 @@
                         <span id="a233ConfidenceNote" class="text-[10px] text-cyan-300">Wilson / SE / OOS calibration</span>
                     </div>
                     <div id="a233ConfidenceTable" class="overflow-x-auto"></div>
+                </div>
+                <div class="p-3.5 rounded-xl border border-rose-500/30 bg-rose-950/10 space-y-3">
+                    <div class="flex justify-between items-center gap-2 flex-wrap">
+                        <div>
+                            <span class="font-bold text-white text-xs">🧪 V8.6-A2.4 Edge Validation — 雙軌 OOS / Regime Stability / Net Edge</span>
+                            <div class="text-[10px] text-slate-400 mt-1">Execution 與 Shadow 分開驗證；不把兩者混成一條訓練曲線。只有 OOS、信賴區間、Regime 穩定性同時達標，才允許自動交易候選。</div>
+                        </div>
+                        <span id="a24ValidationStatus" class="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-300">Validation 計算中</span>
+                    </div>
+                    <div id="a24ValidationCards" class="grid grid-cols-2 md:grid-cols-4 gap-2 text-[11px]"></div>
+                    <div id="a24TrackTable" class="overflow-x-auto"></div>
+                    <div id="a24RegimeTable" class="overflow-x-auto"></div>
+                    <div id="a24GateNote" class="text-[10px] text-slate-400 leading-relaxed"></div>
                 </div>
 
                 <div class="p-3.5 rounded-xl border border-crypto-border bg-slate-900/60 space-y-2">
@@ -633,7 +646,7 @@
                 active: [], 
                 archive: [], 
                 seenSignals: {}, 
-                version: 'V8.6-A2.3.3.1' 
+                version: 'V8.6-A2.4.0' 
             }
         };
 
@@ -779,6 +792,28 @@
             minOosCalibrationSamples: 60,
             walkForwardFolds: 4,
             minFoldTestSamples: 20
+        };
+
+        /* V8.6-A2.4: Edge Validation & Strategy Optimization.
+           This layer does not mix Execution and Shadow data. It validates each
+           track independently, measures time-forward OOS performance, checks
+           regime stability, and uses a conservative safety gate for AUTO mode.
+           Manual follow/copy remains available and the default auto-trade flag
+           remains OFF. */
+        const A24_CONFIG = {
+            version: 'V8.6-A2.4.0',
+            enabled: true,
+            applyExecutionGate: true,
+            minTrackSamples: 120,
+            minOosSamples: 60,
+            minFoldSamples: 30,
+            folds: 4,
+            trainRatio: 0.50,
+            minRegimeSamples: 30,
+            minPositiveFoldRatio: 0.75,
+            minPositiveRegimeRatio: 0.50,
+            ciZ: 1.96,
+            candidateConfidence: 0.95
         };
 
         function a232Num(v, d = 0) { const n = Number(v); return Number.isFinite(n) ? n : d; }
@@ -1117,6 +1152,196 @@
             };
         }
 
+        let a24ValidationCache = { key:'', value:null };
+
+        function a24TradeTimestamp(t) {
+            return a232Num(t?.closedAtTs ?? t?.closedAt ?? t?.openedAt ?? t?.openTime, 0);
+        }
+
+        function a24NetValue(t) {
+            const n = Number(t?.netPnl ?? t?.pnl);
+            return Number.isFinite(n) ? n : 0;
+        }
+
+        function a24GrossValue(t) {
+            const n = Number(t?.grossPnl);
+            return Number.isFinite(n) ? n : a24NetValue(t);
+        }
+
+        function a24CostDrag(trades) {
+            const arr = (trades || []).filter(Boolean);
+            if (!arr.length) return { n:0, total:0, mean:0 };
+            const costs = arr.map(t => Math.max(0, a24GrossValue(t) - a24NetValue(t)));
+            const total = costs.reduce((a,b)=>a+b,0);
+            return { n:arr.length, total, mean:total/arr.length };
+        }
+
+        function a24RegimeOf(t) {
+            const c = t?.entryContext || t?.context || {};
+            return String(t?.regimeAtEntry ?? t?.regime ?? c.regime ?? 'UNKNOWN').toUpperCase();
+        }
+
+        function a24SampleTier(n) {
+            if (n >= 500) return 'STRONG';
+            if (n >= 200) return 'CALIBRATION_READY';
+            if (n >= 100) return 'DEVELOPMENT';
+            if (n >= 50) return 'WEAK_EVIDENCE';
+            if (n >= 20) return 'RESEARCH_ONLY';
+            return 'INSUFFICIENT';
+        }
+
+        function a24ForwardValidation(trades) {
+            const rows = [...(trades || [])].filter(t => t?.__a232?.quality?.complete).sort((a,b)=>a24TradeTimestamp(a)-a24TradeTimestamp(b));
+            if (rows.length < A24_CONFIG.minTrackSamples) {
+                return { ok:false, samples:rows.length, tier:a24SampleTier(rows.length), reason:`完整樣本 ${rows.length} < ${A24_CONFIG.minTrackSamples}`, folds:[], oos:{n:0,mean:0,se:0,ciLow:0,ciHigh:0}, positiveFoldRatio:0 };
+            }
+            const minTrain = Math.max(50, Math.floor(rows.length * A24_CONFIG.trainRatio));
+            const remaining = rows.length - minTrain;
+            const foldCount = Math.max(1, Math.min(A24_CONFIG.folds, Math.floor(remaining / A24_CONFIG.minFoldSamples)));
+            const foldSize = Math.max(A24_CONFIG.minFoldSamples, Math.floor(remaining / foldCount));
+            const folds = [];
+            const oosRows = [];
+
+            for (let i=0; i<foldCount; i++) {
+                const testStart = minTrain + i * foldSize;
+                const testEnd = i === foldCount - 1 ? rows.length : Math.min(rows.length, testStart + foldSize);
+                const train = rows.slice(0, testStart);
+                const test = rows.slice(testStart, testEnd);
+                if (train.length < 50 || test.length < A24_CONFIG.minFoldSamples) continue;
+
+                const model = a232BuildContextModel(train, 'A24_WF_TRAIN');
+                const scored = test.map(t => {
+                    const adj = a232ContextAdjustment(t.__a232.ctx, model, false).total;
+                    const base = a232Num(t.__a232.ctx?.baseScore ?? t.entryContext?.score ?? t.scoreAtEntry, 0);
+                    return { t, score: base + adj };
+                });
+                const sorted = scored.map(x=>x.score).sort((a,b)=>a-b);
+                const median = sorted[Math.floor(sorted.length/2)] ?? 0;
+                const high = test.filter((_,idx)=>scored[idx].score >= median);
+                const low = test.filter((_,idx)=>scored[idx].score < median);
+                const stats = a233UncertaintyStats(test, true);
+                const highStats = a233UncertaintyStats(high, true);
+                const lowStats = a233UncertaintyStats(low, true);
+                const net = calculateGroupMetrics(test);
+                const cost = a24CostDrag(test);
+                const fold = {
+                    index:i+1, trainCount:train.length, testCount:test.length,
+                    testExp:stats.mean, testSe:stats.se, testCiLow:stats.ciLow, testCiHigh:stats.ciHigh,
+                    wr:stats.wr, wrLow:stats.wrLow, wrHigh:stats.wrHigh,
+                    netExp:net.exp, costMean:cost.mean,
+                    highExp:highStats.mean, lowExp:lowStats.mean, lift:highStats.mean-lowStats.mean,
+                    medianScore:median
+                };
+                folds.push(fold);
+                oosRows.push(...test);
+            }
+
+            if (!folds.length) return { ok:false, samples:rows.length, tier:a24SampleTier(rows.length), reason:'沒有足夠的連續 Forward OOS fold', folds:[], oos:{n:0,mean:0,se:0,ciLow:0,ciHigh:0}, positiveFoldRatio:0 };
+
+            const oos = a233UncertaintyStats(oosRows, true);
+            const netOos = calculateGroupMetrics(oosRows);
+            const positiveFolds = folds.filter(f=>f.testExp > 0).length;
+            const positiveLiftFolds = folds.filter(f=>f.lift > 0).length;
+            const positiveFoldRatio = positiveFolds / folds.length;
+            const positiveLiftRatio = positiveLiftFolds / folds.length;
+            const cost = a24CostDrag(oosRows);
+            return {
+                ok:true, samples:rows.length, tier:a24SampleTier(rows.length), train:minTrain,
+                test:oosRows.length, folds, oos, netOos, cost,
+                positiveFolds, positiveLiftFolds, positiveFoldRatio, positiveLiftRatio,
+                lastFold:folds[folds.length-1]
+            };
+        }
+
+        function a24RegimeAudit(trades) {
+            const map = new Map();
+            (trades || []).filter(t=>t?.__a232?.quality?.complete).forEach(t=>{
+                const r=a24RegimeOf(t); if(!map.has(r)) map.set(r,[]); map.get(r).push(t);
+            });
+            const rows=[];
+            map.forEach((group, regime)=>{
+                const st=a233UncertaintyStats(group,true);
+                const net=calculateGroupMetrics(group);
+                rows.push({regime,count:group.length,exp:st.mean,ciLow:st.ciLow,ciHigh:st.ciHigh,wr:st.wr,wrLow:st.wrLow,wrHigh:st.wrHigh,netExp:net.exp,eligible:group.length>=A24_CONFIG.minRegimeSamples});
+            });
+            rows.sort((a,b)=>a.regime.localeCompare(b.regime));
+            const eligible=rows.filter(r=>r.eligible);
+            const positive=eligible.filter(r=>r.exp>0).length;
+            return {rows,eligible:eligible.length,positive,positiveRatio:eligible.length?positive/eligible.length:0,stable:eligible.length>=2 && positive/eligible.length>=A24_CONFIG.minPositiveRegimeRatio};
+        }
+
+        function a24TrackValidation(trades, source) {
+            const wf=a24ForwardValidation(trades);
+            const regimes=a24RegimeAudit(trades);
+            const ciPass=wf.ok && wf.oos.ciLow>0;
+            const foldPass=wf.ok && wf.positiveFoldRatio>=A24_CONFIG.minPositiveFoldRatio;
+            const samplePass=wf.samples>=A24_CONFIG.minTrackSamples && wf.oos.n>=A24_CONFIG.minOosSamples;
+            const regimePass=regimes.stable;
+            const allow=Boolean(wf.ok && samplePass && ciPass && foldPass && regimePass);
+            const reasons=[];
+            if(!samplePass) reasons.push('SAMPLE');
+            if(!ciPass) reasons.push('OOS_CI');
+            if(!foldPass) reasons.push('FOLD_STABILITY');
+            if(!regimePass) reasons.push('REGIME_STABILITY');
+            return {source,wf,regimes,allow,reasons,validationConfidence:allow?A24_CONFIG.candidateConfidence:Math.min(0.94,Math.max(0.50,(wf.oos?.ciLow>0?0.85:0.55)+(wf.positiveFoldRatio||0)*0.10))};
+        }
+
+        function a24GetValidationSuite(ds=null) {
+            const dataset=ds||buildA232Dataset();
+            const key=`${dataset.executionTrain.length}:${dataset.shadowTrain.length}:${dataset.total}`;
+            if(a24ValidationCache.key===key && a24ValidationCache.value) return a24ValidationCache.value;
+            const execution=a24TrackValidation(dataset.executionTrain,'EXECUTION');
+            const shadow=a24TrackValidation(dataset.shadowTrain,'SHADOW');
+            const active=dataset.preferredSource==='EXECUTION' ? execution : shadow;
+            const suite={version:A24_CONFIG.version,key,dataset,execution,shadow,active,generatedAt:Date.now()};
+            a24ValidationCache={key,value:suite};
+            return suite;
+        }
+
+        function a24ExecutionGate() {
+            if(!A24_CONFIG.enabled) return {allow:true,reason:'A24_DISABLED'};
+            const suite=a24GetValidationSuite();
+            const track=suite.execution;
+            if(!A24_CONFIG.applyExecutionGate) return {allow:true,reason:'GATE_OFF',suite,track};
+            if(track.allow) return {allow:true,reason:'A24_VALIDATED',suite,track};
+            return {allow:false,reason:`A2.4_VALIDATION_BLOCK:${track.reasons.join('|')||'NOT_VALIDATED'}`,suite,track};
+        }
+
+        function a24RenderLab() {
+            const suite=a24GetValidationSuite();
+            const status=document.getElementById('a24ValidationStatus');
+            const cards=document.getElementById('a24ValidationCards');
+            const trackTable=document.getElementById('a24TrackTable');
+            const regimeTable=document.getElementById('a24RegimeTable');
+            const note=document.getElementById('a24GateNote');
+            const e=suite.execution, sh=suite.shadow;
+            const fmt=(v,d=3)=>Number.isFinite(v)?v.toFixed(d):'—';
+            if(status){
+                status.textContent=e.allow?'🟢 Execution OOS 已驗證':'🟠 Execution OOS 尚未通過安全門';
+                status.className=`text-[10px] px-2 py-0.5 rounded ${e.allow?'bg-emerald-900/60 text-emerald-300':'bg-amber-900/60 text-amber-300'}`;
+            }
+            if(cards){
+                cards.innerHTML=[
+                    ['Execution N',e.wf.samples,'text-emerald-300'],
+                    ['Execution OOS',e.wf.oos?.n||0,'text-sky-300'],
+                    ['OOS Exp',fmt(e.wf.oos?.mean),'text-fuchsia-300'],
+                    ['OOS 95% CI Low',fmt(e.wf.oos?.ciLow),'text-amber-300']
+                ].map(([k,v,c])=>`<div class="p-2 rounded bg-slate-950/60 border border-slate-800"><div class="text-slate-500 text-[10px]">${k}</div><div class="font-bold ${c} text-sm">${v}</div></div>`).join('');
+            }
+            if(trackTable){
+                const rows=[e,sh].map(x=>`<tr class="border-b border-slate-900"><td class="p-2 font-bold text-white">${x.source}</td><td class="p-2 text-center">${x.wf.samples} · ${x.wf.tier}</td><td class="p-2 text-center ${x.wf.oos?.mean>0?'text-emerald-400':'text-rose-400'}">${fmt(x.wf.oos?.mean)}</td><td class="p-2 text-center">[${fmt(x.wf.oos?.ciLow)}, ${fmt(x.wf.oos?.ciHigh)}]</td><td class="p-2 text-center">${x.wf.positiveFolds||0}/${x.wf.folds?.length||0}</td><td class="p-2 text-center">${x.regimes.positive}/${x.regimes.eligible}</td><td class="p-2 text-center font-bold ${x.allow?'text-emerald-400':'text-amber-400'}">${x.allow?'VALIDATED':'RESEARCH'}</td></tr>`).join('');
+                trackTable.innerHTML=`<table class="w-full text-left text-[11px]"><thead class="text-slate-400 border-b border-slate-800 bg-slate-950"><tr><th class="p-2">Track</th><th class="p-2 text-center">樣本 / Tier</th><th class="p-2 text-center">OOS Exp</th><th class="p-2 text-center">95% CI</th><th class="p-2 text-center">Positive Fold</th><th class="p-2 text-center">Positive Regime</th><th class="p-2 text-center">狀態</th></tr></thead><tbody>${rows}</tbody></table>`;
+            }
+            if(regimeTable){
+                const rows=[...e.regimes.rows,...sh.regimes.rows.map(r=>({...r,regime:`SHADOW · ${r.regime}`}))];
+                regimeTable.innerHTML=`<table class="w-full text-left text-[11px]"><thead class="text-slate-400 border-b border-slate-800 bg-slate-950"><tr><th class="p-2">Regime</th><th class="p-2 text-center">N</th><th class="p-2 text-center">Exp</th><th class="p-2 text-center">95% CI</th><th class="p-2 text-center">WR</th><th class="p-2 text-center">判定</th></tr></thead><tbody>${rows.map(r=>`<tr class="border-b border-slate-900"><td class="p-2 text-white">${r.regime}</td><td class="p-2 text-center">${r.count}</td><td class="p-2 text-center ${r.exp>0?'text-emerald-400':'text-rose-400'}">${fmt(r.exp)}</td><td class="p-2 text-center">[${fmt(r.ciLow)}, ${fmt(r.ciHigh)}]</td><td class="p-2 text-center">${r.wr.toFixed(1)}% (${r.wrLow.toFixed(1)}–${r.wrHigh.toFixed(1)})</td><td class="p-2 text-center ${r.eligible?(r.exp>0?'text-emerald-400':'text-amber-400'):'text-slate-500'}">${r.eligible?(r.exp>0?'POSITIVE':'NEGATIVE'):'N<'+A24_CONFIG.minRegimeSamples}</td></tr>`).join('')}</tbody></table>`;
+            }
+            if(note){
+                const gate=a24ExecutionGate();
+                note.innerHTML=`<b class="text-white">Auto Gate:</b> ${gate.allow?'<span class="text-emerald-400">允許候選</span>':'<span class="text-amber-300">目前禁止自動交易候選</span>'} · ${gate.reason}<br>Execution 與 Shadow 完全分開驗證；OOS 必須有正向 95% CI 下界、≥${Math.round(A24_CONFIG.minPositiveFoldRatio*100)}% 正 Fold、至少 2 個足夠樣本 Regime。成本拖累會另外以 Gross→Net 差額監控。<br>Execution OOS 成本均值：<b>$${fmt(e.wf.cost?.mean,4)}</b> / trade · Shadow：<b>$${fmt(sh.wf.cost?.mean,4)}</b> / trade`;
+            }
+        }
+
         let a233CalibrationCache = { key:'', value:null };
         function a233GetWalkForwardCalibration(ds) {
             const key = `${ds?.preferredSource || 'NONE'}:${ds?.preferred?.length || 0}:${ds?.executionTrain?.length || 0}:${ds?.shadowTrain?.length || 0}`;
@@ -1262,7 +1487,7 @@
                 maePct: v85Number(trade?.maePct),
                 fills,
                 entryContext: trade?.entryContext || null,
-                schemaVersion: '8.6-A2.3.3.1'
+                schemaVersion: '8.6-A2.4.0'
             };
             normalized.tradeId = v85StableTradeId(normalized);
             normalized.id = normalized.tradeId;
@@ -1456,6 +1681,13 @@
             }
             if (entryContext.decision === 'SHADOW_ONLY') {
                 return { allowed: false, reason: `A23_SHADOW_ONLY (EES:${entryContext.expectedEdgeScore})` };
+            }
+
+            /* V8.6-A2.4: only AUTO execution is subject to the statistical
+               validation gate. Manual follow/copy remains unchanged. */
+            if (simState.autoTrade && A24_CONFIG.applyExecutionGate) {
+                const a24Gate = a24ExecutionGate();
+                if (!a24Gate.allow) return { allowed: false, reason: a24Gate.reason, a24: a24Gate.track };
             }
 
             if (simState.positions.length >= simState.maxPositions) return { allowed: false, reason: 'MAX_POSITIONS' };
@@ -1906,7 +2138,7 @@
             
             const candidate = ranked.find(c => evaluateRiskGate(c).allowed);
             if (candidate) {
-                executeOpenPosition(candidate, `🧠 V8.6-A2.3 EES ${candidate.entryContext.expectedEdgeScore}分`);
+                executeOpenPosition(candidate, `🧠 V8.6-A2.4 Validated EES ${candidate.entryContext.expectedEdgeScore}分`);
             }
         }
 
@@ -2219,7 +2451,8 @@
                 confEl.innerHTML = rows.length ? `<table class="w-full text-left text-[11px]"><thead class="text-slate-400 border-b border-slate-800 bg-slate-950"><tr><th class="p-2">Context</th><th class="p-2 text-center">N</th><th class="p-2 text-center">Exp</th><th class="p-2 text-center">95% CI</th><th class="p-2 text-center">WR Wilson</th><th class="p-2 text-center">Stat Conf.</th></tr></thead><tbody>${rows.map(r=>`<tr class="border-b border-slate-900"><td class="p-2 text-white">${r.dim} × ${r.key}</td><td class="p-2 text-center">${r.count}</td><td class="p-2 text-center ${r.exp>=0?'text-emerald-400':'text-rose-400'}">${r.exp.toFixed(3)}</td><td class="p-2 text-center">[${r.ciLow.toFixed(3)}, ${r.ciHigh.toFixed(3)}]</td><td class="p-2 text-center">${r.wrLow.toFixed(1)}–${r.wrHigh.toFixed(1)}%</td><td class="p-2 text-center font-bold">${(r.confidence*100).toFixed(0)}%</td></tr>`).join('')}</tbody></table>` : '<div class="p-3 text-center text-slate-500">目前沒有達最低樣本門檻的 Context。</div>';
             }
             if (document.getElementById('a233ConfidenceNote')) document.getElementById('a233ConfidenceNote').textContent = `Stat confidence = N prior + expectancy SE + Wilson WR；OOS calibration ${(wf.oosReliability*100).toFixed(0)}%`;
-            persistDatasetMetadata('A233_LAB_REFRESH');
+            a24RenderLab();
+            persistDatasetMetadata('A24_LAB_REFRESH');
         }
 
         function openA23LabModal() {
@@ -2335,8 +2568,9 @@
             const { variantA, variantB, blockedTrades } = computeABDataset();
             const models = a232GetModels();
             const ds = models.dataset;
+            const a24 = a24GetValidationSuite(ds);
             const report = {
-                version: "V8.6-A2.3.2-DATASET-INTEGRITY-CONTEXTUAL-EDGE",
+                version: "V8.6-A2.4.0-EDGE-VALIDATION",
                 generatedAt: new Date().toISOString(),
                 metricsVariantA: calculateGroupMetrics(variantA),
                 metricsVariantB: calculateGroupMetrics(variantB),
@@ -2353,6 +2587,12 @@
                 },
                 activeContextModel: models.active,
                 walkForward: a232WalkForward(ds.preferred),
+                a24Validation: {
+                    execution: a24.execution,
+                    shadow: a24.shadow,
+                    activeSource: ds.preferredSource,
+                    autoExecutionGate: a24ExecutionGate().allow
+                },
                 totalDataset: variantA.length
             };
             const b = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
@@ -2630,7 +2870,7 @@
         const currentDeviceId = getOrCreateDeviceId();
         let lastKnownCloudRevision = 0;
 
-        const CLOUD_SYNC_VERSION = 'V8.6-A2.3.3.5';
+        const CLOUD_SYNC_VERSION = 'V8.6-A2.3.3.2';
         const CLOUD_PROTOCOL = 'manifest-chunk-v3';
         const CLOUD_TIMEOUT_MS = 12000;
         const CLOUD_RETRY_DELAYS = [5000, 10000, 20000, 40000, 60000];
@@ -2639,36 +2879,12 @@
            experimentalForceLongPolling and requires settings() before other Firestore calls. */
         const CLOUD_FIRESTORE_TRANSPORT = 'FORCE_LONG_POLLING';
         const CLOUD_TRANSPORT_RECOVERY_COOLDOWN_MS = 15000;
-        /* V8.6-A2.3.3.1: soft reset is attempted first; repeated WebChannel
+        /* V8.6-A2.4.0: soft reset is attempted first; repeated WebChannel
            closures escalate to a full Firestore client termination/rebuild. This
            prevents Firebase 8.10.1 from keeping a broken WebChannel alive while
            the application keeps scheduling health probes. */
         const CLOUD_TRANSPORT_HARD_RESET_THRESHOLD = 2;
         const CLOUD_TRANSPORT_ERROR_WINDOW_MS = 30000;
-        /* V8.6-A2.3.3.3: Firestore AsyncQueue / queued-write saturation guard.
-           Repeated automatic pushes can overwhelm Firebase 8.10.1's internal queue
-           even when the browser network is healthy. Keep push operations serialized
-           and back off hard when the SDK reports queued-write saturation. */
-        const CLOUD_WRITE_QUEUE_OVERFLOW_COOLDOWN_MS = 60000;
-        let cloudWriteQueueBlockedUntil = 0;
-        /* V8.6-A2.3.3.4: a Firestore batch commit cannot be cancelled by Promise.race.
-           Keep the real in-flight promise visible so timeout recovery never starts a
-           second write/reset against the same Firebase 8.10.1 AsyncQueue. */
-        let cloudWriteInFlightPromise = null;
-        let cloudWriteInFlightLabel = '';
-        let cloudWriteInFlightStartedAt = 0;
-        let cloudWriteInFlightGeneration = 0;
-        /* V8.6-A2.3.3.5: Write-stream circuit breaker. A timeout is not enough: the
-           Firebase 8.10.1 SDK can continue queueing writes after a WebChannel close.
-           Freeze NEW write attempts when the SDK reports queue saturation/transport
-           instability, then allow one controlled recovery after cooldown. */
-        const CLOUD_WRITE_CIRCUIT_COOLDOWN_MS = 90000;
-        const CLOUD_WRITE_CIRCUIT_WINDOW_MS = 120000;
-        const CLOUD_WRITE_CIRCUIT_THRESHOLD = 2;
-        let cloudWriteCircuitOpenUntil = 0;
-        let cloudWriteCircuitReason = '';
-        let cloudWriteCircuitFailures = 0;
-        let cloudWriteCircuitWindowStartedAt = 0;
         let cloudState = 'INIT';
         let cloudRetryTimer = null;
         let cloudRetryAttempt = 0;
@@ -2899,12 +3115,6 @@
             return /ERR_CONNECTION_CLOSED|INTERNAL ASSERTION FAILED|Unexpected state|WebChannelConnection|WebChannel|channelrequest|webchannelbase|transport errored|connection closed|Could not reach Cloud Firestore backend|Failed to fetch|network request failed/i.test(`${code} ${msg}`);
         }
 
-        function isCloudWriteQueueOverflowError(err) {
-            const msg = String(err?.message || err || '');
-            const code = String(err?.code || '');
-            return /maximum allowed queued writes|maximum.*queued writes|queued writes.*maximum|queued write.*exceed|too many queued writes|AsyncQueue.*write/i.test(`${code} ${msg}`);
-        }
-
         /* V8.6-A2.3.2.8: Integrity failures are deterministic data/schema problems.
            They must NOT enter the transport retry loop, otherwise a legacy/corrupt
            manifest can create an endless pull -> retry -> pull storm (as observed in
@@ -3033,116 +3243,19 @@
             return Promise.race([promise, timeout]).finally(() => { if (timer) clearTimeout(timer); });
         }
 
-        function isCloudWriteCircuitOpen() {
-            return Date.now() < cloudWriteCircuitOpenUntil;
-        }
-
-        function noteCloudWriteCircuitFailure(reason = 'WRITE_FAILURE') {
-            const now = Date.now();
-            if (!cloudWriteCircuitWindowStartedAt || now - cloudWriteCircuitWindowStartedAt > CLOUD_WRITE_CIRCUIT_WINDOW_MS) {
-                cloudWriteCircuitWindowStartedAt = now;
-                cloudWriteCircuitFailures = 1;
-            } else {
-                cloudWriteCircuitFailures += 1;
-            }
-            if (cloudWriteCircuitFailures >= CLOUD_WRITE_CIRCUIT_THRESHOLD) {
-                cloudWriteCircuitOpenUntil = now + CLOUD_WRITE_CIRCUIT_COOLDOWN_MS;
-                cloudWriteCircuitReason = reason;
-                clearCloudRetry();
-                console.warn(`[Cloud] WRITE CIRCUIT OPEN for ${Math.round(CLOUD_WRITE_CIRCUIT_COOLDOWN_MS / 1000)}s`, { reason, failures: cloudWriteCircuitFailures });
-                updateCloudStatus('RETRYING', `Firestore 寫入熔斷：${Math.round(CLOUD_WRITE_CIRCUIT_COOLDOWN_MS / 1000)}s 後再恢復`);
-            }
-            return cloudWriteCircuitFailures;
-        }
-
-        function clearCloudWriteCircuit(reason = 'RECOVERED') {
-            cloudWriteCircuitOpenUntil = 0;
-            cloudWriteCircuitReason = '';
-            cloudWriteCircuitFailures = 0;
-            cloudWriteCircuitWindowStartedAt = 0;
-            console.info('[Cloud] WRITE CIRCUIT CLOSED', reason);
-        }
-
-        function maybeScheduleAfterWriteCircuit() {
-            if (!firestoreDb || isSyncing || isCloudWriteInFlight() || !cloudPushQueued) return;
-            if (isCloudWriteCircuitOpen()) {
-                const remaining = Math.max(0, cloudWriteCircuitOpenUntil - Date.now());
-                updateCloudStatus('RETRYING', `Firestore 寫入熔斷中 · ${Math.ceil(remaining / 1000)}s`);
-                if (!cloudRetryTimer) {
-                    cloudRetryTimer = setTimeout(() => {
-                        cloudRetryTimer = null;
-                        if (isCloudWriteCircuitOpen()) { maybeScheduleAfterWriteCircuit(); return; }
-                        clearCloudWriteCircuit('COOLDOWN_EXPIRED');
-                        scheduleCloudRetry('WRITE_CIRCUIT_RECOVER');
-                    }, remaining);
-                }
-                return;
-            }
-            scheduleCloudRetry('WRITE_SETTLED');
-        }
-
-        function isCloudWriteInFlight() {
-            return !!cloudWriteInFlightPromise;
-        }
-
-        function attachCloudWriteSettlement(promise, label, generation) {
-            Promise.resolve(promise).then(
-                () => {
-                    if (cloudWriteInFlightGeneration !== generation) return;
-                    cloudWriteInFlightPromise = null;
-                    cloudWriteInFlightLabel = '';
-                    cloudWriteInFlightStartedAt = 0;
-                    console.info(`[Cloud] ${label} settled after timeout; write lane released`);
-                    if (cloudPushQueued && !isSyncing) maybeScheduleAfterWriteCircuit();
-                },
-                (err) => {
-                    if (cloudWriteInFlightGeneration !== generation) return;
-                    cloudWriteInFlightPromise = null;
-                    cloudWriteInFlightLabel = '';
-                    cloudWriteInFlightStartedAt = 0;
-                    cloudLastError = err;
-                    console.warn(`[Cloud] ${label} rejected after timeout; write lane released`, err);
-                    if (isCloudTransportError(err) || isCloudWriteQueueOverflowError(err)) {
-                        noteCloudWriteCircuitFailure(isCloudWriteQueueOverflowError(err) ? 'QUEUED_WRITE_SATURATION' : 'TRANSPORT_SETTLEMENT');
-                    }
-                    if (cloudPushQueued && !isSyncing) maybeScheduleAfterWriteCircuit();
-                }
-            );
-        }
-
-        function makeCloudWriteTimeoutError(label, pending, generation) {
-            const err = new Error(`${label} timeout after ${Math.round(CLOUD_TIMEOUT_MS * 2 / 1000)}s; underlying Firestore commit remains in-flight`);
-            err.code = 'CLOUD_WRITE_IN_FLIGHT_TIMEOUT';
-            err.cloudWriteInFlight = true;
-            err.pendingPromise = pending;
-            err.generation = generation;
-            return err;
-        }
-
         function clearCloudRetry() {
             if (cloudRetryTimer) { clearTimeout(cloudRetryTimer); cloudRetryTimer = null; }
         }
 
         function scheduleCloudRetry(reason = 'RETRY') {
-            if (cloudRetryTimer || !firestoreDb || isSyncing || isCloudWriteInFlight()) return;
-            if (isCloudWriteCircuitOpen()) {
-                maybeScheduleAfterWriteCircuit();
-                return;
-            }
-            const queueBlockedRemaining = Math.max(0, cloudWriteQueueBlockedUntil - Date.now());
-            const baseDelay = CLOUD_RETRY_DELAYS[Math.min(cloudRetryAttempt, CLOUD_RETRY_DELAYS.length - 1)];
-            const delay = Math.max(baseDelay, queueBlockedRemaining);
+            if (cloudRetryTimer || !firestoreDb || isSyncing) return;
+            const delay = CLOUD_RETRY_DELAYS[Math.min(cloudRetryAttempt, CLOUD_RETRY_DELAYS.length - 1)];
             cloudRetryAttempt = Math.min(cloudRetryAttempt + 1, CLOUD_RETRY_DELAYS.length - 1);
             updateCloudStatus('RETRYING', `${Math.round(delay / 1000)}s 後重試`);
             cloudRetryTimer = setTimeout(async () => {
                 cloudRetryTimer = null;
                 if (!isNetworkLikelyAvailable()) { scheduleCloudRetry('BROWSER_OFFLINE'); return; }
-                if (isSyncing || isCloudWriteInFlight()) return;
-                if (isCloudWriteCircuitOpen()) { maybeScheduleAfterWriteCircuit(); return; }
-                if (Date.now() < cloudWriteQueueBlockedUntil) {
-                    scheduleCloudRetry('WRITE_QUEUE_COOLDOWN');
-                    return;
-                }
+                if (isSyncing) return;
                 try {
                     const recovered = await ensureFirestoreNetwork('RETRY');
                     if (!recovered) throw new Error('Firestore network recovery failed');
@@ -3179,7 +3292,6 @@
         function markCloudOnline(detail = '連線正常') {
             clearCloudRetry();
             cloudRetryAttempt = 0;
-            cloudWriteQueueBlockedUntil = 0;
             cloudLastError = null;
             resetCloudTransportErrorStreak();
             updateCloudStatus('ONLINE', detail);
@@ -3302,45 +3414,12 @@
 
             const commitBatch = async () => {
                 if (!batchOps) return;
-                if (isCloudWriteInFlight()) {
-                    const err = new Error(`Cloud chunk batch ${batchNumber + 1} blocked: previous Firestore commit is still in-flight`);
-                    err.code = 'CLOUD_WRITE_IN_FLIGHT';
-                    throw err;
-                }
                 batchNumber++;
-                const pendingBatch = batch;
-                const label = `Cloud chunk batch ${batchNumber}`;
+                const pending = batch;
                 batch = firestoreDb.batch();
                 batchOps = 0;
                 batchBytes = CLOUD_BATCH_FIXED_OVERHEAD_BYTES;
-
-                const rawCommit = pendingBatch.commit();
-                const generation = ++cloudWriteInFlightGeneration;
-                cloudWriteInFlightPromise = rawCommit;
-                cloudWriteInFlightLabel = label;
-                cloudWriteInFlightStartedAt = Date.now();
-                try {
-                    await withCloudTimeout(rawCommit, label, CLOUD_TIMEOUT_MS * 2);
-                    if (cloudWriteInFlightGeneration === generation) {
-                        cloudWriteInFlightPromise = null;
-                        cloudWriteInFlightLabel = '';
-                        cloudWriteInFlightStartedAt = 0;
-                    }
-                } catch (err) {
-                    if (/timeout after/i.test(String(err?.message || err || ''))) {
-                        /* Promise.race timed out, but rawCommit cannot be cancelled. Do NOT
-                           call enableNetwork/disableNetwork/terminate or start another push.
-                           Let the actual SDK commit settle first. */
-                        attachCloudWriteSettlement(rawCommit, label, generation);
-                        throw makeCloudWriteTimeoutError(label, rawCommit, generation);
-                    }
-                    if (cloudWriteInFlightGeneration === generation) {
-                        cloudWriteInFlightPromise = null;
-                        cloudWriteInFlightLabel = '';
-                        cloudWriteInFlightStartedAt = 0;
-                    }
-                    throw err;
-                }
+                await withCloudTimeout(pending.commit(), `Cloud chunk batch ${batchNumber}`, CLOUD_TIMEOUT_MS * 2);
             };
 
             for (let i = 0; i < chunks.length; i++) {
@@ -3407,25 +3486,11 @@
                 if (!silent) showNotificationModal('雲端未連線', '資料仍安全保留於本機 IndexedDB，系統會在連線恢復後重試。'); 
                 return false; 
             }
-            if (isCloudWriteCircuitOpen()) {
-                cloudPushQueued = true;
-                maybeScheduleAfterWriteCircuit();
-                return false;
-            }
-            /* A2.3.3.3: serialize ALL pushes, including retry paths. The previous
-               retryAttempts exception could allow a second push to enter Firebase's
-               AsyncQueue while another operation was still unwinding. */
-            if (isSyncing) {
-                cloudPushQueued = true;
-                return false;
+            if (isSyncing && retryAttempts === 0) { 
+                cloudPushQueued = true; 
+                return false; 
             }
             const now = Date.now();
-            if (now < cloudWriteQueueBlockedUntil) {
-                cloudPushQueued = true;
-                updateCloudStatus('RETRYING', `${Math.ceil((cloudWriteQueueBlockedUntil - now) / 1000)}s 後恢復雲端寫入`);
-                scheduleCloudRetry('WRITE_QUEUE_COOLDOWN');
-                return false;
-            }
             if (retryAttempts === 0 && (now - lastCloudOperationAt < CLOUD_OPERATION_COOLDOWN_MS)) {
                 cloudPushQueued = true;
                 return false;
@@ -3492,7 +3557,6 @@
                 lastCloudSyncAt = Date.now(); 
                 cloudPushQueued = false;
                 await persistDatasetMetadata('CLOUD_PUSH');
-                clearCloudWriteCircuit('PUSH_SUCCESS');
                 markCloudOnline(`同步成功 (Rev ${nextRevision})：${roomData.executionCount} Execution / ${roomData.researchCount} Research`);
                 cleanupPreviousCloudChunks(room, previous.syncId, Number(previous.chunkCount || 0));
                 if (!silent) {
@@ -3500,22 +3564,6 @@
                 }
                 return true;
             } catch (err) {
-                /* V8.6-A2.3.3.4: a timed-out Firestore commit is still physically running
-                   inside Firebase 8.10.1. Retrying or resetting the client here creates a
-                   second AsyncQueue operation and is what produced 'maximum backoff delay'
-                   followed by INTERNAL ASSERTION FAILED: Unexpected state. Wait for the
-                   original promise to settle before allowing the next push. */
-                if (err?.code === 'CLOUD_WRITE_IN_FLIGHT_TIMEOUT' || err?.code === 'CLOUD_WRITE_IN_FLIGHT') {
-                    cloudPushQueued = true;
-                    cloudLastError = err;
-                    cloudWriteQueueBlockedUntil = Date.now() + 60000;
-                    updateCloudStatus('RETRYING', 'Firestore 批次仍在背景提交；已鎖定寫入通道，等待原批次完成');
-                    console.warn('[Cloud] write timeout is non-cancellable; waiting for the original Firestore commit before retry', {
-                        label: cloudWriteInFlightLabel, startedAt: cloudWriteInFlightStartedAt
-                    });
-                    return false;
-                }
-
                 /* V8.6-A2.3.2.6: payload/document size is deterministic, not transient.
                    Do not queue another automatic retry and spam the console. */
                 if (err?.code === 'CLOUD_DOCUMENT_TOO_LARGE' || isCloudPayloadSizeError(err)) {
@@ -3536,12 +3584,7 @@
                 if (isCloudTransportError(err)) {
                     cloudPushQueued = true;
                     cloudLastError = err;
-                    noteCloudWriteCircuitFailure('TRANSPORT_ERROR');
                     updateCloudStatus(isNetworkLikelyAvailable() ? 'RETRYING' : 'OFFLINE', cloudErrorMessage(err));
-                    if (isCloudWriteCircuitOpen()) {
-                        maybeScheduleAfterWriteCircuit();
-                        return false;
-                    }
                     await recoverFirestoreTransport(`PUSH:${retryAttempts}`);
                     return false;
                 }
@@ -3577,23 +3620,6 @@
                     return await pushToCloudForce(silent, retryAttempts + 1);
                 }
 
-                if (isCloudWriteQueueOverflowError(err)) {
-                    cloudPushQueued = true;
-                    cloudLastError = err;
-                    cloudWriteQueueBlockedUntil = Date.now() + CLOUD_WRITE_QUEUE_OVERFLOW_COOLDOWN_MS;
-                    cloudRetryAttempt = Math.max(cloudRetryAttempt, 2);
-                    noteCloudWriteCircuitFailure('QUEUED_WRITE_SATURATION');
-                    console.warn('[Cloud] Firestore queued-write saturation detected; write circuit engaged', err);
-                    /* Do not rebuild/reset the Firestore client while the SDK may still
-                       have queued writes. A client reset here can race the existing
-                       AsyncQueue and recreate the INTERNAL ASSERTION / Unexpected state
-                       failure we are explicitly trying to prevent. Recovery is deferred
-                       until the circuit cooldown expires. */
-                    updateCloudStatus('RETRYING', 'Firestore 寫入佇列過載；已開啟寫入熔斷，等待安全恢復');
-                    maybeScheduleAfterWriteCircuit();
-                    return false;
-                }
-
                 console.error('[Cloud] push failed', err);
                 cloudPushQueued = true;
                 cloudLastError = err;
@@ -3604,7 +3630,7 @@
                 return false;
             } finally {
                 isSyncing = false;
-                if (cloudPushQueued && !isCloudWriteInFlight()) scheduleCloudRetry('PUSH');
+                if (cloudPushQueued) scheduleCloudRetry('PUSH');
             }
         }
 
@@ -3613,7 +3639,7 @@
            移除 COUNT_VERIFIED_MIGRATION 的無條件放行後門。
            Checksum 必須通過 CURRENT_FULL 或已知的 Legacy 演算法，否則嚴格拒絕寫入本機！
         */
-        /* V8.6-A2.3.3.3: Legacy Manifest Recovery Candidate Hardening.
+        /* V8.6-A2.3.3.2: Legacy Manifest Recovery Candidate Hardening.
            If a v2 manifest lost syncId/chunkCount but its archive chunks are still present,
            reconstruct the candidate from immutable chunk documents. The recovered payload
            is structurally validated, checksumed locally, then the next successful push
