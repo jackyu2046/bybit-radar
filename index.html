@@ -2634,7 +2634,7 @@
         const CLOUD_PROTOCOL = 'manifest-chunk-v3';
         const CLOUD_TIMEOUT_MS = 12000;
         const CLOUD_RETRY_DELAYS = [5000, 10000, 20000, 40000, 60000];
-        const CLOUD_OPERATION_COOLDOWN_MS = 4000;
+        const CLOUD_OPERATION_COOLDOWN_MS = 120000; // was 4000 — 4s auto-push was flooding Firestore's write queue at scale (11k+ records); local IndexedDB saves are unaffected by this value
         /* V8.6-A2.3.2.8: Firestore WebChannel resilience. Firebase 8.10.1 supports
            experimentalForceLongPolling and requires settings() before other Firestore calls. */
         const CLOUD_FIRESTORE_TRANSPORT = 'FORCE_LONG_POLLING';
