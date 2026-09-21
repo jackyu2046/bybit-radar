@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bybit 小幣高精度狙擊交易系統 V8.6-A2.3.3.4 (Legacy Cloud Recovery + Statistical Confidence + Walk-Forward Edge Calibration + Firestore Transport Hardening)</title>
+    <title>Bybit 小幣高精度狙擊交易系統 V8.6-A2.3.3.1 (Legacy Cloud Recovery + Statistical Confidence + Walk-Forward Edge Calibration + Firestore Transport Hardening)</title>
     <!-- Tailwind CSS CDN --> 
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -2630,11 +2630,11 @@
         const currentDeviceId = getOrCreateDeviceId();
         let lastKnownCloudRevision = 0;
 
-        const CLOUD_SYNC_VERSION = 'V8.6-A2.3.3.4';
+        const CLOUD_SYNC_VERSION = 'V8.6-A2.3.3.5';
         const CLOUD_PROTOCOL = 'manifest-chunk-v3';
         const CLOUD_TIMEOUT_MS = 12000;
         const CLOUD_RETRY_DELAYS = [5000, 10000, 20000, 40000, 60000];
-        const CLOUD_OPERATION_COOLDOWN_MS = 120000; // was 4000 — 4s auto-push was flooding Firestore's write queue at scale (11k+ records); local IndexedDB saves are unaffected by this value
+        const CLOUD_OPERATION_COOLDOWN_MS = 4000;
         /* V8.6-A2.3.2.8: Firestore WebChannel resilience. Firebase 8.10.1 supports
            experimentalForceLongPolling and requires settings() before other Firestore calls. */
         const CLOUD_FIRESTORE_TRANSPORT = 'FORCE_LONG_POLLING';
@@ -2658,6 +2658,17 @@
         let cloudWriteInFlightLabel = '';
         let cloudWriteInFlightStartedAt = 0;
         let cloudWriteInFlightGeneration = 0;
+        /* V8.6-A2.3.3.5: Write-stream circuit breaker. A timeout is not enough: the
+           Firebase 8.10.1 SDK can continue queueing writes after a WebChannel close.
+           Freeze NEW write attempts when the SDK reports queue saturation/transport
+           instability, then allow one controlled recovery after cooldown. */
+        const CLOUD_WRITE_CIRCUIT_COOLDOWN_MS = 90000;
+        const CLOUD_WRITE_CIRCUIT_WINDOW_MS = 120000;
+        const CLOUD_WRITE_CIRCUIT_THRESHOLD = 2;
+        let cloudWriteCircuitOpenUntil = 0;
+        let cloudWriteCircuitReason = '';
+        let cloudWriteCircuitFailures = 0;
+        let cloudWriteCircuitWindowStartedAt = 0;
         let cloudState = 'INIT';
         let cloudRetryTimer = null;
         let cloudRetryAttempt = 0;
@@ -3022,6 +3033,54 @@
             return Promise.race([promise, timeout]).finally(() => { if (timer) clearTimeout(timer); });
         }
 
+        function isCloudWriteCircuitOpen() {
+            return Date.now() < cloudWriteCircuitOpenUntil;
+        }
+
+        function noteCloudWriteCircuitFailure(reason = 'WRITE_FAILURE') {
+            const now = Date.now();
+            if (!cloudWriteCircuitWindowStartedAt || now - cloudWriteCircuitWindowStartedAt > CLOUD_WRITE_CIRCUIT_WINDOW_MS) {
+                cloudWriteCircuitWindowStartedAt = now;
+                cloudWriteCircuitFailures = 1;
+            } else {
+                cloudWriteCircuitFailures += 1;
+            }
+            if (cloudWriteCircuitFailures >= CLOUD_WRITE_CIRCUIT_THRESHOLD) {
+                cloudWriteCircuitOpenUntil = now + CLOUD_WRITE_CIRCUIT_COOLDOWN_MS;
+                cloudWriteCircuitReason = reason;
+                clearCloudRetry();
+                console.warn(`[Cloud] WRITE CIRCUIT OPEN for ${Math.round(CLOUD_WRITE_CIRCUIT_COOLDOWN_MS / 1000)}s`, { reason, failures: cloudWriteCircuitFailures });
+                updateCloudStatus('RETRYING', `Firestore 寫入熔斷：${Math.round(CLOUD_WRITE_CIRCUIT_COOLDOWN_MS / 1000)}s 後再恢復`);
+            }
+            return cloudWriteCircuitFailures;
+        }
+
+        function clearCloudWriteCircuit(reason = 'RECOVERED') {
+            cloudWriteCircuitOpenUntil = 0;
+            cloudWriteCircuitReason = '';
+            cloudWriteCircuitFailures = 0;
+            cloudWriteCircuitWindowStartedAt = 0;
+            console.info('[Cloud] WRITE CIRCUIT CLOSED', reason);
+        }
+
+        function maybeScheduleAfterWriteCircuit() {
+            if (!firestoreDb || isSyncing || isCloudWriteInFlight() || !cloudPushQueued) return;
+            if (isCloudWriteCircuitOpen()) {
+                const remaining = Math.max(0, cloudWriteCircuitOpenUntil - Date.now());
+                updateCloudStatus('RETRYING', `Firestore 寫入熔斷中 · ${Math.ceil(remaining / 1000)}s`);
+                if (!cloudRetryTimer) {
+                    cloudRetryTimer = setTimeout(() => {
+                        cloudRetryTimer = null;
+                        if (isCloudWriteCircuitOpen()) { maybeScheduleAfterWriteCircuit(); return; }
+                        clearCloudWriteCircuit('COOLDOWN_EXPIRED');
+                        scheduleCloudRetry('WRITE_CIRCUIT_RECOVER');
+                    }, remaining);
+                }
+                return;
+            }
+            scheduleCloudRetry('WRITE_SETTLED');
+        }
+
         function isCloudWriteInFlight() {
             return !!cloudWriteInFlightPromise;
         }
@@ -3034,7 +3093,7 @@
                     cloudWriteInFlightLabel = '';
                     cloudWriteInFlightStartedAt = 0;
                     console.info(`[Cloud] ${label} settled after timeout; write lane released`);
-                    if (cloudPushQueued && !isSyncing) scheduleCloudRetry('WRITE_SETTLED');
+                    if (cloudPushQueued && !isSyncing) maybeScheduleAfterWriteCircuit();
                 },
                 (err) => {
                     if (cloudWriteInFlightGeneration !== generation) return;
@@ -3043,7 +3102,10 @@
                     cloudWriteInFlightStartedAt = 0;
                     cloudLastError = err;
                     console.warn(`[Cloud] ${label} rejected after timeout; write lane released`, err);
-                    if (cloudPushQueued && !isSyncing) scheduleCloudRetry('WRITE_SETTLED_REJECTED');
+                    if (isCloudTransportError(err) || isCloudWriteQueueOverflowError(err)) {
+                        noteCloudWriteCircuitFailure(isCloudWriteQueueOverflowError(err) ? 'QUEUED_WRITE_SATURATION' : 'TRANSPORT_SETTLEMENT');
+                    }
+                    if (cloudPushQueued && !isSyncing) maybeScheduleAfterWriteCircuit();
                 }
             );
         }
@@ -3063,6 +3125,10 @@
 
         function scheduleCloudRetry(reason = 'RETRY') {
             if (cloudRetryTimer || !firestoreDb || isSyncing || isCloudWriteInFlight()) return;
+            if (isCloudWriteCircuitOpen()) {
+                maybeScheduleAfterWriteCircuit();
+                return;
+            }
             const queueBlockedRemaining = Math.max(0, cloudWriteQueueBlockedUntil - Date.now());
             const baseDelay = CLOUD_RETRY_DELAYS[Math.min(cloudRetryAttempt, CLOUD_RETRY_DELAYS.length - 1)];
             const delay = Math.max(baseDelay, queueBlockedRemaining);
@@ -3072,6 +3138,7 @@
                 cloudRetryTimer = null;
                 if (!isNetworkLikelyAvailable()) { scheduleCloudRetry('BROWSER_OFFLINE'); return; }
                 if (isSyncing || isCloudWriteInFlight()) return;
+                if (isCloudWriteCircuitOpen()) { maybeScheduleAfterWriteCircuit(); return; }
                 if (Date.now() < cloudWriteQueueBlockedUntil) {
                     scheduleCloudRetry('WRITE_QUEUE_COOLDOWN');
                     return;
@@ -3340,6 +3407,11 @@
                 if (!silent) showNotificationModal('雲端未連線', '資料仍安全保留於本機 IndexedDB，系統會在連線恢復後重試。'); 
                 return false; 
             }
+            if (isCloudWriteCircuitOpen()) {
+                cloudPushQueued = true;
+                maybeScheduleAfterWriteCircuit();
+                return false;
+            }
             /* A2.3.3.3: serialize ALL pushes, including retry paths. The previous
                retryAttempts exception could allow a second push to enter Firebase's
                AsyncQueue while another operation was still unwinding. */
@@ -3420,6 +3492,7 @@
                 lastCloudSyncAt = Date.now(); 
                 cloudPushQueued = false;
                 await persistDatasetMetadata('CLOUD_PUSH');
+                clearCloudWriteCircuit('PUSH_SUCCESS');
                 markCloudOnline(`同步成功 (Rev ${nextRevision})：${roomData.executionCount} Execution / ${roomData.researchCount} Research`);
                 cleanupPreviousCloudChunks(room, previous.syncId, Number(previous.chunkCount || 0));
                 if (!silent) {
@@ -3463,7 +3536,12 @@
                 if (isCloudTransportError(err)) {
                     cloudPushQueued = true;
                     cloudLastError = err;
+                    noteCloudWriteCircuitFailure('TRANSPORT_ERROR');
                     updateCloudStatus(isNetworkLikelyAvailable() ? 'RETRYING' : 'OFFLINE', cloudErrorMessage(err));
+                    if (isCloudWriteCircuitOpen()) {
+                        maybeScheduleAfterWriteCircuit();
+                        return false;
+                    }
                     await recoverFirestoreTransport(`PUSH:${retryAttempts}`);
                     return false;
                 }
@@ -3504,12 +3582,15 @@
                     cloudLastError = err;
                     cloudWriteQueueBlockedUntil = Date.now() + CLOUD_WRITE_QUEUE_OVERFLOW_COOLDOWN_MS;
                     cloudRetryAttempt = Math.max(cloudRetryAttempt, 2);
-                    console.warn('[Cloud] Firestore queued-write saturation detected; serializing and backing off', err);
-                    /* Rebuild once so stale AsyncQueue state is discarded, but do not
-                       immediately issue another write. The retry is delayed by the
-                       explicit saturation cooldown above. */
-                    try { await rebuildFirestoreClient('WRITE_QUEUE_OVERFLOW'); } catch (_) {}
-                    updateCloudStatus('RETRYING', 'Firestore 寫入佇列過載；已停止連續推送，60s 後再試');
+                    noteCloudWriteCircuitFailure('QUEUED_WRITE_SATURATION');
+                    console.warn('[Cloud] Firestore queued-write saturation detected; write circuit engaged', err);
+                    /* Do not rebuild/reset the Firestore client while the SDK may still
+                       have queued writes. A client reset here can race the existing
+                       AsyncQueue and recreate the INTERNAL ASSERTION / Unexpected state
+                       failure we are explicitly trying to prevent. Recovery is deferred
+                       until the circuit cooldown expires. */
+                    updateCloudStatus('RETRYING', 'Firestore 寫入佇列過載；已開啟寫入熔斷，等待安全恢復');
+                    maybeScheduleAfterWriteCircuit();
                     return false;
                 }
 
