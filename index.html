@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bybit 小幣高精度狙擊交易系統 V8.6-A2.3.3.1 (Legacy Cloud Recovery + Statistical Confidence + Walk-Forward Edge Calibration + Firestore Transport Hardening)</title>
+    <title>Bybit 小幣高精度狙擊交易系統 V8.6-A2.3.3.4 (Legacy Cloud Recovery + Statistical Confidence + Walk-Forward Edge Calibration + Firestore Transport Hardening)</title>
     <!-- Tailwind CSS CDN --> 
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -2630,7 +2630,7 @@
         const currentDeviceId = getOrCreateDeviceId();
         let lastKnownCloudRevision = 0;
 
-        const CLOUD_SYNC_VERSION = 'V8.6-A2.3.3.3';
+        const CLOUD_SYNC_VERSION = 'V8.6-A2.3.3.4';
         const CLOUD_PROTOCOL = 'manifest-chunk-v3';
         const CLOUD_TIMEOUT_MS = 12000;
         const CLOUD_RETRY_DELAYS = [5000, 10000, 20000, 40000, 60000];
@@ -2651,6 +2651,13 @@
            and back off hard when the SDK reports queued-write saturation. */
         const CLOUD_WRITE_QUEUE_OVERFLOW_COOLDOWN_MS = 60000;
         let cloudWriteQueueBlockedUntil = 0;
+        /* V8.6-A2.3.3.4: a Firestore batch commit cannot be cancelled by Promise.race.
+           Keep the real in-flight promise visible so timeout recovery never starts a
+           second write/reset against the same Firebase 8.10.1 AsyncQueue. */
+        let cloudWriteInFlightPromise = null;
+        let cloudWriteInFlightLabel = '';
+        let cloudWriteInFlightStartedAt = 0;
+        let cloudWriteInFlightGeneration = 0;
         let cloudState = 'INIT';
         let cloudRetryTimer = null;
         let cloudRetryAttempt = 0;
@@ -3015,12 +3022,47 @@
             return Promise.race([promise, timeout]).finally(() => { if (timer) clearTimeout(timer); });
         }
 
+        function isCloudWriteInFlight() {
+            return !!cloudWriteInFlightPromise;
+        }
+
+        function attachCloudWriteSettlement(promise, label, generation) {
+            Promise.resolve(promise).then(
+                () => {
+                    if (cloudWriteInFlightGeneration !== generation) return;
+                    cloudWriteInFlightPromise = null;
+                    cloudWriteInFlightLabel = '';
+                    cloudWriteInFlightStartedAt = 0;
+                    console.info(`[Cloud] ${label} settled after timeout; write lane released`);
+                    if (cloudPushQueued && !isSyncing) scheduleCloudRetry('WRITE_SETTLED');
+                },
+                (err) => {
+                    if (cloudWriteInFlightGeneration !== generation) return;
+                    cloudWriteInFlightPromise = null;
+                    cloudWriteInFlightLabel = '';
+                    cloudWriteInFlightStartedAt = 0;
+                    cloudLastError = err;
+                    console.warn(`[Cloud] ${label} rejected after timeout; write lane released`, err);
+                    if (cloudPushQueued && !isSyncing) scheduleCloudRetry('WRITE_SETTLED_REJECTED');
+                }
+            );
+        }
+
+        function makeCloudWriteTimeoutError(label, pending, generation) {
+            const err = new Error(`${label} timeout after ${Math.round(CLOUD_TIMEOUT_MS * 2 / 1000)}s; underlying Firestore commit remains in-flight`);
+            err.code = 'CLOUD_WRITE_IN_FLIGHT_TIMEOUT';
+            err.cloudWriteInFlight = true;
+            err.pendingPromise = pending;
+            err.generation = generation;
+            return err;
+        }
+
         function clearCloudRetry() {
             if (cloudRetryTimer) { clearTimeout(cloudRetryTimer); cloudRetryTimer = null; }
         }
 
         function scheduleCloudRetry(reason = 'RETRY') {
-            if (cloudRetryTimer || !firestoreDb || isSyncing) return;
+            if (cloudRetryTimer || !firestoreDb || isSyncing || isCloudWriteInFlight()) return;
             const queueBlockedRemaining = Math.max(0, cloudWriteQueueBlockedUntil - Date.now());
             const baseDelay = CLOUD_RETRY_DELAYS[Math.min(cloudRetryAttempt, CLOUD_RETRY_DELAYS.length - 1)];
             const delay = Math.max(baseDelay, queueBlockedRemaining);
@@ -3029,7 +3071,7 @@
             cloudRetryTimer = setTimeout(async () => {
                 cloudRetryTimer = null;
                 if (!isNetworkLikelyAvailable()) { scheduleCloudRetry('BROWSER_OFFLINE'); return; }
-                if (isSyncing) return;
+                if (isSyncing || isCloudWriteInFlight()) return;
                 if (Date.now() < cloudWriteQueueBlockedUntil) {
                     scheduleCloudRetry('WRITE_QUEUE_COOLDOWN');
                     return;
@@ -3193,12 +3235,45 @@
 
             const commitBatch = async () => {
                 if (!batchOps) return;
+                if (isCloudWriteInFlight()) {
+                    const err = new Error(`Cloud chunk batch ${batchNumber + 1} blocked: previous Firestore commit is still in-flight`);
+                    err.code = 'CLOUD_WRITE_IN_FLIGHT';
+                    throw err;
+                }
                 batchNumber++;
-                const pending = batch;
+                const pendingBatch = batch;
+                const label = `Cloud chunk batch ${batchNumber}`;
                 batch = firestoreDb.batch();
                 batchOps = 0;
                 batchBytes = CLOUD_BATCH_FIXED_OVERHEAD_BYTES;
-                await withCloudTimeout(pending.commit(), `Cloud chunk batch ${batchNumber}`, CLOUD_TIMEOUT_MS * 2);
+
+                const rawCommit = pendingBatch.commit();
+                const generation = ++cloudWriteInFlightGeneration;
+                cloudWriteInFlightPromise = rawCommit;
+                cloudWriteInFlightLabel = label;
+                cloudWriteInFlightStartedAt = Date.now();
+                try {
+                    await withCloudTimeout(rawCommit, label, CLOUD_TIMEOUT_MS * 2);
+                    if (cloudWriteInFlightGeneration === generation) {
+                        cloudWriteInFlightPromise = null;
+                        cloudWriteInFlightLabel = '';
+                        cloudWriteInFlightStartedAt = 0;
+                    }
+                } catch (err) {
+                    if (/timeout after/i.test(String(err?.message || err || ''))) {
+                        /* Promise.race timed out, but rawCommit cannot be cancelled. Do NOT
+                           call enableNetwork/disableNetwork/terminate or start another push.
+                           Let the actual SDK commit settle first. */
+                        attachCloudWriteSettlement(rawCommit, label, generation);
+                        throw makeCloudWriteTimeoutError(label, rawCommit, generation);
+                    }
+                    if (cloudWriteInFlightGeneration === generation) {
+                        cloudWriteInFlightPromise = null;
+                        cloudWriteInFlightLabel = '';
+                        cloudWriteInFlightStartedAt = 0;
+                    }
+                    throw err;
+                }
             };
 
             for (let i = 0; i < chunks.length; i++) {
@@ -3352,6 +3427,22 @@
                 }
                 return true;
             } catch (err) {
+                /* V8.6-A2.3.3.4: a timed-out Firestore commit is still physically running
+                   inside Firebase 8.10.1. Retrying or resetting the client here creates a
+                   second AsyncQueue operation and is what produced 'maximum backoff delay'
+                   followed by INTERNAL ASSERTION FAILED: Unexpected state. Wait for the
+                   original promise to settle before allowing the next push. */
+                if (err?.code === 'CLOUD_WRITE_IN_FLIGHT_TIMEOUT' || err?.code === 'CLOUD_WRITE_IN_FLIGHT') {
+                    cloudPushQueued = true;
+                    cloudLastError = err;
+                    cloudWriteQueueBlockedUntil = Date.now() + 60000;
+                    updateCloudStatus('RETRYING', 'Firestore 批次仍在背景提交；已鎖定寫入通道，等待原批次完成');
+                    console.warn('[Cloud] write timeout is non-cancellable; waiting for the original Firestore commit before retry', {
+                        label: cloudWriteInFlightLabel, startedAt: cloudWriteInFlightStartedAt
+                    });
+                    return false;
+                }
+
                 /* V8.6-A2.3.2.6: payload/document size is deterministic, not transient.
                    Do not queue another automatic retry and spam the console. */
                 if (err?.code === 'CLOUD_DOCUMENT_TOO_LARGE' || isCloudPayloadSizeError(err)) {
@@ -3432,7 +3523,7 @@
                 return false;
             } finally {
                 isSyncing = false;
-                if (cloudPushQueued) scheduleCloudRetry('PUSH');
+                if (cloudPushQueued && !isCloudWriteInFlight()) scheduleCloudRetry('PUSH');
             }
         }
 
