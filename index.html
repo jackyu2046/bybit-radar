@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bybit 小幣高精度狙擊交易系統 V8.6-A2.4.0 (Edge Validation + Dual-Track OOS + Regime Stability + Strategy Safety Gate)</title>
+    <title>Bybit 小幣高精度狙擊交易系統 V8.6-A2.4.1 (Multi-Asset Universe + Legacy Recovery Hardening + Statistical Edge Gate)</title>
     <!-- Tailwind CSS CDN --> 
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -263,6 +263,31 @@
             </div>
         </section>
 
+        <section class="bg-crypto-card border border-cyan-500/20 rounded-xl overflow-hidden shadow-lg">
+            <div class="p-2.5 border-b border-crypto-border flex flex-wrap items-center justify-between gap-2 bg-slate-900/40">
+                <div>
+                    <span class="text-xs font-semibold text-white">🎯 Core / Hot 多資產焦點監控</span>
+                    <span id="assetFocusSummary" class="ml-2 text-[10px] text-slate-400">BTC · ETH · SOL · MNT · ENA · SUI + 動態熱門幣</span>
+                </div>
+                <span class="text-[10px] text-cyan-300">研究樣本分層：CORE 12 / HOT 16 / 小幣 20</span>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-[11px] border-collapse font-mono">
+                    <thead class="bg-slate-950/80 text-slate-400 border-b border-crypto-border">
+                        <tr>
+                            <th class="py-2 px-2.5">Tier / 幣種</th><th class="py-2 px-2.5 text-right">現價</th>
+                            <th class="py-2 px-2.5 text-right">1h</th><th class="py-2 px-2.5 text-right">RVOL</th>
+                            <th class="py-2 px-2.5 text-right">OI</th><th class="py-2 px-2.5 text-right">24h Turnover</th>
+                            <th class="py-2 px-2.5 text-center">EES</th><th class="py-2 px-2.5 text-center">判定</th>
+                        </tr>
+                    </thead>
+                    <tbody id="assetFocusTableBody">
+                        <tr><td colspan="8" class="py-6 text-center text-slate-500">等待市場資料…</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
         <section class="bg-crypto-card border border-crypto-border rounded-xl overflow-hidden shadow-lg">
             <div class="p-2.5 border-b border-crypto-border flex items-center justify-between bg-slate-900/40">
                 <span class="text-xs font-semibold text-slate-200">
@@ -302,7 +327,7 @@
                 <div class="flex items-center gap-2">
                     <span class="text-xl">🧠</span>
                     <div>
-                        <h3 class="font-bold text-white text-sm sm:text-base">V8.6-A2.4.0 Edge Validation · Dual-Track OOS · Regime Stability · Safety Gate</h3>
+                        <h3 class="font-bold text-white text-sm sm:text-base">V8.6-A2.4.1 Multi-Asset Edge Lab · Core/Hot Universe · OOS Safety Gate</h3>
                         <p class="text-[11px] text-fuchsia-300">資料完整性分層 · Execution / Shadow 分離 · Contextual Edge 校準 · Block Attribution · Walk-forward 驗證</p>
                     </div>
                 </div>
@@ -646,7 +671,7 @@
                 active: [], 
                 archive: [], 
                 seenSignals: {}, 
-                version: 'V8.6-A2.4.0' 
+                version: 'V8.6-A2.4.1' 
             }
         };
 
@@ -801,7 +826,7 @@
            Manual follow/copy remains available and the default auto-trade flag
            remains OFF. */
         const A24_CONFIG = {
-            version: 'V8.6-A2.4.0',
+            version: 'V8.6-A2.4.1',
             enabled: true,
             applyExecutionGate: true,
             minTrackSamples: 120,
@@ -815,6 +840,65 @@
             ciZ: 1.96,
             candidateConfidence: 0.95
         };
+
+        /* V8.6-A2.4.1: Multi-Asset Universe & Research Stratification.
+           Core majors are monitored explicitly, while HOT assets are discovered
+           dynamically from liquidity/volatility. Research sampling is stratified
+           so 700+ small caps cannot consume the entire shadow dataset. */
+        const A241_CONFIG = {
+            version: 'V8.6-A2.4.1',
+            coreSymbols: new Set([
+                'BTCUSDT','ETHUSDT','SOLUSDT','MNTUSDT','ENAUSDT','SUIUSDT',
+                'BNBUSDT','XRPUSDT','DOGEUSDT','ADAUSDT','LINKUSDT','AVAXUSDT',
+                'TRXUSDT','TONUSDT','HYPEUSDT'
+            ]),
+            researchMaxActive: 48,
+            researchSlots: { CORE: 12, HOT: 16, OTHER: 20 },
+            hotMinTurnover: 15000000,
+            hotMinTurnoverFast: 5000000,
+            hotRvol: 2.8,
+            hotAbsMomentum24h: 5.0,
+            focusRows: 18,
+            legacyScanLimit: 600,
+            legacySyncScanLimit: 5000,
+            legacyScanTimeoutMs: 15000,
+            chunkBatchBytes: 2.5 * 1024 * 1024,
+            chunkBatchOps: 40,
+            chunkBatchTimeoutMs: 30000,
+            pushCooldownMs: 15000
+        };
+
+        function a241IsCore(symbol) {
+            return A241_CONFIG.coreSymbols.has(String(symbol || '').toUpperCase());
+        }
+
+        function a241AssetTier(symbol, metrics = {}) {
+            const sym = String(symbol || '').toUpperCase();
+            if (a241IsCore(sym)) return 'CORE';
+            const turnover = a22n(metrics.turnover24h);
+            const rvol = a22n(metrics.rvol);
+            const abs24h = Math.abs(a22n(metrics.price24hPcnt));
+            const fastHot = turnover >= A241_CONFIG.hotMinTurnoverFast && rvol >= A241_CONFIG.hotRvol;
+            const momentumHot = turnover >= A241_CONFIG.hotMinTurnoverFast && abs24h >= A241_CONFIG.hotAbsMomentum24h;
+            if (turnover >= A241_CONFIG.hotMinTurnover || fastHot || momentumHot) return 'HOT';
+            return 'OTHER';
+        }
+
+        function a241TierPriority(tier) {
+            return tier === 'CORE' ? 3 : (tier === 'HOT' ? 2 : 1);
+        }
+
+        function a241TierLabel(tier) {
+            return tier === 'CORE' ? '核心' : (tier === 'HOT' ? '熱門' : '小幣');
+        }
+
+        function a241DecorateRecord(record) {
+            const tier = a241AssetTier(record.symbol, record);
+            record.assetTier = tier;
+            record.assetTierLabel = a241TierLabel(tier);
+            record.monitorPriority = a241TierPriority(tier);
+            return record;
+        }
 
         function a232Num(v, d = 0) { const n = Number(v); return Number.isFinite(n) ? n : d; }
         function a232ContextOf(t) {
@@ -1067,6 +1151,7 @@
                 schema: 'A2.3.2-CONTEXTUAL-IDB', datasetVersion: A232_CONFIG.version, capturedAt: Date.now(),
                 score: a22n(c.score), grade: c.grade || 'C', direction: classifyDirection(c), regime: classifyRegime(),
                 strategy: classifyStrategy(c), volatility: classifyVolatility(c), liquidity: classifyLiquidity(c),
+                assetTier: c.assetTier || a241AssetTier(c.symbol, c),
                 scoreBucket: a22Bucket(a22n(c.score), [['<50',-Infinity,50],['50-59',50,60],['60-69',60,70],['70-79',70,80],['80-89',80,90],['90-100',90,Infinity]]),
                 momentumBucket: a22Bucket(Math.abs(f.momentum1h), [['LOW',0,1],['MED',1,3],['HIGH',3,Infinity]]),
                 rvolBucket: a22Bucket(f.rvol, [['LOW',-Infinity,1],['NORMAL',1,1.5],['HIGH',1.5,3],['EXTREME',3,Infinity]]),
@@ -1487,7 +1572,7 @@
                 maePct: v85Number(trade?.maePct),
                 fills,
                 entryContext: trade?.entryContext || null,
-                schemaVersion: '8.6-A2.4.0'
+                schemaVersion: '8.6-A2.4.1'
             };
             normalized.tradeId = v85StableTradeId(normalized);
             normalized.id = normalized.tradeId;
@@ -1568,7 +1653,7 @@
                         timeoutMinutes: simState.research?.timeoutMinutes ?? 60,
                         active: (simState.research?.active || []).slice(-35),
                         seenSignals: simState.research?.seenSignals || {},
-                        version: 'V8.6-A2.3.2'
+                        version: 'V8.6-A2.4.1'
                     }
                 };
                 safeSetStorage(STORAGE_KEY_SIM, JSON.stringify(lightweightSimState));
@@ -1834,7 +1919,7 @@
         }
 
         function ensureResearchState() {
-            const d = { enabled: true, shadowNotional: 10, timeoutMinutes: 60, active: [], archive: [], seenSignals: {}, version: 'V8.6-A2.3.2' };
+            const d = { enabled: true, shadowNotional: 10, timeoutMinutes: 60, active: [], archive: [], seenSignals: {}, version: 'V8.6-A2.4.1' };
             simState.research = Object.assign(d, simState.research || {});
             simState.research.active = Array.isArray(simState.research.active) ? simState.research.active : [];
             simState.research.archive = Array.isArray(simState.research.archive) ? simState.research.archive : [];
@@ -1847,52 +1932,58 @@
         function collectResearchSignals(list) {
             const r = ensureResearchState();
             if (!r.enabled) return;
-            if (r.active.length >= 40) return;
+            if (r.active.length >= A241_CONFIG.researchMaxActive) return;
 
             const now = Date.now();
             Object.keys(r.seenSignals).forEach(k => {
                 if (now - r.seenSignals[k] > 10 * 60 * 1000) delete r.seenSignals[k];
             });
 
-            list.forEach(c => {
-                if (r.active.length >= 40) return;
-                const k = researchKey(c);
-                if (r.seenSignals[k]) return;
-                const e = a22n(c.lastPrice);
-                if (e <= 0) return;
-
-                const entryCtx = buildEntryContext(c);
-                const d = entryCtx.direction;
-                const sl = a22n(adaptiveParams.stopLossPct, 4.5);
-                const tp = a22n(adaptiveParams.tp2Pct, 10);
-
-                const shadowObj = {
-                    id: 'shadow_' + now + '_' + Math.random().toString(36).slice(2, 7),
-                    source: 'RESEARCH_SHADOW',
-                    lifecycle: 'ACTIVE',
-                    openedAt: now,
-                    symbol: c.symbol,
-                    direction: d,
-                    entryPrice: e,
-                    currentPrice: e,
-                    notional: a22n(r.shadowNotional, 10),
-                    baseScore: entryCtx.score,
-                    expectedEdgeScore: entryCtx.expectedEdgeScore,
-                    grade: entryCtx.grade,
-                    strategy: entryCtx.strategy,
-                    regime: entryCtx.regime,
-                    strategyVariant: entryCtx.decision === 'BLOCK' ? 'VARIANT_A_ONLY_BLOCKED_BY_A23' : 'VARIANT_AB_DUAL',
-                    a23Decision: entryCtx.decision,
-                    entryContext: entryCtx,
-                    tp2: d === 'LONG' ? e * (1 + tp / 100) : e * (1 - tp / 100),
-                    stopLoss: d === 'LONG' ? e * (1 - sl / 100) : e * (1 + sl / 100),
-                    timeoutAt: now + (60 * 60000),
-                    mfePct: 0,
-                    maePct: 0
-                };
-                r.active.push(shadowObj);
-                r.seenSignals[k] = now;
+            const pools = { CORE: [], HOT: [], OTHER: [] };
+            (list || []).forEach(c => {
+                const tier = c.assetTier || a241AssetTier(c.symbol, c);
+                if (pools[tier]) pools[tier].push(c);
             });
+            Object.values(pools).forEach(arr => arr.sort((a,b) => {
+                const ae = a?.entryContext?.expectedEdgeScore ?? a?.score ?? 0;
+                const be = b?.entryContext?.expectedEdgeScore ?? b?.score ?? 0;
+                if (a241TierPriority(a.assetTier) !== a241TierPriority(b.assetTier)) return a241TierPriority(b.assetTier) - a241TierPriority(a.assetTier);
+                return (Number(be) || 0) - (Number(ae) || 0);
+            }));
+
+            let added = 0;
+            for (const tier of ['CORE','HOT','OTHER']) {
+                const quota = A241_CONFIG.researchSlots[tier] || 0;
+                let used = 0;
+                for (const c of pools[tier]) {
+                    if (added >= A241_CONFIG.researchMaxActive || used >= quota) break;
+                    const k = researchKey(c);
+                    if (r.seenSignals[k]) continue;
+                    const e = a22n(c.lastPrice);
+                    if (e <= 0) continue;
+
+                    const entryCtx = buildEntryContext(c);
+                    const d = entryCtx.direction;
+                    const sl = a22n(adaptiveParams.stopLossPct, 4.5);
+                    const tp = a22n(adaptiveParams.tp2Pct, 10);
+                    const shadowObj = {
+                        id: 'shadow_' + now + '_' + Math.random().toString(36).slice(2, 7),
+                        source: 'RESEARCH_SHADOW', lifecycle: 'ACTIVE', openedAt: now,
+                        symbol: c.symbol, assetTier: c.assetTier || tier, direction: d,
+                        entryPrice: e, currentPrice: e, notional: a22n(r.shadowNotional, 10),
+                        baseScore: entryCtx.score, expectedEdgeScore: entryCtx.expectedEdgeScore,
+                        grade: entryCtx.grade, strategy: entryCtx.strategy, regime: entryCtx.regime,
+                        strategyVariant: entryCtx.decision === 'BLOCK' ? 'VARIANT_A_ONLY_BLOCKED_BY_A23' : 'VARIANT_AB_DUAL',
+                        a23Decision: entryCtx.decision, entryContext: entryCtx,
+                        tp2: d === 'LONG' ? e * (1 + tp / 100) : e * (1 - tp / 100),
+                        stopLoss: d === 'LONG' ? e * (1 - sl / 100) : e * (1 + sl / 100),
+                        timeoutAt: now + (60 * 60000), mfePct: 0, maePct: 0
+                    };
+                    r.active.push(shadowObj);
+                    r.seenSignals[k] = now;
+                    added++; used++;
+                }
+            }
         }
 
         async function closeShadowTrade(s, p, reason) {
@@ -1978,14 +2069,22 @@
                 else if (baseScore >= 65) grade = 'B';
 
                 const rawRecord = { symbol, lastPrice, price24hPcnt, momentum1h, turnover24h, openInterestValue, rvol, oiVelocity, oiAcceleration, spreadPct, fundingRate, score: baseScore, grade };
+                a241DecorateRecord(rawRecord);
                 rawRecord.entryContext = buildEntryContext(rawRecord);
                 newTickers.push(rawRecord);
             });
 
+            newTickers.sort((a,b) => {
+                if (a.monitorPriority !== b.monitorPriority) return b.monitorPriority - a.monitorPriority;
+                const ae = a.entryContext?.expectedEdgeScore ?? a.score ?? 0;
+                const be = b.entryContext?.expectedEdgeScore ?? b.score ?? 0;
+                return (Number(be) || 0) - (Number(ae) || 0);
+            });
             rawTickers = newTickers;
             ensureResearchState();
             collectResearchSignals(newTickers);
             updateShadowTrades();
+            renderAssetFocusPanel(newTickers);
             renderMarketTable(newTickers);
             updateSimPositions();
             updateSimHeaderStats();
@@ -2297,6 +2396,32 @@
             `;
         }
 
+        function renderAssetFocusPanel(list) {
+            const tbody = document.getElementById('assetFocusTableBody');
+            if (!tbody) return;
+            const rows = (list || []).filter(x => x.assetTier === 'CORE' || x.assetTier === 'HOT').slice(0, A241_CONFIG.focusRows);
+            const tierClass = t => t === 'CORE' ? 'bg-cyan-500/15 text-cyan-300 border-cyan-500/30' : 'bg-fuchsia-500/15 text-fuchsia-300 border-fuchsia-500/30';
+            tbody.innerHTML = rows.length ? rows.map(c => {
+                const ees = Number(c.entryContext?.expectedEdgeScore ?? c.score ?? 0);
+                const decision = String(c.entryContext?.decision || 'WATCH');
+                const decisionClass = decision === 'CANDIDATE' ? 'text-emerald-400' : decision === 'BLOCK' ? 'text-rose-400' : 'text-amber-300';
+                return `<tr class="border-b border-crypto-border/30 hover:bg-slate-900/60">
+                    <td class="py-1.5 px-2.5"><span class="px-1.5 py-0.5 rounded border text-[9px] ${tierClass(c.assetTier)}">${c.assetTierLabel}</span> <b class="text-white ml-1">${c.symbol}</b></td>
+                    <td class="py-1.5 px-2.5 text-right text-slate-200">$${formatPrice(c.lastPrice)}</td>
+                    <td class="py-1.5 px-2.5 text-right ${c.momentum1h >= 0 ? 'text-emerald-400' : 'text-rose-400'}">${c.momentum1h >= 0 ? '+' : ''}${c.momentum1h.toFixed(2)}%</td>
+                    <td class="py-1.5 px-2.5 text-right ${c.rvol >= 2 ? 'text-amber-400' : 'text-slate-300'}">${c.rvol.toFixed(1)}x</td>
+                    <td class="py-1.5 px-2.5 text-right ${c.oiVelocity >= 0.8 ? 'text-emerald-400' : 'text-slate-400'}">${c.oiVelocity >= 0 ? '+' : ''}${c.oiVelocity.toFixed(2)}%</td>
+                    <td class="py-1.5 px-2.5 text-right text-slate-300">$${(c.turnover24h/1000000).toFixed(1)}M</td>
+                    <td class="py-1.5 px-2.5 text-center font-bold ${ees >= 70 ? 'text-emerald-400' : ees < 40 ? 'text-rose-400' : 'text-amber-400'}">${ees.toFixed(0)}</td>
+                    <td class="py-1.5 px-2.5 text-center font-bold ${decisionClass}">${decision}</td>
+                </tr>`;
+            }).join('') : '<tr><td colspan="8" class="py-6 text-center text-slate-500">目前沒有可用的 Core / Hot 行情。</td></tr>';
+            const core = (list || []).filter(x => x.assetTier === 'CORE').length;
+            const hot = (list || []).filter(x => x.assetTier === 'HOT').length;
+            const summary = document.getElementById('assetFocusSummary');
+            if (summary) summary.textContent = `Core ${core} · Hot ${hot} · 動態熱門按流動性/RVOL/24h 動量分層`;
+        }
+
         function renderMarketTable(list) {
             const tbody = document.getElementById('tickerTableBody');
             if (!tbody || !list || list.length === 0) return;
@@ -2310,6 +2435,7 @@
                 return `
                     <tr class="hover:bg-slate-900/70 transition-colors border-b border-crypto-border/30">
                         <td class="py-2 px-2.5 font-bold text-white">
+                            <span class="px-1.5 py-0.2 rounded text-[9px] mr-1 border ${coin.assetTier === 'CORE' ? 'bg-cyan-500/10 text-cyan-300 border-cyan-500/30' : coin.assetTier === 'HOT' ? 'bg-fuchsia-500/10 text-fuchsia-300 border-fuchsia-500/30' : 'bg-slate-800 text-slate-400 border-slate-700'}">${coin.assetTierLabel || '小幣'}</span>
                             <span class="px-1.5 py-0.2 rounded text-[10px] mr-1 ${coin.grade === 'A+' ? 'bg-emerald-500 text-black font-bold' : 'bg-slate-800 text-slate-400'}">${coin.grade}</span>
                             ${coin.symbol}
                         </td>
@@ -2870,11 +2996,13 @@
         const currentDeviceId = getOrCreateDeviceId();
         let lastKnownCloudRevision = 0;
 
-        const CLOUD_SYNC_VERSION = 'V8.6-A2.3.3.2';
+        const CLOUD_SYNC_VERSION = 'V8.6-A2.4.1';
         const CLOUD_PROTOCOL = 'manifest-chunk-v3';
         const CLOUD_TIMEOUT_MS = 12000;
+        const CLOUD_CHUNK_BATCH_TIMEOUT_MS = 30000;
         const CLOUD_RETRY_DELAYS = [5000, 10000, 20000, 40000, 60000];
         const CLOUD_OPERATION_COOLDOWN_MS = 4000;
+        const CLOUD_PUSH_COOLDOWN_MS = A241_CONFIG.pushCooldownMs;
         /* V8.6-A2.3.2.8: Firestore WebChannel resilience. Firebase 8.10.1 supports
            experimentalForceLongPolling and requires settings() before other Firestore calls. */
         const CLOUD_FIRESTORE_TRANSPORT = 'FORCE_LONG_POLLING';
@@ -2893,6 +3021,7 @@
         let cloudPullQueued = false;
         let lastCloudOperationAt = 0;
         let cloudTransportRecoveryPromise = null;
+        let cloudWriteInFlightPromise = null;
         let lastCloudTransportRecoveryAt = 0;
         let cloudTransportErrorStreak = 0;
         let cloudTransportErrorWindowStartedAt = 0;
@@ -3040,9 +3169,9 @@
         */
         const CLOUD_CHUNK_TARGET_BYTES = 320 * 1024;
         const CLOUD_MAX_DOCUMENT_BYTES = 800 * 1024;
-        const CLOUD_MAX_BATCH_BYTES = 6 * 1024 * 1024;
+        const CLOUD_MAX_BATCH_BYTES = A241_CONFIG.chunkBatchBytes;
         const CLOUD_BATCH_FIXED_OVERHEAD_BYTES = 2048;
-        const CLOUD_MAX_BATCH_OPS = 100;
+        const CLOUD_MAX_BATCH_OPS = A241_CONFIG.chunkBatchOps;
 
         function utf8ByteLength(value) {
             const str = typeof value === 'string' ? value : JSON.stringify(value);
@@ -3119,10 +3248,16 @@
            They must NOT enter the transport retry loop, otherwise a legacy/corrupt
            manifest can create an endless pull -> retry -> pull storm (as observed in
            the browser console). Local IndexedDB is intentionally left untouched. */
+        function isCloudRecoveryDeferredError(err) {
+            const msg = String(err?.message || err || '');
+            const code = String(err?.code || '');
+            return code === 'CLOUD_RECOVERY_DEFERRED' || /Legacy Manifest archive scan (timeout|逾時)|Legacy Manifest archive 超過掃描上限/i.test(`${code} ${msg}`);
+        }
+
         function isCloudIntegrityError(err) {
             const msg = String(err?.message || err || '');
             const code = String(err?.code || '');
-            return /MANIFEST|Manifest|Checksum|checksum|Count 驗證失敗|Payload Schema|Schema 無效|JSON 損毀|缺少已提交雲端區塊|資料.*完整性|校驗碼|protocol 不匹配/i.test(`${code} ${msg}`);
+            return isCloudRecoveryDeferredError(err) || /MANIFEST|Manifest|Checksum|checksum|Count 驗證失敗|Payload Schema|Schema 無效|JSON 損毀|缺少已提交雲端區塊|資料.*完整性|校驗碼|protocol 不匹配/i.test(`${code} ${msg}`);
         }
 
         function noteCloudTransportError() {
@@ -3419,7 +3554,7 @@
                 batch = firestoreDb.batch();
                 batchOps = 0;
                 batchBytes = CLOUD_BATCH_FIXED_OVERHEAD_BYTES;
-                await withCloudTimeout(pending.commit(), `Cloud chunk batch ${batchNumber}`, CLOUD_TIMEOUT_MS * 2);
+                await withCloudTimeout(pending.commit(), `Cloud chunk batch ${batchNumber}`, CLOUD_CHUNK_BATCH_TIMEOUT_MS);
             };
 
             for (let i = 0; i < chunks.length; i++) {
@@ -3480,6 +3615,21 @@
         }
 
         async function pushToCloudForce(silent = false, retryAttempts = 0) {
+            if (retryAttempts === 0 && cloudWriteInFlightPromise) {
+                cloudPushQueued = true;
+                return cloudWriteInFlightPromise;
+            }
+            if (retryAttempts > 0) return pushToCloudForceCore(silent, retryAttempts);
+            const promise = pushToCloudForceCore(silent, 0);
+            cloudWriteInFlightPromise = promise;
+            try { return await promise; }
+            finally {
+                if (cloudWriteInFlightPromise === promise) cloudWriteInFlightPromise = null;
+                if (cloudPushQueued && !cloudRetryTimer) scheduleCloudRetry('COALESCED_PUSH');
+            }
+        }
+
+        async function pushToCloudForceCore(silent = false, retryAttempts = 0) {
             if (!firestoreDb) { 
                 cloudPushQueued = true; 
                 updateCloudStatus('OFFLINE', 'Firebase 尚未建立；已保留本機資料'); 
@@ -3492,6 +3642,10 @@
             }
             const now = Date.now();
             if (retryAttempts === 0 && (now - lastCloudOperationAt < CLOUD_OPERATION_COOLDOWN_MS)) {
+                cloudPushQueued = true;
+                return false;
+            }
+            if (retryAttempts === 0 && (now - lastCloudSyncAt < CLOUD_PUSH_COOLDOWN_MS)) {
                 cloudPushQueued = true;
                 return false;
             }
@@ -3647,10 +3801,22 @@
            during recovery. */
         async function recoverLegacyManifestV2(room, meta = {}) {
             const base = meta && typeof meta === 'object' ? meta : {};
-            const archiveSnap = await withCloudTimeout(room.collection('archives').limit(5001).get(), 'Legacy manifest archive scan');
-            if (archiveSnap.size > 5000) {
-                const err = new Error('Legacy Manifest archive 超過 5000 chunks；為安全起見拒絕自動恢復');
-                err.code = 'CLOUD_MANIFEST_INVALID';
+            let archiveQuery = room.collection('archives');
+            const hasSyncId = !!base.syncId;
+            if (hasSyncId) {
+                archiveQuery = archiveQuery.where('syncId', '==', String(base.syncId)).limit(A241_CONFIG.legacySyncScanLimit);
+            } else {
+                /* No syncId: do not scan the entire archive collection. A bounded recent scan
+                   prevents the 12s timeout/backoff storm seen in the browser. */
+                archiveQuery = archiveQuery.orderBy('updatedAt', 'desc').limit(A241_CONFIG.legacyScanLimit);
+            }
+            let archiveSnap;
+            try {
+                archiveSnap = await withCloudTimeout(archiveQuery.get(), 'Legacy manifest archive scan', A241_CONFIG.legacyScanTimeoutMs);
+            } catch (scanErr) {
+                const err = new Error(`Legacy Manifest archive scan 逾時/過慢；已停止自動恢復（${A241_CONFIG.legacyScanLimit} 筆上限）`);
+                err.code = 'CLOUD_RECOVERY_DEFERRED';
+                err.cause = scanErr;
                 throw err;
             }
             const groups = new Map();
@@ -3698,6 +3864,12 @@
             if (!chosen) {
                 const best = inspected[0];
                 const observed = best ? `${best.idx.length}/${expectedChunkCount || best.count}` : '0/0';
+                if (!hasSyncId && archiveSnap.size >= A241_CONFIG.legacyScanLimit) {
+                    const err = new Error(`Legacy Manifest 未能在最近 ${A241_CONFIG.legacyScanLimit} 個 archive chunks 找到完整版本（${observed}）；已延後全庫掃描`);
+                    err.code = 'CLOUD_RECOVERY_DEFERRED';
+                    err.cloudRecovery = { reason:'BOUNDED_SCAN_EXHAUSTED', scanLimit:A241_CONFIG.legacyScanLimit, observedChunkCount:best?.idx.length || 0 };
+                    throw err;
+                }
                 const err = new Error(base.syncId
                     ? `Legacy Manifest 指定 syncId 的 archive 不完整（${observed}）；已拒絕合併，避免以部分資料覆蓋本機`
                     : `Legacy Manifest 找不到完整 archive chunks（${observed}）；已拒絕合併，避免以部分資料覆蓋本機`);
@@ -3747,7 +3919,7 @@
             payload._cloudChecksumMode = 'LEGACY_RECONSTRUCTED';
             payload._cloudMeta = recovered;
             lastKnownCloudRevision = Math.max(lastKnownCloudRevision, Number(recovered.revision || 0));
-            console.warn('[Cloud] legacy manifest reconstructed from archive chunks; next push will upgrade to v3', { syncId: chosen.syncId, chunkCount, execution: payload.execution.length, research: payload.research.length });
+            console.warn('[Cloud] legacy manifest reconstructed from bounded archive scan; next push will upgrade to v3', { syncId: chosen.syncId, chunkCount, execution: payload.execution.length, research: payload.research.length });
             return payload;
         }
 
@@ -3901,6 +4073,14 @@
                    with a transient WebChannel failure. This is the exact condition
                    visible in the reported console: "reading legacy manifest-chunk-v2"
                    followed by "雲端 Manifest 無效". Retrying cannot repair it. */
+                if (isCloudRecoveryDeferredError(err)) {
+                    cloudPullQueued = false;
+                    clearCloudRetry();
+                    updateCloudStatus('ERROR', 'Legacy Manifest 太大/太慢，已停止自動掃描；本機資料保持不變');
+                    if (!silent) showNotificationModal('Legacy Manifest 延後恢復', '雲端舊 archive 掃描已達安全上限，避免 Firestore backoff storm。請使用手動 Legacy Recovery，或先完成一次成功的 V3 推送。');
+                    return false;
+                }
+
                 if (isCloudIntegrityError(err)) {
                     cloudPullQueued = false;
                     clearCloudRetry();
